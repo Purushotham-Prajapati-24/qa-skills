@@ -1,0 +1,117 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "common.schema.json",
+  "title": "Shared definitions",
+  "description": "Building blocks referenced by every other AST schema. Change here, change everywhere -- on purpose.",
+  "definitions": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 UTC instant."
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Subjective probability the agent assigns to a claim. Never fabricate precision: use 0.5 when genuinely unsure."
+    },
+    "sessionId": { "type": "string", "pattern": "^SESSION-\\d{4,}$" },
+    "decisionId": { "type": "string", "pattern": "^DEC-\\d{5,}$" },
+    "executionId": { "type": "string", "pattern": "^EXEC-\\d{4}-\\d{5,}$" },
+    "evidenceId": { "type": "string", "pattern": "^EV-\\d{4}-\\d{5,}$" },
+    "findingId": { "type": "string", "pattern": "^FIND-\\d{5,}$" },
+    "uncertaintyId": { "type": "string", "pattern": "^U-\\d{5,}$" },
+    "reportId": { "type": "string", "pattern": "^REPORT-\\d{4}-\\d{5,}$" },
+    "testCaseId": { "type": "string", "pattern": "^TC-\\d{5,}$" },
+    "planId": { "type": "string", "pattern": "^PLAN-\\d{5,}$" },
+    "evidenceRefs": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/evidenceId" },
+      "description": "Evidence backing a claim. An empty array is a valid, meaningful statement: it means 'unevidenced'."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "COMPLETED",
+        "PASSED",
+        "FAILED",
+        "PARTIAL",
+        "BLOCKED",
+        "DEFERRED",
+        "INTERRUPTED",
+        "SKIPPED",
+        "NOT_APPLICABLE",
+        "NEEDS_USER_INPUT",
+        "INCONCLUSIVE"
+      ],
+      "description": "See docs/status-model.md for the exact meaning of each value."
+    },
+    "riskLevel": {
+      "type": "string",
+      "enum": ["negligible", "low", "medium", "high", "critical"]
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["P0", "P1", "P2", "P3"]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["blocker", "critical", "major", "minor", "trivial"]
+    },
+    "epistemicClass": {
+      "type": "string",
+      "enum": ["observed", "verified", "inferred", "reported-by-user", "expected", "assumed"],
+      "description": "How the agent came to hold this. 'observed' and 'verified' require evidence; 'inferred' must never be reported as fact."
+    },
+    "testCategory": {
+      "type": "string",
+      "enum": [
+        "unit", "component", "integration", "api", "contract", "e2e", "ui",
+        "exploratory", "smoke", "sanity", "regression", "acceptance", "functional",
+        "non-functional", "accessibility", "visual", "cross-browser", "responsive",
+        "compatibility", "localization", "performance", "load", "stress", "spike",
+        "endurance", "security", "authn-authz", "session-management",
+        "input-validation", "dependency-scan", "database", "data-integrity",
+        "migration", "caching", "concurrency", "resilience", "observability",
+        "logging-monitoring", "infrastructure", "ci-cd", "deployment", "rollback",
+        "browser-automation", "mobile-viewport", "ai-llm", "rag-evaluation",
+        "agent-tool-eval"
+      ]
+    },
+    "capabilityVerb": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+      "description": "Abstract capability, e.g. 'github.create_issue'. Never an MCP tool name."
+    },
+    "gitRef": {
+      "type": "object",
+      "properties": {
+        "repository": { "type": "string" },
+        "branch": { "type": "string" },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+        "pull_request": { "type": ["string", "null"] },
+        "dirty": { "type": "boolean", "description": "True when the working tree had uncommitted changes at capture time." }
+      },
+      "required": ["repository"],
+      "additionalProperties": false
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Who/what produced a record. Every persisted artefact carries this.",
+      "properties": {
+        "skill_version": { "$ref": "#/definitions/semver" },
+        "skill_name": { "type": "string" },
+        "engine_version": { "$ref": "#/definitions/semver" },
+        "session_id": { "$ref": "#/definitions/sessionId" },
+        "created_at": { "$ref": "#/definitions/timestamp" },
+        "created_by": { "type": "string", "enum": ["agent", "human", "ci", "hook"] }
+      },
+      "required": ["skill_version", "created_at", "created_by"],
+      "additionalProperties": false
+    }
+  }
+}

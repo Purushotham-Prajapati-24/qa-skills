@@ -1,0 +1,30 @@
+{
+  "$comment": [
+    "MCP servers this plugin can make use of. NONE of these are required: every capability",
+    "resolves through engine/capability-registry, which degrades honestly when a provider is",
+    "absent. Remove any entry you do not want; the system reports the affected test",
+    "categories as BLOCKED rather than pretending to cover them.",
+    "",
+    "Playwright MCP tool names were verified against github.com/microsoft/playwright-mcp.",
+    "MCP servers move quickly -- re-verify before relying on a specific tool name, and never",
+    "hard-code one inside a skill."
+  ],
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest", "--isolated", "--headless", "--output-dir", "${CLAUDE_PLUGIN_DATA}/browser-artifacts"],
+      "$note": "--isolated keeps the browser profile in memory so a test session never inherits or pollutes real browser state. --output-dir puts screenshots and traces somewhere they can be registered as evidence."
+    }
+  },
+  "$disabled_examples": {
+    "$comment": "Move an entry into mcpServers to enable it. Left disabled by default because each needs credentials the user must supply deliberately.",
+    "github": {
+      "$note": "The official GitHub MCP server usually requires an OAuth flow. When it is unavailable, the capability registry falls back to the `gh` CLI if that is authenticated — check `gh auth status` and its token scopes.",
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    },
+    "atlassian": {
+      "$note": "Atlassian (Jira/Confluence) connector. Requires authorisation in an interactive session. Without it, jira.* capabilities resolve to the JIRA_BASE_URL/JIRA_EMAIL/JIRA_API_TOKEN REST fallback, or report unavailable."
+    }
+  }
+}

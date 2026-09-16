@@ -1,0 +1,126 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "report.schema.json",
+  "title": "Testing Report",
+  "description": "Machine-readable form of the testing report. The Markdown report is rendered FROM this, never written by hand, so prose can never outrun the data.",
+  "type": "object",
+  "required": ["report_id", "generated_at", "session_id", "executive_summary", "execution_summary", "integrity", "provenance"],
+  "properties": {
+    "report_id": { "$ref": "common.schema.json#/definitions/reportId" },
+    "report_version": { "$ref": "common.schema.json#/definitions/semver" },
+    "generated_at": { "$ref": "common.schema.json#/definitions/timestamp" },
+    "session_id": { "$ref": "common.schema.json#/definitions/sessionId" },
+    "supersedes": { "$ref": "common.schema.json#/definitions/reportId" },
+    "git": { "$ref": "common.schema.json#/definitions/gitRef" },
+    "executive_summary": {
+      "type": "object",
+      "required": ["headline", "overall_status"],
+      "properties": {
+        "headline": { "type": "string" },
+        "overall_status": { "$ref": "common.schema.json#/definitions/status" },
+        "confidence": { "$ref": "common.schema.json#/definitions/confidence" },
+        "key_points": { "type": "array", "items": { "type": "string" } },
+        "what_was_not_tested": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "repository_context": { "type": "object" },
+    "goals": { "type": "array", "items": { "type": "object" } },
+    "risk_assessment": { "$ref": "testing-plan.schema.json#/definitions/riskAssessment" },
+    "applicable_categories": {
+      "type": "array",
+      "items": { "$ref": "testing-plan.schema.json#/definitions/applicabilityRow" }
+    },
+    "execution_summary": {
+      "type": "object",
+      "required": ["by_status"],
+      "properties": {
+        "by_status": {
+          "type": "object",
+          "patternProperties": { "^[A-Z_]+$": { "type": "integer", "minimum": 0 } }
+        },
+        "executions": { "type": "integer", "minimum": 0 },
+        "test_cases": { "type": "integer", "minimum": 0 },
+        "total_duration_ms": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "detailed_results": { "type": "array", "items": { "type": "object" } },
+    "evidence_index": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["evidence_id", "kind", "summary"],
+        "properties": {
+          "evidence_id": { "$ref": "common.schema.json#/definitions/evidenceId" },
+          "kind": { "type": "string" },
+          "summary": { "type": "string" },
+          "path": { "type": "string" },
+          "sha256": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "findings": { "type": "array", "items": { "$ref": "common.schema.json#/definitions/findingId" } },
+    "external_writes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["system", "action", "confirmed"],
+        "properties": {
+          "system": { "type": "string" },
+          "action": { "type": "string" },
+          "target": { "type": "string" },
+          "result_id": { "type": "string" },
+          "url": { "type": "string" },
+          "confirmed": {
+            "type": "boolean",
+            "description": "True ONLY when the provider returned a success response. Never set optimistically."
+          },
+          "authorised_by": { "type": "string", "enum": ["user-explicit", "policy-default", "not-authorised"] },
+          "decision_id": { "$ref": "common.schema.json#/definitions/decisionId" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "traceability": { "type": "array", "items": { "type": "object" } },
+    "automation_added": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "kind"],
+        "properties": {
+          "path": { "type": "string" },
+          "kind": { "type": "string" },
+          "test_count": { "type": "integer", "minimum": 0 },
+          "converted_from": { "$ref": "common.schema.json#/definitions/executionId" },
+          "quality_score": { "type": "number", "minimum": 0, "maximum": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "blocked_work": { "type": "array", "items": { "type": "object" } },
+    "deferred_work": { "type": "array", "items": { "type": "object" } },
+    "interrupted_work": { "type": "array", "items": { "type": "object" } },
+    "uncertainty_register": { "type": "array", "items": { "$ref": "common.schema.json#/definitions/uncertaintyId" } },
+    "coverage_gaps": { "type": "array", "items": { "type": "string" } },
+    "remaining_work": { "type": "array", "items": { "type": "object" } },
+    "recommendations": { "type": "array", "items": { "type": "string" } },
+    "decision_history": { "type": "array", "items": { "$ref": "common.schema.json#/definitions/decisionId" } },
+    "metrics": { "type": "object" },
+    "integrity": {
+      "type": "object",
+      "required": ["unevidenced_pass_claims", "false_confidence_rate", "checks_run"],
+      "description": "Self-audit of this report. A report that cannot state its own false-confidence rate is not trustworthy.",
+      "properties": {
+        "unevidenced_pass_claims": { "type": "integer", "minimum": 0 },
+        "false_confidence_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "checks_run": { "type": "array", "items": { "type": "string" } },
+        "violations": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "provenance": { "$ref": "common.schema.json#/definitions/provenance" }
+  },
+  "additionalProperties": false
+}

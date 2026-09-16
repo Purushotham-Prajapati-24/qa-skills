@@ -1,0 +1,32 @@
+{
+  "name": "autonomous-software-testing",
+  "displayName": "Autonomous Software Testing",
+  "version": "0.5.0",
+  "description": "An evidence-driven testing agent: profiles a repository, decides which testing actually applies, scores risk, chooses tools, executes, collects evidence, and reports honestly on what was and was not tested.",
+  "author": { "name": "Autonomous Software Testing contributors" },
+  "license": "MIT",
+  "keywords": ["testing", "qa", "sdet", "playwright", "regression", "evidence", "test-automation"],
+  "repository": "https://github.com/your-org/autonomous-software-testing",
+  "defaultEnabled": true,
+  "userConfig": {
+    "risk_profile": {
+      "type": "string",
+      "title": "Default risk weighting profile",
+      "description": "Which weighting the risk engine uses when the orchestrator does not choose one explicitly.",
+      "options": ["balanced", "security-critical", "internal-tooling", "prototype"],
+      "default": "balanced"
+    },
+    "state_dir": {
+      "type": "directory",
+      "title": "Testing state directory",
+      "description": "Where sessions, decisions, evidence and reports are persisted. Defaults to <plugin>/state.",
+      "required": false
+    },
+    "allow_external_writes": {
+      "type": "boolean",
+      "title": "Allow external writes without re-asking each time",
+      "description": "Leave OFF unless you understand the consequence. When OFF (recommended), every GitHub/Jira/document write asks for explicit authorisation in the session. This setting never enables the prohibited-by-default actions.",
+      "default": false
+    }
+  }
+}

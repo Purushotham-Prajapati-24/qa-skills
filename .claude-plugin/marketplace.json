@@ -1,0 +1,14 @@
+{
+  "name": "autonomous-testing-marketplace",
+  "owner": { "name": "Autonomous Software Testing contributors" },
+  "plugins": [
+    {
+      "name": "autonomous-software-testing",
+      "source": "./",
+      "description": "Evidence-driven autonomous software testing: repository intelligence, risk scoring, test applicability, browser-method decisions, execution with evidence, defect reporting and honest reports.",
+      "version": "0.5.0",
+      "category": "testing",
+      "keywords": ["testing", "qa", "sdet", "playwright", "evidence"]
+    }
+  ]
+}

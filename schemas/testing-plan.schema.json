@@ -1,0 +1,205 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "testing-plan.schema.json",
+  "title": "Testing Plan",
+  "description": "The output of the planning workflow: what will be tested, why, how deep, with what, and -- equally important -- what will not be.",
+  "type": "object",
+  "required": ["plan_id", "created_at", "objective", "scope", "applicability", "scenarios", "exit_criteria", "provenance"],
+  "properties": {
+    "plan_id": { "$ref": "common.schema.json#/definitions/planId" },
+    "created_at": { "$ref": "common.schema.json#/definitions/timestamp" },
+    "session_id": { "$ref": "common.schema.json#/definitions/sessionId" },
+    "plan_version": { "$ref": "common.schema.json#/definitions/semver" },
+    "objective": { "type": "string", "minLength": 8 },
+    "trigger": {
+      "type": "string",
+      "enum": ["user-request", "pull-request", "commit", "ticket", "schedule", "deployment", "failure", "release-candidate"]
+    },
+    "git": { "$ref": "common.schema.json#/definitions/gitRef" },
+    "scope": {
+      "type": "object",
+      "required": ["in_scope", "out_of_scope"],
+      "properties": {
+        "in_scope": { "type": "array", "items": { "type": "string" } },
+        "out_of_scope": { "type": "array", "items": { "type": "string" } },
+        "rationale": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "assumptions": { "type": "array", "items": { "type": "string" } },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement", "source"],
+        "properties": {
+          "id": { "type": "string" },
+          "statement": { "type": "string" },
+          "source": { "type": "string", "enum": ["jira", "github-issue", "readme", "code", "user", "inferred", "spec-file"] },
+          "source_ref": { "type": "string" },
+          "acceptance_criteria": { "type": "array", "items": { "type": "string" } },
+          "testable": { "type": "boolean" },
+          "ambiguity": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "change_summary": {
+      "type": "object",
+      "properties": {
+        "files_changed": { "type": "integer", "minimum": 0 },
+        "insertions": { "type": "integer", "minimum": 0 },
+        "deletions": { "type": "integer", "minimum": 0 },
+        "impacted_modules": { "type": "array", "items": { "type": "string" } },
+        "user_facing_behaviour": { "type": "array", "items": { "type": "string" } },
+        "mapped_existing_tests": { "type": "array", "items": { "type": "string" } },
+        "coverage_gaps": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "risk_assessment": { "$ref": "#/definitions/riskAssessment" },
+    "applicability": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One row per considered test category. Categories judged not applicable MUST appear here with a reason.",
+      "items": { "$ref": "#/definitions/applicabilityRow" }
+    },
+    "strategy": {
+      "type": "object",
+      "properties": {
+        "approach": { "type": "string" },
+        "depth": { "type": "string", "enum": ["smoke", "targeted", "standard", "deep", "exhaustive"] },
+        "depth_rationale": { "type": "string" },
+        "parallelisable": { "type": "array", "items": { "type": "string" } },
+        "must_serialise": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "category", "obligation", "method"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "category": { "$ref": "common.schema.json#/definitions/testCategory" },
+          "obligation": {
+            "type": "string",
+            "enum": ["must-test", "should-test", "nice-to-test", "not-applicable", "blocked", "deferred"]
+          },
+          "priority": { "$ref": "common.schema.json#/definitions/priority" },
+          "method": { "type": "string" },
+          "preconditions": { "type": "array", "items": { "type": "string" } },
+          "steps": { "type": "array", "items": { "type": "string" } },
+          "expected": { "type": "string" },
+          "test_data": { "type": "string" },
+          "environment": { "type": "string" },
+          "expected_evidence": { "type": "array", "items": { "type": "string" } },
+          "validates_requirements": { "type": "array", "items": { "type": "string" } },
+          "covers_risks": { "type": "array", "items": { "type": "string" } },
+          "estimated_minutes": { "type": "number", "minimum": 0 },
+          "reuses_existing_test": { "type": "string" },
+          "blocked_by": { "$ref": "common.schema.json#/definitions/uncertaintyId" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "environments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "available"],
+        "properties": {
+          "name": { "type": "string" },
+          "available": { "type": "boolean" },
+          "base_url": { "type": "string" },
+          "safe_for_writes": { "type": "boolean" },
+          "notes": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "tooling": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["capability", "resolved_provider", "available"],
+        "properties": {
+          "capability": { "$ref": "common.schema.json#/definitions/capabilityVerb" },
+          "resolved_provider": { "type": "string" },
+          "available": { "type": "boolean" },
+          "fallback": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "success_criteria": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "exit_criteria": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "fallback_strategy": { "type": "string" },
+    "open_questions": { "type": "array", "items": { "$ref": "common.schema.json#/definitions/uncertaintyId" } },
+    "deferred": { "type": "array", "items": { "type": "string" } },
+    "future_opportunities": { "type": "array", "items": { "type": "string" } },
+    "estimated_effort_minutes": { "type": "number", "minimum": 0 },
+    "decision_refs": { "type": "array", "items": { "$ref": "common.schema.json#/definitions/decisionId" } },
+    "provenance": { "$ref": "common.schema.json#/definitions/provenance" }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "riskAssessment": {
+      "type": "object",
+      "required": ["risk_score", "risk_level", "factors"],
+      "properties": {
+        "risk_score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "risk_level": { "$ref": "common.schema.json#/definitions/riskLevel" },
+        "weights_profile": { "type": "string" },
+        "confidence": { "$ref": "common.schema.json#/definitions/confidence" },
+        "factors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["factor", "value", "weight", "contribution"],
+            "properties": {
+              "factor": { "type": "string" },
+              "value": { "type": "number", "minimum": 0, "maximum": 1 },
+              "weight": { "type": "number", "minimum": 0 },
+              "contribution": { "type": "number" },
+              "basis": { "type": "string" },
+              "epistemic_class": { "$ref": "common.schema.json#/definitions/epistemicClass" },
+              "evidence": { "$ref": "common.schema.json#/definitions/evidenceRefs" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "unscored_factors": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Factors with no evidence. They are excluded from the score rather than guessed, and the confidence value reflects that."
+        }
+      },
+      "additionalProperties": false
+    },
+    "applicabilityRow": {
+      "type": "object",
+      "required": ["category", "applicable", "reason"],
+      "properties": {
+        "category": { "$ref": "common.schema.json#/definitions/testCategory" },
+        "applicable": { "type": "boolean" },
+        "reason": { "type": "string", "minLength": 5 },
+        "priority": { "$ref": "common.schema.json#/definitions/priority" },
+        "expected_value": { "type": "number", "minimum": 0, "maximum": 1 },
+        "risk_addressed": { "type": "array", "items": { "type": "string" } },
+        "estimated_cost_minutes": { "type": "number", "minimum": 0 },
+        "existing_coverage": { "type": "string", "enum": ["none", "minimal", "partial", "substantial", "unknown"] },
+        "tool_available": { "type": "boolean" },
+        "prerequisites": { "type": "array", "items": { "type": "string" } },
+        "automation_suitability": { "type": "string", "enum": ["high", "medium", "low", "unsuitable"] },
+        "recommended_method": { "type": "string" },
+        "execution_priority": { "type": "integer", "minimum": 0 },
+        "score": { "type": "number" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

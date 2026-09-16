@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "decision.schema.json",
+  "title": "Decision Record",
+  "description": "One reversible, explainable choice the agent made. If a future reader cannot reconstruct WHY from this record alone, the record is inadequate.",
+  "type": "object",
+  "required": [
+    "decision_id",
+    "timestamp",
+    "question",
+    "candidate_options",
+    "selected_option",
+    "reason",
+    "confidence",
+    "reversible",
+    "provenance"
+  ],
+  "properties": {
+    "decision_id": { "$ref": "common.schema.json#/definitions/decisionId" },
+    "timestamp": { "$ref": "common.schema.json#/definitions/timestamp" },
+    "session_id": { "$ref": "common.schema.json#/definitions/sessionId" },
+    "category": {
+      "type": "string",
+      "enum": [
+        "test-selection", "tool-selection", "browser-method", "test-depth",
+        "scope", "risk-acceptance", "external-write", "escalation",
+        "automation-conversion", "failure-response", "ticket-relevance",
+        "documentation-level", "parallelisation", "other"
+      ]
+    },
+    "question": { "type": "string", "minLength": 8 },
+    "context": {
+      "type": "object",
+      "properties": {
+        "summary": { "type": "string" },
+        "inputs": { "type": "object" },
+        "git": { "$ref": "common.schema.json#/definitions/gitRef" }
+      },
+      "additionalProperties": false
+    },
+    "candidate_options": {
+      "type": "array",
+      "minItems": 2,
+      "description": "At least two. A 'decision' with one option is not a decision; record it as an assumption instead.",
+      "items": {
+        "type": "object",
+        "required": ["id", "label"],
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "pros": { "type": "array", "items": { "type": "string" } },
+          "cons": { "type": "array", "items": { "type": "string" } },
+          "score": { "type": "number" },
+          "rejected_because": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "selected_option": { "type": "string" },
+    "reason": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" },
+      "description": "Each entry is one independent reason. Prose paragraphs are not acceptable here."
+    },
+    "evidence_refs": { "$ref": "common.schema.json#/definitions/evidenceRefs" },
+    "confidence": { "$ref": "common.schema.json#/definitions/confidence" },
+    "risk": {
+      "type": "object",
+      "properties": {
+        "level": { "$ref": "common.schema.json#/definitions/riskLevel" },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "note": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "reversible": {
+      "type": "boolean",
+      "description": "Can the effect be undone without an external write or data loss?"
+    },
+    "downstream_effect": { "type": "array", "items": { "type": "string" } },
+    "policy_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Which policy file / matrix row drove this, e.g. 'browser-decision.matrix#exploratory-unknown-ui'."
+    },
+    "superseded_by": { "$ref": "common.schema.json#/definitions/decisionId" },
+    "outcome": {
+      "type": "object",
+      "description": "Filled in later, once the consequence is observable. This is what makes decision accuracy measurable.",
+      "properties": {
+        "assessed_at": { "$ref": "common.schema.json#/definitions/timestamp" },
+        "verdict": { "type": "string", "enum": ["correct", "acceptable", "suboptimal", "wrong", "unknown"] },
+        "note": { "type": "string" },
+        "evidence_refs": { "$ref": "common.schema.json#/definitions/evidenceRefs" }
+      },
+      "additionalProperties": false
+    },
+    "provenance": { "$ref": "common.schema.json#/definitions/provenance" }
+  },
+  "additionalProperties": false
+}

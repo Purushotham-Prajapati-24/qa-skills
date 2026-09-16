@@ -1,0 +1,137 @@
+{
+  "$comment": "Risk weighting profiles. There is no universal correct weighting -- a fintech backend and a marketing site should not share one. Pick a profile with --profile, or add your own. Weights are relative, not percentages; the engine normalises over the factors that actually have evidence.",
+  "version": "1.0.0",
+  "levels": {
+    "$comment": "Score thresholds. Inclusive lower bound.",
+    "negligible": 0.0,
+    "low": 0.2,
+    "medium": 0.4,
+    "high": 0.65,
+    "critical": 0.85
+  },
+  "factors": {
+    "business_criticality": {
+      "label": "Business criticality of the affected capability",
+      "guidance": "1.0 = revenue/compliance path. 0.5 = important internal flow. 0.1 = cosmetic."
+    },
+    "security_sensitivity": {
+      "label": "Touches authn, authz, secrets, crypto or session handling"
+    },
+    "user_impact": {
+      "label": "Breadth and severity of impact on end users if this breaks"
+    },
+    "data_sensitivity": {
+      "label": "Personal, financial or regulated data in scope"
+    },
+    "change_magnitude": {
+      "label": "Size of the change relative to the module",
+      "guidance": "Derive from diff stats; do not eyeball."
+    },
+    "change_frequency": {
+      "label": "How often this area churns (hotspot signal from git history)"
+    },
+    "dependency_complexity": {
+      "label": "Number and depth of internal dependencies on the changed code"
+    },
+    "integration_complexity": {
+      "label": "Number of external systems involved in the behaviour"
+    },
+    "historical_failures": {
+      "label": "Past defects or incidents in this area"
+    },
+    "coverage_deficit": {
+      "label": "1 - existing effective coverage of the changed behaviour",
+      "guidance": "This is a deficit: higher means LESS covered, therefore riskier."
+    },
+    "test_flakiness": {
+      "label": "Unreliability of the tests that guard this area"
+    },
+    "deployment_exposure": {
+      "label": "How quickly a defect reaches real users (continuous deploy vs. gated release)"
+    },
+    "irreversibility": {
+      "label": "Difficulty of undoing the effect (migrations, payments, emails sent)"
+    },
+    "external_system_dependency": {
+      "label": "Reliance on third parties that cannot be controlled in test"
+    }
+  },
+  "profiles": {
+    "balanced": {
+      "description": "Sensible default for a general web application.",
+      "weights": {
+        "business_criticality": 1.0,
+        "security_sensitivity": 1.0,
+        "user_impact": 0.9,
+        "data_sensitivity": 0.8,
+        "change_magnitude": 0.7,
+        "change_frequency": 0.4,
+        "dependency_complexity": 0.6,
+        "integration_complexity": 0.6,
+        "historical_failures": 0.7,
+        "coverage_deficit": 1.0,
+        "test_flakiness": 0.4,
+        "deployment_exposure": 0.6,
+        "irreversibility": 0.8,
+        "external_system_dependency": 0.5
+      }
+    },
+    "security-critical": {
+      "description": "Auth systems, payment rails, anything handling regulated data.",
+      "weights": {
+        "business_criticality": 1.0,
+        "security_sensitivity": 2.0,
+        "user_impact": 1.0,
+        "data_sensitivity": 1.8,
+        "change_magnitude": 0.6,
+        "change_frequency": 0.3,
+        "dependency_complexity": 0.6,
+        "integration_complexity": 0.8,
+        "historical_failures": 0.9,
+        "coverage_deficit": 1.2,
+        "test_flakiness": 0.4,
+        "deployment_exposure": 0.8,
+        "irreversibility": 1.5,
+        "external_system_dependency": 0.7
+      }
+    },
+    "internal-tooling": {
+      "description": "Low blast radius, technical users, easy rollback.",
+      "weights": {
+        "business_criticality": 0.5,
+        "security_sensitivity": 0.7,
+        "user_impact": 0.4,
+        "data_sensitivity": 0.4,
+        "change_magnitude": 0.8,
+        "change_frequency": 0.5,
+        "dependency_complexity": 0.7,
+        "integration_complexity": 0.5,
+        "historical_failures": 0.6,
+        "coverage_deficit": 0.9,
+        "test_flakiness": 0.5,
+        "deployment_exposure": 0.3,
+        "irreversibility": 0.4,
+        "external_system_dependency": 0.4
+      }
+    },
+    "prototype": {
+      "description": "Early-stage product where shipping beats certainty. Still weights security, because a prototype leak is still a leak.",
+      "weights": {
+        "business_criticality": 0.4,
+        "security_sensitivity": 1.0,
+        "user_impact": 0.3,
+        "data_sensitivity": 0.9,
+        "change_magnitude": 0.4,
+        "change_frequency": 0.2,
+        "dependency_complexity": 0.3,
+        "integration_complexity": 0.3,
+        "historical_failures": 0.3,
+        "coverage_deficit": 0.5,
+        "test_flakiness": 0.2,
+        "deployment_exposure": 0.3,
+        "irreversibility": 0.7,
+        "external_system_dependency": 0.3
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "test-result.schema.json",
+  "title": "Test Result",
+  "description": "One test case outcome inside an execution. Kept separate from Execution so results can be aggregated across runs for flakiness analysis.",
+  "type": "object",
+  "required": ["name", "status"],
+  "properties": {
+    "test_case_id": { "$ref": "common.schema.json#/definitions/testCaseId" },
+    "name": { "type": "string", "minLength": 1 },
+    "suite": { "type": "string" },
+    "file": { "type": "string" },
+    "status": { "$ref": "common.schema.json#/definitions/status" },
+    "duration_ms": { "type": "integer", "minimum": 0 },
+    "assertions": {
+      "type": "object",
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "message": { "type": "string", "maxLength": 4000 },
+    "stack": { "type": "string", "maxLength": 8000 },
+    "retry_count": { "type": "integer", "minimum": 0 },
+    "evidence": { "$ref": "common.schema.json#/definitions/evidenceRefs" },
+    "validates_requirements": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Requirement / acceptance-criterion identifiers this test asserts. Drives requirement coverage."
+    },
+    "covers_risks": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

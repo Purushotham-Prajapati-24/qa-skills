@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "session-state.schema.json",
+  "title": "Session State",
+  "description": "The agent's durable working memory. Written to disk after every phase transition so a compaction, crash or interruption loses at most one step.",
+  "type": "object",
+  "required": ["session_id", "started_at", "updated_at", "phase", "goals", "next_action", "provenance"],
+  "properties": {
+    "session_id": { "$ref": "common.schema.json#/definitions/sessionId" },
+    "started_at": { "$ref": "common.schema.json#/definitions/timestamp" },
+    "updated_at": { "$ref": "common.schema.json#/definitions/timestamp" },
+    "state_version": { "$ref": "common.schema.json#/definitions/semver" },
+    "trigger": { "type": "string" },
+    "user_request": { "type": "string" },
+    "git": { "$ref": "common.schema.json#/definitions/gitRef" },
+    "phase": {
+      "type": "string",
+      "enum": [
+        "discover", "profile", "understand", "classify", "assess-risk",
+        "select-tests", "select-tools", "plan", "execute", "observe",
+        "validate", "document", "decide-next", "complete", "blocked", "escalated"
+      ]
+    },
+    "phase_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["phase", "at"],
+        "properties": {
+          "phase": { "type": "string" },
+          "at": { "$ref": "common.schema.json#/definitions/timestamp" },
+          "note": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "profile_ref": { "type": "string", "description": "Path to repository-profile.json as of this session." },
+    "plan_ref": { "$ref": "common.schema.json#/definitions/planId" },
+    "goals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "goal", "status"],
+        "properties": {
+          "id": { "type": "string" },
+          "goal": { "type": "string" },
+          "target": { "type": "string" },
+          "success_criteria": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["criterion", "status"],
+              "properties": {
+                "criterion": { "type": "string" },
+                "status": { "$ref": "common.schema.json#/definitions/status" },
+                "evidence": { "$ref": "common.schema.json#/definitions/evidenceRefs" },
+                "execution_id": { "$ref": "common.schema.json#/definitions/executionId" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "status": { "$ref": "common.schema.json#/definitions/status" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "selected_tests": { "type": "array", "items": { "type": "string" } },
+    "completed_executions": { "type": "array", "items": { "$ref": "common.schema.json#/definitions/executionId" } },
+    "open_executions": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/definitions/executionId" },
+      "description": "Started but not finalised. On resume these are marked INTERRUPTED, never assumed successful."
+    },
+    "decisions": { "type": "array", "items": { "$ref": "common.schema.json#/definitions/decisionId" } },
+    "findings": { "type": "array", "items": { "$ref": "common.schema.json#/definitions/findingId" } },
+    "uncertainties": { "type": "array", "items": { "$ref": "common.schema.json#/definitions/uncertaintyId" } },
+    "blockers": { "type": "array", "items": { "$ref": "common.schema.json#/definitions/uncertaintyId" } },
+    "deferred": { "type": "array", "items": { "type": "string" } },
+    "remaining_work": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["item", "status"],
+        "properties": {
+          "item": { "type": "string" },
+          "status": { "$ref": "common.schema.json#/definitions/status" },
+          "reason": { "type": "string" },
+          "blocked_by": { "$ref": "common.schema.json#/definitions/uncertaintyId" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "interruptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["at", "kind"],
+        "properties": {
+          "at": { "$ref": "common.schema.json#/definitions/timestamp" },
+          "kind": { "type": "string", "enum": ["user", "tool-failure", "compaction", "restart", "timeout", "environment-reset"] },
+          "during_phase": { "type": "string" },
+          "during_execution": { "$ref": "common.schema.json#/definitions/executionId" },
+          "recovered_at": { "$ref": "common.schema.json#/definitions/timestamp" },
+          "note": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "next_action": { "type": "string", "minLength": 3 },
+    "last_report": { "$ref": "common.schema.json#/definitions/reportId" },
+    "capability_snapshot": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$": {
+          "type": "object",
+          "properties": {
+            "available": { "type": "boolean" },
+            "provider": { "type": "string" },
+            "checked_at": { "$ref": "common.schema.json#/definitions/timestamp" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "provenance": { "$ref": "common.schema.json#/definitions/provenance" }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "evidence.schema.json",
+  "title": "Evidence Item",
+  "description": "A single artefact that supports a claim. Evidence is the only currency the reporting engine accepts for PASSED/FAILED.",
+  "type": "object",
+  "required": ["evidence_id", "timestamp", "kind", "epistemic_class", "summary", "provenance"],
+  "properties": {
+    "evidence_id": { "$ref": "common.schema.json#/definitions/evidenceId" },
+    "timestamp": { "$ref": "common.schema.json#/definitions/timestamp" },
+    "session_id": { "$ref": "common.schema.json#/definitions/sessionId" },
+    "execution_id": { "$ref": "common.schema.json#/definitions/executionId" },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "command-output", "test-report", "assertion-result", "screenshot", "video",
+        "trace", "har", "console-log", "server-log", "network-request",
+        "coverage-report", "static-analysis", "dependency-scan", "accessibility-scan",
+        "performance-metric", "database-snapshot", "diff", "file-content",
+        "github-object", "jira-object", "document-revision", "user-statement",
+        "external-api-response", "screenshot-diff", "other"
+      ]
+    },
+    "epistemic_class": { "$ref": "common.schema.json#/definitions/epistemicClass" },
+    "summary": { "type": "string", "minLength": 3 },
+    "git": { "$ref": "common.schema.json#/definitions/gitRef" },
+    "environment": {
+      "type": "object",
+      "properties": {
+        "os": { "type": "string" },
+        "node": { "type": "string" },
+        "runtime": { "type": "string" },
+        "browser": { "type": "string" },
+        "browser_version": { "type": "string" },
+        "viewport": { "type": "string" },
+        "base_url": { "type": "string" },
+        "test_framework": { "type": "string" },
+        "ci": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "command": {
+      "type": "object",
+      "description": "Present when the evidence came from executing something. Redacted before persistence.",
+      "properties": {
+        "argv": { "type": "string" },
+        "cwd": { "type": "string" },
+        "exit_code": { "type": "integer" },
+        "duration_ms": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "artifact": {
+      "type": "object",
+      "description": "Pointer to bytes on disk or in an external system. Never inline large blobs into state.",
+      "properties": {
+        "path": { "type": "string" },
+        "uri": { "type": "string" },
+        "media_type": { "type": "string" },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      },
+      "additionalProperties": false
+    },
+    "excerpt": {
+      "type": "string",
+      "maxLength": 8000,
+      "description": "Redacted, truncated text sample. For humans reading the report; the artifact is the source of truth."
+    },
+    "supports": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "IDs this evidence backs (test case, finding, decision)."
+    },
+    "redacted": { "type": "boolean", "description": "True when the redaction pass modified content." },
+    "provenance": { "$ref": "common.schema.json#/definitions/provenance" }
+  },
+  "additionalProperties": false
+}

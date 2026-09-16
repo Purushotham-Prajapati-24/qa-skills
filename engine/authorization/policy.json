@@ -1,0 +1,83 @@
+{
+  "$comment": "Authorization policy for anything the agent does that reaches outside the workspace. The default answer to 'may I write?' is NO. This file is the only place that answer can change.",
+  "version": "1.0.0",
+  "principles": [
+    "Reading is free; writing is earned.",
+    "Authorization is per-action and per-session. Approving one issue does not approve the next.",
+    "An action is only 'done' when the provider confirms it. An unconfirmed write is reported as INCONCLUSIVE.",
+    "Never assign work to a human the agent picked itself.",
+    "Prefer the safe environment. If a safe environment does not exist, that is a blocker, not a reason to use production."
+  ],
+  "levels": {
+    "none": "No authorization needed. Read-only, workspace-local.",
+    "workspace-only": "May write inside the repository working tree only. Never outside it.",
+    "explicit": "Requires the user to authorise this specific action in this session.",
+    "explicit-named-assignee": "Requires the user to name the account, or to state a rule the agent can apply mechanically.",
+    "non-production-only": "Permitted only against an environment the profile marks as non-production.",
+    "prohibited-by-default": "Refuse. May only proceed if the user restates the request after being told the risk."
+  },
+  "actions": {
+    "fs.write_test_file": { "level": "workspace-only", "note": "Adding or updating tests inside the repo is normal work." },
+    "fs.write_source_file": { "level": "explicit", "note": "Changing product code to make a test pass is forbidden separately; see forbidden_patterns." },
+    "github.create_issue": { "level": "explicit", "idempotency_key": "finding.fingerprint" },
+    "github.update_issue": { "level": "explicit" },
+    "github.comment": { "level": "explicit" },
+    "github.assign_issue": { "level": "explicit-named-assignee" },
+    "github.close_issue": { "level": "prohibited-by-default" },
+    "github.merge_pr": { "level": "prohibited-by-default" },
+    "github.delete_anything": { "level": "prohibited-by-default" },
+    "git.push": { "level": "explicit" },
+    "git.force_push": { "level": "prohibited-by-default" },
+    "jira.comment": { "level": "explicit" },
+    "jira.create_issue": { "level": "explicit" },
+    "jira.transition": { "level": "prohibited-by-default" },
+    "docs.create": { "level": "explicit" },
+    "docs.update_testing_log": { "level": "explicit", "idempotency_key": "execution_id" },
+    "drive.upload_evidence": { "level": "explicit", "note": "Evidence may contain screenshots of real data. Confirm before uploading." },
+    "db.read_non_production": { "level": "non-production-only" },
+    "db.write_non_production": { "level": "non-production-only" },
+    "db.any_production": { "level": "prohibited-by-default" },
+    "email.send": { "level": "prohibited-by-default" },
+    "sms.send": { "level": "prohibited-by-default" },
+    "payment.execute": { "level": "prohibited-by-default" },
+    "deploy.execute": { "level": "prohibited-by-default" },
+    "migration.run_destructive": { "level": "prohibited-by-default" },
+    "load_test.execute": { "level": "explicit", "note": "Load traffic is indistinguishable from an attack. Needs an owner's sign-off and a non-production target." },
+    "security_scan.active": { "level": "explicit", "note": "Active scanning of a host requires authorisation from whoever owns that host." },
+    "script.execute_untrusted": { "level": "prohibited-by-default" }
+  },
+  "environment_rules": {
+    "production_markers": ["prod", "production", "live", "www.", "api.", "app."],
+    "$comment_markers": "These are heuristics for warning, not for permission. A host is treated as non-production only when the repository profile explicitly says so.",
+    "default_environment_classification": "unknown",
+    "unknown_is_treated_as": "production",
+    "why": "Mistaking staging for production costs a wasted question. Mistaking production for staging costs an incident."
+  },
+  "forbidden_patterns": [
+    {
+      "id": "weaken-product-to-pass",
+      "rule": "Never modify product behaviour, assertions-under-test, or configuration in order to make a failing test pass.",
+      "instead": "Record a finding. A failing test that reflects a real defect is the deliverable."
+    },
+    {
+      "id": "fabricate-evidence",
+      "rule": "Never create a screenshot, log, trace or result that did not come from an actual run.",
+      "instead": "Report the status as BLOCKED or NOT_APPLICABLE."
+    },
+    {
+      "id": "claim-unconfirmed-write",
+      "rule": "Never report an external write as successful without a provider response containing an identifier.",
+      "instead": "Report INCONCLUSIVE and record what was attempted."
+    },
+    {
+      "id": "infer-assignee",
+      "rule": "Never choose a human to assign work to based on git blame, CODEOWNERS or seniority.",
+      "instead": "Leave unassigned and tell the user who the candidates are."
+    },
+    {
+      "id": "log-secrets",
+      "rule": "Never write credentials, tokens or keys into state, reports or issue bodies.",
+      "instead": "The redaction pass masks known shapes; do not deliberately capture secret material as evidence."
+    }
+  ]
+}

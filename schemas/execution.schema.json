@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "execution.schema.json",
+  "title": "Execution Record",
+  "description": "One attempt to run something. Created BEFORE the run starts (status RUNNING is expressed as PARTIAL) and finalised after, so an interrupted run leaves a trace.",
+  "type": "object",
+  "required": ["execution_id", "session_id", "started_at", "goal", "method", "status", "provenance"],
+  "properties": {
+    "execution_id": { "$ref": "common.schema.json#/definitions/executionId" },
+    "session_id": { "$ref": "common.schema.json#/definitions/sessionId" },
+    "decision_id": { "$ref": "common.schema.json#/definitions/decisionId" },
+    "plan_id": { "$ref": "common.schema.json#/definitions/planId" },
+    "started_at": { "$ref": "common.schema.json#/definitions/timestamp" },
+    "finished_at": { "$ref": "common.schema.json#/definitions/timestamp" },
+    "duration_ms": { "type": "integer", "minimum": 0 },
+    "git": { "$ref": "common.schema.json#/definitions/gitRef" },
+    "goal": { "type": "string", "minLength": 3 },
+    "test_category": { "$ref": "common.schema.json#/definitions/testCategory" },
+    "method": {
+      "type": "string",
+      "enum": [
+        "existing-suite", "generated-script", "playwright-script", "playwright-mcp",
+        "browser-agent", "static-analysis", "manual-review", "api-client",
+        "load-tool", "scanner", "database-query", "hybrid", "not-executed"
+      ],
+      "description": "'not-executed' is legitimate and must be used when the record exists only to document a BLOCKED/SKIPPED item."
+    },
+    "command": { "type": "string", "description": "Exact command line, redacted." },
+    "cwd": { "type": "string" },
+    "environment": { "type": "string", "description": "Named environment, e.g. 'local-docker', 'staging'." },
+    "status": { "$ref": "common.schema.json#/definitions/status" },
+    "status_reason": { "type": "string" },
+    "test_results": {
+      "type": "array",
+      "items": { "$ref": "test-result.schema.json" }
+    },
+    "totals": {
+      "type": "object",
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0 },
+        "errored": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "evidence": { "$ref": "common.schema.json#/definitions/evidenceRefs" },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/definitions/findingId" }
+    },
+    "uncertainties": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/definitions/uncertaintyId" }
+    },
+    "failure_classification": {
+      "type": "object",
+      "properties": {
+        "class": {
+          "type": "string",
+          "enum": [
+            "product-defect", "test-defect", "environment-defect", "infrastructure-failure",
+            "dependency-failure", "flaky-test", "configuration-failure", "data-failure",
+            "authentication-failure", "timeout", "performance-degradation",
+            "expected-behaviour-mismatch", "ambiguous-requirement", "insufficient-evidence",
+            "unclassified"
+          ]
+        },
+        "confidence": { "$ref": "common.schema.json#/definitions/confidence" },
+        "signals": { "type": "array", "items": { "type": "string" } },
+        "evidence_refs": { "$ref": "common.schema.json#/definitions/evidenceRefs" }
+      },
+      "required": ["class", "confidence"],
+      "additionalProperties": false
+    },
+    "retries": { "type": "integer", "minimum": 0 },
+    "next_action": { "type": "string" },
+    "provenance": { "$ref": "common.schema.json#/definitions/provenance" }
+  },
+  "additionalProperties": false
+}

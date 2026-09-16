@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "finding.schema.json",
+  "title": "Finding",
+  "description": "Something worth a human's attention. A finding is not automatically a defect and not automatically a GitHub issue -- promotion is a separate, authorised step.",
+  "type": "object",
+  "required": ["finding_id", "timestamp", "title", "kind", "severity", "confidence", "epistemic_class", "provenance"],
+  "properties": {
+    "finding_id": { "$ref": "common.schema.json#/definitions/findingId" },
+    "timestamp": { "$ref": "common.schema.json#/definitions/timestamp" },
+    "session_id": { "$ref": "common.schema.json#/definitions/sessionId" },
+    "execution_id": { "$ref": "common.schema.json#/definitions/executionId" },
+    "title": { "type": "string", "minLength": 8, "maxLength": 160 },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "defect", "regression", "security-issue", "accessibility-violation",
+        "performance-issue", "data-integrity-issue", "usability-issue",
+        "coverage-gap", "test-quality-issue", "documentation-gap",
+        "requirement-ambiguity", "observation"
+      ]
+    },
+    "severity": { "$ref": "common.schema.json#/definitions/severity" },
+    "priority": { "$ref": "common.schema.json#/definitions/priority" },
+    "confidence": { "$ref": "common.schema.json#/definitions/confidence" },
+    "epistemic_class": { "$ref": "common.schema.json#/definitions/epistemicClass" },
+    "summary": { "type": "string" },
+    "component": { "type": "string" },
+    "environment": { "type": "string" },
+    "reproduction": {
+      "type": "object",
+      "properties": {
+        "preconditions": { "type": "array", "items": { "type": "string" } },
+        "steps": { "type": "array", "items": { "type": "string" } },
+        "expected": { "type": "string" },
+        "actual": { "type": "string" },
+        "reproducible": { "type": "string", "enum": ["always", "intermittent", "once", "unverified"] },
+        "attempts": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "impact": { "type": "string" },
+    "git": { "$ref": "common.schema.json#/definitions/gitRef" },
+    "evidence": { "$ref": "common.schema.json#/definitions/evidenceRefs" },
+    "related_requirements": { "type": "array", "items": { "type": "string" } },
+    "related_findings": { "type": "array", "items": { "$ref": "common.schema.json#/definitions/findingId" } },
+    "duplicate_of": { "$ref": "common.schema.json#/definitions/findingId" },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "Stable hash over (component, title-normalised, expected, actual). Used to suppress duplicate issue creation."
+    },
+    "recommended_action": { "type": "string" },
+    "external_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["system", "id"],
+        "properties": {
+          "system": { "type": "string", "enum": ["github", "jira", "google-docs", "other"] },
+          "id": { "type": "string" },
+          "url": { "type": "string" },
+          "relation": { "type": "string", "enum": ["reported-as", "caused-by", "relates-to", "duplicate-of", "documented-in"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "triage": {
+      "type": "object",
+      "properties": {
+        "state": { "type": "string", "enum": ["new", "confirmed", "needs-more-evidence", "not-a-defect", "wont-report", "reported", "resolved"] },
+        "note": { "type": "string" },
+        "decided_by": { "type": "string", "enum": ["agent", "human"] },
+        "decision_id": { "$ref": "common.schema.json#/definitions/decisionId" }
+      },
+      "additionalProperties": false
+    },
+    "provenance": { "$ref": "common.schema.json#/definitions/provenance" }
+  },
+  "additionalProperties": false
+}

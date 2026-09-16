@@ -1,0 +1,71 @@
+{
+  "$comment": "Capability -> provider bindings. The testing skills reason ONLY in terms of the abstract verbs on the left. Nothing in skills/ may name an MCP tool directly, because MCP tool names are the least stable thing in this whole stack. Providers are tried in the listed order.",
+  "version": "1.0.0",
+  "providers": {
+    "shell": { "kind": "builtin", "probe": { "type": "always" }, "notes": "Claude Code Bash/PowerShell tool." },
+    "git": { "kind": "command", "probe": { "type": "command", "command": "git --version" } },
+    "gh-cli": {
+      "kind": "command",
+      "probe": { "type": "command", "command": "gh auth status" },
+      "notes": "Authenticated GitHub CLI. Scope-limited: check `gh auth status` output for the token scopes before assuming write access."
+    },
+    "mcp-github": { "kind": "mcp", "probe": { "type": "agent-declared" }, "notes": "Official GitHub MCP server. Usually requires an OAuth flow that cannot run in a non-interactive session." },
+    "mcp-atlassian": { "kind": "mcp", "probe": { "type": "agent-declared" }, "notes": "Atlassian (Jira/Confluence) MCP connector." },
+    "jira-rest": { "kind": "http", "probe": { "type": "env", "vars": ["JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN"] }, "notes": "Direct Jira Cloud REST v3 fallback when the connector is unavailable." },
+    "mcp-playwright": { "kind": "mcp", "probe": { "type": "agent-declared" }, "notes": "@playwright/mcp. Tool names verified against microsoft/playwright-mcp: browser_navigate, browser_snapshot, browser_click, browser_take_screenshot, browser_console_messages, browser_network_requests." },
+    "builtin-browser": { "kind": "builtin", "probe": { "type": "agent-declared" }, "notes": "The Claude Code in-app browser pane. Adequate for exploration and evidence capture; it is NOT a test runner." },
+    "playwright-cli": { "kind": "command", "probe": { "type": "command", "command": "npx --no-install playwright --version" } },
+    "mcp-google-drive": { "kind": "mcp", "probe": { "type": "agent-declared" } },
+    "local-doc-mirror": {
+      "kind": "builtin",
+      "probe": { "type": "always" },
+      "notes": "Always-available fallback: maintain the testing log as versioned Markdown under state/reports/. Honest degradation beats a fake Google Doc."
+    },
+    "node": { "kind": "command", "probe": { "type": "command", "command": "node --version" } },
+    "docker": { "kind": "command", "probe": { "type": "command", "command": "docker version --format {{.Server.Version}}" } }
+  },
+  "capabilities": {
+    "shell.run": { "providers": ["shell"], "write": false, "description": "Execute a command and capture stdout/stderr/exit code." },
+    "fs.read": { "providers": ["shell"], "write": false },
+    "fs.write": { "providers": ["shell"], "write": true, "authorization": "workspace-only" },
+    "vcs.status": { "providers": ["git"], "write": false },
+    "vcs.diff": { "providers": ["git"], "write": false },
+    "vcs.log": { "providers": ["git"], "write": false },
+
+    "github.read_repo": { "providers": ["mcp-github", "gh-cli"], "write": false },
+    "github.read_pr": { "providers": ["mcp-github", "gh-cli"], "write": false },
+    "github.list_changed_files": { "providers": ["mcp-github", "gh-cli", "git"], "write": false },
+    "github.search_issues": { "providers": ["mcp-github", "gh-cli"], "write": false },
+    "github.create_issue": { "providers": ["mcp-github", "gh-cli"], "write": true, "authorization": "explicit", "idempotency": "finding-fingerprint" },
+    "github.update_issue": { "providers": ["mcp-github", "gh-cli"], "write": true, "authorization": "explicit" },
+    "github.comment": { "providers": ["mcp-github", "gh-cli"], "write": true, "authorization": "explicit" },
+    "github.assign_issue": { "providers": ["mcp-github", "gh-cli"], "write": true, "authorization": "explicit-named-assignee", "description": "Assignment is NEVER inferred. The user must name the account or state the rule." },
+    "github.close_issue": { "providers": ["mcp-github", "gh-cli"], "write": true, "authorization": "prohibited-by-default" },
+    "github.merge_pr": { "providers": ["mcp-github", "gh-cli"], "write": true, "authorization": "prohibited-by-default" },
+    "ci.read_runs": { "providers": ["gh-cli", "mcp-github"], "write": false },
+
+    "jira.search": { "providers": ["mcp-atlassian", "jira-rest"], "write": false },
+    "jira.read_ticket": { "providers": ["mcp-atlassian", "jira-rest"], "write": false },
+    "jira.comment": { "providers": ["mcp-atlassian", "jira-rest"], "write": true, "authorization": "explicit" },
+    "jira.create_issue": { "providers": ["mcp-atlassian", "jira-rest"], "write": true, "authorization": "explicit" },
+    "jira.transition": { "providers": ["mcp-atlassian", "jira-rest"], "write": true, "authorization": "prohibited-by-default" },
+
+    "docs.read": { "providers": ["mcp-google-drive", "local-doc-mirror"], "write": false },
+    "docs.create": { "providers": ["mcp-google-drive", "local-doc-mirror"], "write": true, "authorization": "explicit" },
+    "docs.update_testing_log": { "providers": ["mcp-google-drive", "local-doc-mirror"], "write": true, "authorization": "explicit", "idempotency": "execution-id" },
+    "drive.list": { "providers": ["mcp-google-drive", "local-doc-mirror"], "write": false },
+    "drive.upload_evidence": { "providers": ["mcp-google-drive", "local-doc-mirror"], "write": true, "authorization": "explicit" },
+
+    "browser.explore": { "providers": ["mcp-playwright", "builtin-browser"], "write": false, "description": "Open-ended, agent-driven interaction with a running UI. Not reproducible." },
+    "browser.screenshot": { "providers": ["mcp-playwright", "builtin-browser"], "write": false },
+    "browser.resize": { "providers": ["mcp-playwright", "builtin-browser"], "write": false },
+    "browser.read_console": { "providers": ["mcp-playwright", "builtin-browser"], "write": false },
+    "browser.read_network": { "providers": ["mcp-playwright", "builtin-browser"], "write": false },
+    "browser.run_deterministic_test": { "providers": ["playwright-cli", "shell"], "write": false, "description": "Run a committed spec file and get a machine-readable result." },
+    "browser.trace": { "providers": ["playwright-cli"], "write": false },
+
+    "http.request": { "providers": ["shell"], "write": false, "description": "Read-only API calls. A request with side effects is an external write and needs authorisation." },
+    "database.query": { "providers": ["shell"], "write": false, "authorization": "non-production-only" },
+    "container.run": { "providers": ["docker"], "write": false }
+  }
+}

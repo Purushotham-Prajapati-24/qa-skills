@@ -1,0 +1,162 @@
+{
+  "$comment": "Browser testing method selection. Every threshold here exists for a stated reason and is meant to be tuned. Nothing in engine code hard-codes a number that belongs in this file.",
+  "version": "1.0.0",
+  "factors": {
+    "ui_known": { "label": "How well the agent already understands this UI", "why": "An unmapped UI cannot be scripted reliably; you must look at it first." },
+    "repeatability": { "label": "How often this exact scenario will need re-running", "why": "Repetition is what pays back the cost of writing a script." },
+    "determinism_required": { "label": "Whether the answer must be identical run to run", "why": "Agent-driven exploration is not reproducible; a gate cannot depend on it." },
+    "exploratory_value": { "label": "Expected value of open-ended poking around", "why": "High when requirements are vague or behaviour is unknown." },
+    "ci_suitability": { "label": "Whether this must run unattended in CI", "why": "CI needs a deterministic, headless, exit-code-producing artefact." },
+    "business_criticality": { "label": "Cost of this flow being broken in production" },
+    "assertion_complexity": { "label": "Precision of the checks required", "why": "Exact numeric/DOM/network assertions are a script's strength." },
+    "execution_frequency": { "label": "Expected runs per month" },
+    "maintenance_cost_tolerance": { "label": "Team's appetite for maintaining another test file", "why": "Low tolerance argues against adding brittle scripts." },
+    "existing_automation": { "label": "How much of this is already covered by existing browser tests" },
+    "environment_stability": { "label": "How stable the target environment is", "why": "An unstable target makes a deterministic script fail for the wrong reason." },
+    "evidence_requirements": { "label": "Need for trace / video / screenshot artefacts" },
+    "expected_runtime_minutes": { "label": "Wall-clock cost of one run", "raw": true },
+    "tool_reliability": { "label": "Observed reliability of the automation tooling here" },
+    "network_mocking_required": { "label": "Need to intercept or stub network traffic", "why": "Route interception is a deterministic-script capability." }
+  },
+  "methods": {
+    "playwright-mcp": {
+      "label": "A. Agent-driven exploratory browser session (Playwright MCP or equivalent)",
+      "capability": "browser.explore",
+      "produces_regression_asset": false,
+      "deterministic": false,
+      "affinity": {
+        "ui_known": -0.9,
+        "repeatability": -0.6,
+        "determinism_required": -1.0,
+        "exploratory_value": 1.0,
+        "ci_suitability": -1.0,
+        "assertion_complexity": -0.5,
+        "execution_frequency": -0.5,
+        "maintenance_cost_tolerance": 0.4,
+        "existing_automation": -0.3,
+        "environment_stability": -0.2,
+        "network_mocking_required": -0.6,
+        "tool_reliability": 0.3
+      }
+    },
+    "playwright-script": {
+      "label": "B. Deterministic Playwright (or equivalent) script committed to the repo",
+      "capability": "browser.run_deterministic_test",
+      "produces_regression_asset": true,
+      "deterministic": true,
+      "affinity": {
+        "ui_known": 0.8,
+        "repeatability": 1.0,
+        "determinism_required": 1.0,
+        "exploratory_value": -0.6,
+        "ci_suitability": 1.0,
+        "business_criticality": 0.6,
+        "assertion_complexity": 0.9,
+        "execution_frequency": 0.8,
+        "maintenance_cost_tolerance": -0.5,
+        "existing_automation": -0.2,
+        "environment_stability": 0.5,
+        "evidence_requirements": 0.6,
+        "network_mocking_required": 0.9,
+        "tool_reliability": 0.5
+      }
+    },
+    "existing-tests": {
+      "label": "C. Run the browser tests the repository already has",
+      "capability": "shell.run",
+      "produces_regression_asset": false,
+      "deterministic": true,
+      "affinity": {
+        "existing_automation": 1.0,
+        "repeatability": 0.6,
+        "determinism_required": 0.8,
+        "ci_suitability": 0.8,
+        "exploratory_value": -0.8,
+        "maintenance_cost_tolerance": 0.8,
+        "environment_stability": 0.4,
+        "tool_reliability": 0.4
+      }
+    },
+    "hybrid": {
+      "label": "D. Explore first, then convert the stable path into a deterministic script",
+      "capability": "browser.explore",
+      "produces_regression_asset": true,
+      "deterministic": false,
+      "affinity": {
+        "ui_known": -0.5,
+        "repeatability": 0.9,
+        "exploratory_value": 0.8,
+        "determinism_required": 0.4,
+        "ci_suitability": 0.5,
+        "business_criticality": 0.7,
+        "execution_frequency": 0.6,
+        "assertion_complexity": 0.3,
+        "maintenance_cost_tolerance": -0.3,
+        "existing_automation": -0.4,
+        "evidence_requirements": 0.5
+      }
+    },
+    "existing-other-tooling": {
+      "label": "E. Use the browser automation stack the repository already standardised on (Cypress, Selenium, WebdriverIO, ...)",
+      "capability": "shell.run",
+      "produces_regression_asset": true,
+      "deterministic": true,
+      "affinity": {
+        "existing_automation": 0.9,
+        "maintenance_cost_tolerance": 0.7,
+        "repeatability": 0.8,
+        "ci_suitability": 0.9,
+        "determinism_required": 0.9,
+        "exploratory_value": -0.7
+      }
+    }
+  },
+  "thresholds": {
+    "hybrid_trigger": {
+      "$comment": "When the UI is poorly understood AND the scenario will be re-run often, exploring and then automating beats either pure approach. Below these values the extra step is not worth it.",
+      "min_exploratory_value": 0.55,
+      "min_repeatability": 0.55
+    },
+    "existing_first": {
+      "$comment": "If existing automation already covers this well, running it is nearly always the cheapest reliable evidence. Do that before writing anything new.",
+      "min_existing_automation": 0.7
+    },
+    "ambiguity_gate": {
+      "$comment": "Below this score the engine will not commit to a method and escalates instead -- guessing here produces confidently wrong browser strategy.",
+      "min_margin": 0.05
+    },
+    "script_conversion": {
+      "$comment": "Post-exploration rule: when should an exploratory finding become a committed test? See test-automation-lifecycle in the browser-testing skill.",
+      "min_repeatability": 0.5,
+      "min_business_criticality": 0.4,
+      "min_environment_stability": 0.5,
+      "max_expected_runtime_minutes": 10
+    }
+  },
+  "hard_rules": [
+    {
+      "id": "no-mcp-for-ci-gate",
+      "when": { "ci_suitability": ">=0.8" },
+      "forbid": ["playwright-mcp"],
+      "because": "A CI gate must be reproducible and produce an exit code. An agent-driven session is neither."
+    },
+    {
+      "id": "no-script-for-unknown-ui",
+      "when": { "ui_known": "<=0.25" },
+      "forbid": ["playwright-script"],
+      "because": "Writing selectors for a UI nobody has looked at produces brittle tests that encode guesses. Explore first."
+    },
+    {
+      "id": "no-existing-without-existing",
+      "when": { "existing_automation": "<=0.15" },
+      "forbid": ["existing-tests", "existing-other-tooling"],
+      "because": "There is nothing to run."
+    },
+    {
+      "id": "no-exploration-on-production",
+      "when": { "environment_is_production": "==1" },
+      "forbid": ["playwright-mcp", "hybrid"],
+      "because": "Open-ended agent interaction with production can trigger real side effects. Requires explicit user authorisation to override."
+    }
+  ]
+}
