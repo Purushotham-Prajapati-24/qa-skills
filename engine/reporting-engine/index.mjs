@@ -40,10 +40,34 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
   const id = nextId('report', now);
   const previous = session.last_report ?? null;
 
-  const notTested = [
-    ...applicability.filter((a) => !a.applicable).map((a) => `${a.category}: ${a.reason}`),
-    ...executions.filter((e) => ['BLOCKED', 'SKIPPED', 'DEFERRED', 'NOT_APPLICABLE', 'NEEDS_USER_INPUT'].includes(e.status)).map((e) => `${e.goal} — ${e.status}: ${e.status_reason}`),
-  ];
+  // Two different kinds of "not tested", and they deserve different treatment.
+  //
+  // Work that was planned and did not happen is specific and actionable -- every item
+  // gets its own line. Categories that do not apply are mostly one repeated sentence
+  // ("no matching repository signal"), and listing thirty of them buries the handful of
+  // items a reader actually needs. So those are grouped by reason, with the full list
+  // kept in the appendix.
+  const notTested = executions
+    .filter((e) => ['BLOCKED', 'SKIPPED', 'DEFERRED', 'NOT_APPLICABLE', 'NEEDS_USER_INPUT'].includes(e.status))
+    .map((e) => `${e.goal} — ${e.status}: ${e.status_reason}`);
+
+  const notApplicable = applicability.filter((a) => !a.applicable);
+  const byReason = new Map();
+  for (const row of notApplicable) {
+    const key = /no signal/i.test(row.reason)
+      ? 'no matching repository signal'
+      : /override/i.test(row.reason)
+        ? 'excluded by explicit override'
+        : 'other';
+    if (!byReason.has(key)) byReason.set(key, []);
+    byReason.get(key).push({ category: row.category, reason: row.reason });
+  }
+  const notApplicableSummary = {
+    total: notApplicable.length,
+    groups: [...byReason.entries()]
+      .map(([reason, rows]) => ({ reason, count: rows.length, categories: rows.map((r) => r.category).sort() }))
+      .sort((a, b) => b.count - a.count),
+  };
 
   const failed = executions.filter((e) => e.status === 'FAILED');
   const blocked = executions.filter((e) => ['BLOCKED', 'NEEDS_USER_INPUT'].includes(e.status));
@@ -73,6 +97,7 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
       confidence: Number((1 - audit.false_confidence_rate).toFixed(2)),
       key_points: keyPoints({ executions, findings, blocked, failed }),
       what_was_not_tested: notTested,
+      not_applicable_summary: notApplicableSummary,
     },
     execution_summary: { ...summarise() },
     detailed_results: executions
@@ -99,6 +124,28 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
       ...(e.artifact?.sha256 ? { sha256: e.artifact.sha256 } : {}),
     })),
     findings: findings.map((f) => f.finding_id),
+    // Findings are embedded, not merely referenced. A report whose most important
+    // section is a list of IDs forces the reader to go and look each one up, which in
+    // practice means they do not. A stored report should also stay readable on its own
+    // long after the state directory has moved on.
+    finding_details: findings.map((f) => ({
+      finding_id: f.finding_id,
+      title: f.title,
+      kind: f.kind,
+      severity: f.severity,
+      confidence: f.confidence,
+      component: f.component || undefined,
+      summary: f.summary || undefined,
+      expected: f.reproduction?.expected || undefined,
+      actual: f.reproduction?.actual || undefined,
+      reproducible: f.reproduction?.reproducible || undefined,
+      attempts: f.reproduction?.attempts,
+      impact: f.impact || undefined,
+      evidence: f.evidence ?? [],
+      recommended_action: f.recommended_action || undefined,
+      duplicate_of: f.duplicate_of || undefined,
+      external_refs: f.external_refs ?? [],
+    })),
     external_writes: writes.map((w) => ({
       system: w.system,
       action: w.action,
@@ -113,12 +160,32 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
     deferred_work: deferred.map((e) => ({ execution_id: e.execution_id, goal: e.goal, reason: e.status_reason })),
     interrupted_work: interrupted.map((e) => ({ execution_id: e.execution_id, goal: e.goal, reason: e.status_reason })),
     uncertainty_register: uncertainties.map((u) => u.id),
+    // Same principle as finding_details: a bare list of identifiers is a list of
+    // lookups, and a reader does not perform them.
+    uncertainty_details: uncertainties.map((u) => ({
+      id: u.id,
+      status: u.status,
+      question: u.question,
+      next_action: u.next_action,
+      owner: u.owner ?? 'agent',
+      affected_scope: u.affected_scope ?? [],
+      resolved: u.status === 'resolved',
+    })),
     coverage_gaps: (plan?.change_summary?.coverage_gaps ?? []).concat(
       applicability.filter((a) => a.applicable && a.existing_coverage === 'none').map((a) => `${a.category}: no existing coverage`),
     ),
     remaining_work: session.remaining_work ?? [],
     recommendations,
     decision_history: decisions.map((d) => d.decision_id),
+    decision_summaries: decisions.map((d) => ({
+      decision_id: d.decision_id,
+      question: d.question,
+      selected_option: d.selected_option,
+      confidence: d.confidence,
+      reversible: d.reversible,
+      top_reason: d.reason?.[0] ?? '',
+      outcome: d.outcome?.verdict ?? undefined,
+    })),
     metrics,
     integrity: {
       unevidenced_pass_claims: audit.unevidenced_pass_claims,
@@ -153,132 +220,333 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
   return { report, markdown: md, markdown_path: mdPath };
 }
 
+
+/* ------------------------------------------------------------- summarising */
+
+const SEVERITY_ORDER = ['blocker', 'critical', 'major', 'minor', 'trivial'];
+const SEVERITY_LABEL = {
+  blocker: 'Blocker', critical: 'Critical', major: 'Major', minor: 'Minor', trivial: 'Trivial',
+};
+
 function headline({ overall, executions, findings, notTested }) {
   const real = executions.filter((e) => e.method !== 'not-executed').length;
-  // Count everything actionable, not only kind === 'defect'. A security-issue or an
-  // accessibility-violation is a defect finding in every sense the reader cares about;
-  // counting by the literal kind string under-reports the headline.
-  const actionable = findings.filter((f) => !f.duplicate_of && f.kind !== 'observation').length;
-  return `${overall}: ${real} execution(s) run, ${actionable} actionable finding(s), ${notTested.length} item(s) explicitly not tested.`;
+  const actionable = findings.filter((f) => !f.duplicate_of && f.kind !== 'observation');
+  const worst = actionable
+    .map((f) => SEVERITY_ORDER.indexOf(f.severity))
+    .filter((i) => i >= 0)
+    .sort((a, b) => a - b)[0];
+
+  const parts = [`${real} execution${real === 1 ? '' : 's'} run`];
+  if (actionable.length) {
+    parts.push(`${actionable.length} finding${actionable.length === 1 ? '' : 's'}${worst !== undefined ? `, worst ${SEVERITY_ORDER[worst]}` : ''}`);
+  } else {
+    parts.push('no findings');
+  }
+  if (notTested.length) parts.push(`${notTested.length} planned item${notTested.length === 1 ? '' : 's'} not run`);
+  return `**${overall}** — ${parts.join(' · ')}.`;
 }
 
 function keyPoints({ executions, findings, blocked, failed }) {
   const points = [];
-  if (failed.length) points.push(`${failed.length} execution(s) failed — see Detailed Results for the failure classification of each.`);
+  if (failed.length) points.push(`${failed.length} execution(s) failed — each carries a failure classification below.`);
   if (blocked.length) points.push(`${blocked.length} execution(s) blocked; their scope was NOT covered by anything else.`);
   const high = findings.filter((f) => ['blocker', 'critical'].includes(f.severity) && !f.duplicate_of);
   if (high.length) points.push(`${high.length} finding(s) at critical severity or above.`);
-  const lowConfidence = findings.filter((f) => f.confidence < 0.6);
+  const lowConfidence = findings.filter((f) => f.confidence < 0.6 && !f.duplicate_of);
   if (lowConfidence.length) points.push(`${lowConfidence.length} finding(s) carry low confidence and need human confirmation before action.`);
-  if (points.length === 0) points.push('No failures, no blockers and no findings were recorded. Check the "what was not tested" list before reading this as a clean bill of health.');
+  if (points.length === 0) {
+    points.push('No failures, no blockers and no findings were recorded. Check "What was not tested" before reading this as a clean bill of health.');
+  }
   return points;
 }
 
 /* ------------------------------------------------------------------ render */
 
+/**
+ * The report is rendered as an inverted pyramid: verdict, then what needs action, then
+ * what was proven, then the gaps, then supporting detail, then reference material.
+ *
+ * Two rules do most of the work:
+ *
+ *   1. An empty section is not rendered. A heading over nothing trains the reader to
+ *      skim past headings, which then hides the sections that DO have content.
+ *   2. Findings are rendered with their content, not as a list of identifiers. The most
+ *      important section of a testing report should not be a set of lookups.
+ */
+
 function table(rows, headers) {
-  if (!rows.length) return '_None._\n';
-  const out = [`| ${headers.join(' | ')} |`, `| ${headers.map(() => '---').join(' | ')} |`];
-  for (const r of rows) out.push(`| ${r.map((c) => String(c ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ')).join(' | ')} |`);
-  return `${out.join('\n')}\n`;
+  if (!rows.length) return '';
+  const cell = (c) => String(c ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ');
+  return [
+    `| ${headers.join(' | ')} |`,
+    `| ${headers.map(() => '---').join(' | ')} |`,
+    ...rows.map((r) => `| ${r.map(cell).join(' | ')} |`),
+  ].join('\n');
+}
+
+function bullets(items, mapper = (x) => x) {
+  return items.length ? items.map((i) => `- ${mapper(i)}`).join('\n') : '';
+}
+
+/** Render a section only when it has something to say. */
+function section(heading, body, { level = 2 } = {}) {
+  const content = Array.isArray(body) ? body.filter(Boolean).join('\n\n') : body;
+  if (!content || !String(content).trim()) return '';
+  return `${'#'.repeat(level)} ${heading}\n\n${String(content).trim()}`;
+}
+
+function shortDate(iso) {
+  return typeof iso === 'string' ? iso.replace('T', ' ').replace(/\.\d+Z$/, 'Z') : iso;
+}
+
+/** One finding, rendered so a reader can act on it without opening anything else. */
+function renderFinding(f) {
+  const meta = [
+    f.component ? `\`${f.component}\`` : null,
+    f.reproducible ? `reproduced ${f.attempts ? `${f.attempts}/${f.attempts}` : ''} (${f.reproducible})`.replace('  ', ' ') : null,
+    `confidence ${f.confidence}`,
+    f.kind !== 'defect' ? f.kind : null,
+  ].filter(Boolean).join(' · ');
+
+  const lines = [`#### ${f.finding_id} — ${f.title}`, '', meta, ''];
+
+  if (f.confidence < 0.6) {
+    lines.push(`> **Low confidence (${f.confidence}).** This may not be a defect. Confirm before acting.`, '');
+  }
+  if (f.summary) lines.push(f.summary, '');
+  if (f.expected || f.actual) {
+    lines.push(table(
+      [[f.expected ?? '_not stated_', f.actual ?? '_not stated_']],
+      ['Expected', 'Actual'],
+    ), '');
+  }
+  if (f.impact) lines.push(`**Impact.** ${f.impact}`, '');
+  if (f.recommended_action) lines.push(`**Next.** ${f.recommended_action}`, '');
+
+  const refs = [
+    f.evidence?.length ? `Evidence: ${f.evidence.join(', ')}` : 'Evidence: _none captured_',
+    ...(f.external_refs ?? []).map((x) => `${x.system}: ${x.url ?? x.id}`),
+  ];
+  lines.push(`_${refs.join(' · ')}_`);
+  return lines.join('\n');
 }
 
 export function render(r) {
-  const L = [];
-  const push = (...lines) => L.push(...lines, '');
+  const out = [];
+  const add = (s) => { if (s && s.trim()) out.push(s.trim()); };
 
-  push(`# Software Testing Report — ${r.report_id}`);
-  push(
-    `**Status:** ${r.executive_summary.overall_status} · **Session:** ${r.session_id} · **Generated:** ${r.generated_at}`,
-    `**Skill version:** v${r.provenance.skill_version} · **Report schema:** v${r.report_version}${r.supersedes ? ` · **Supersedes:** ${r.supersedes}` : ''}`,
-  );
+  const details = r.finding_details ?? [];
+  const actionable = details.filter((f) => !f.duplicate_of && f.kind !== 'observation');
+  const observations = details.filter((f) => f.kind === 'observation' && !f.duplicate_of);
+  const duplicates = details.filter((f) => f.duplicate_of);
 
-  push('## 1. Executive summary', r.executive_summary.headline, '',
-    ...r.executive_summary.key_points.map((p) => `- ${p}`));
+  /* ---------------------------------------------------------------- header */
 
-  if (r.executive_summary.what_was_not_tested.length) {
-    push('### What was NOT tested', '_This section is not an appendix. Read it before drawing any conclusion from the results above._', '',
-      ...r.executive_summary.what_was_not_tested.map((p) => `- ${p}`));
+  add(`# Testing Report · ${r.report_id}`);
+  add(r.executive_summary.headline);
+
+  const git = r.git ?? {};
+  add(table([[
+    r.session_id,
+    git.repository ? `${git.repository}${git.branch ? ` (${git.branch})` : ''}` : '—',
+    git.commit ?? '—',
+    git.pull_request ?? '—',
+    shortDate(r.generated_at),
+    `v${r.provenance.skill_version}`,
+  ]], ['Session', 'Repository', 'Commit', 'PR', 'Generated', 'Skill']));
+
+  if (r.supersedes) add(`_Supersedes ${r.supersedes}._`);
+
+  /* ------------------------------------------------------------- 1. verdict */
+
+  add(section('Verdict', bullets(r.executive_summary.key_points)));
+
+  /* ---------------------------------------------------- 2. needs attention */
+
+  if (actionable.length) {
+    const groups = SEVERITY_ORDER
+      .map((sev) => ({ sev, items: actionable.filter((f) => f.severity === sev) }))
+      .filter((g) => g.items.length);
+
+    const body = [
+      table(
+        groups.map((g) => [SEVERITY_LABEL[g.sev], g.items.length, g.items.map((f) => f.finding_id).join(', ')]),
+        ['Severity', 'Count', 'Findings'],
+      ),
+      ...groups.flatMap((g) => [
+        `### ${SEVERITY_LABEL[g.sev]}`,
+        ...g.items.map(renderFinding),
+      ]),
+    ];
+    add(section('Needs attention', body));
   }
 
-  if (r.git) {
-    push('## 2. Repository context',
-      table([[r.git.repository, r.git.branch ?? '—', r.git.commit ?? '—', r.git.pull_request ?? '—', r.git.dirty ? 'yes' : 'no']],
-        ['Repository', 'Branch', 'Commit', 'PR', 'Uncommitted changes']));
+  /* ------------------------------------------------------ 3. what was proven */
+
+  const proven = (r.detailed_results ?? []).filter((d) => ['PASSED', 'COMPLETED'].includes(d.status));
+  if (proven.length) {
+    add(section('What was proven', [
+      table(
+        proven.map((d) => [d.execution_id, d.goal, d.category ?? '—', d.method, (d.evidence ?? []).join(', ') || '—']),
+        ['Execution', 'What was checked', 'Category', 'Method', 'Evidence'],
+      ),
+      '_Every row above executed against the commit named at the top and is backed by the evidence cited. Nothing else in this report is a claim that something works._',
+    ]));
   }
 
-  if (r.goals?.length) {
-    push('## 3. Testing goals',
-      table(r.goals.flatMap((g) => (g.success_criteria?.length ? g.success_criteria : [{ criterion: '(no criteria declared)', status: g.status }])
-        .map((c) => [g.id, g.goal, c.criterion, c.status, (c.evidence ?? []).join(', ') || '—'])),
-        ['Goal', 'Description', 'Success criterion', 'Status', 'Evidence']));
-  }
+  /* ------------------------------------------------------- 4. not tested */
 
-  if (r.risk_assessment) {
-    const ra = r.risk_assessment;
-    push('## 4. Risk assessment',
-      `**Score:** ${ra.risk_score} (${ra.risk_level}) · **Profile:** ${ra.weights_profile} · **Assessment confidence:** ${ra.confidence}`,
-      '', table(ra.factors.map((f) => [f.factor, f.value, f.weight, f.contribution, f.epistemic_class, f.basis]),
-        ['Factor', 'Value', 'Weight', 'Contribution', 'Basis class', 'Why']));
-    if (ra.unscored_factors?.length) {
-      push(`_Excluded for lack of evidence (not scored, not guessed): ${ra.unscored_factors.join(', ')}._`);
-    }
-  }
+  const na = r.executive_summary.not_applicable_summary;
+  const notTestedBody = [
+    r.executive_summary.what_was_not_tested?.length
+      ? ['**Planned, not run.**', '', bullets(r.executive_summary.what_was_not_tested)].join('\n')
+      : '',
+    na?.total
+      ? ['**Not applicable to this repository.**', '',
+        bullets(na.groups, (g) => `${g.count} categor${g.count === 1 ? 'y' : 'ies'} — ${g.reason}: ${g.categories.join(', ')}`),
+      ].join('\n')
+      : '',
+    (r.coverage_gaps ?? []).length
+      ? ['**Coverage gaps.**', '', bullets(r.coverage_gaps)].join('\n')
+      : '',
+  ];
+  add(section('What was not tested', notTestedBody.length ? [
+    '_Read this before drawing any conclusion from the results above._',
+    ...notTestedBody,
+  ] : ''));
 
-  if (r.applicable_categories?.length) {
-    push('## 5. Test applicability matrix',
-      table(r.applicable_categories.map((a) => [a.category, a.applicable ? 'yes' : 'no', a.priority, a.existing_coverage, a.score, a.reason]),
-        ['Category', 'Applicable', 'Priority', 'Existing coverage', 'Score', 'Reason']));
-  }
+  /* ------------------------------------------------- 5. open questions etc. */
 
-  push('## 6. Execution summary',
-    table(Object.entries(r.execution_summary.by_status ?? {}).map(([s, n]) => [s, n]), ['Status', 'Count']),
-    `Total executions: ${r.execution_summary.executions} · Test cases: ${r.execution_summary.test_cases} · Wall clock: ${r.execution_summary.total_duration_ms} ms`);
+  const openQuestions = (r.uncertainty_details ?? []).filter((u) => !u.resolved);
+  add(section('Open questions', [
+    table(
+      openQuestions.map((u) => [u.id, u.status, u.question, u.next_action, u.owner]),
+      ['ID', 'Status', 'Question', 'What would resolve it', 'Owner'],
+    ),
+    openQuestions.some((u) => u.owner === 'user')
+      ? '_Questions owned by you are the only ones the agent cannot progress on its own._'
+      : '',
+  ]));
+  add(section('Remaining work', table(
+    (r.remaining_work ?? []).map((w) => [w.status, w.item, w.reason ?? '—', w.blocked_by ?? '—']),
+    ['Status', 'Item', 'Why', 'Blocked by'],
+  )));
+  add(section('Recommended next', bullets(r.recommendations ?? [])));
 
-  push('## 7. Detailed results',
-    table(r.detailed_results.map((d) => [
-      d.execution_id, d.goal, d.category ?? '—', d.method, d.status,
-      d.failure_classification ? `${d.failure_classification.class} (${d.failure_classification.confidence})` : '—',
-      (d.evidence ?? []).join(', ') || '—',
-    ]), ['Execution', 'Goal', 'Category', 'Method', 'Status', 'Failure class', 'Evidence']));
+  /* ------------------------------------------------------------- 6. detail */
 
-  push('## 8. Evidence index',
-    table(r.evidence_index.map((e) => [e.evidence_id, e.kind, e.summary, e.path ?? e.sha256 ?? '—']),
-      ['ID', 'Kind', 'Summary', 'Artifact']));
+  const detailBody = [
+    section('Executions', [
+      table(
+        (r.detailed_results ?? []).map((d) => [
+          d.execution_id, d.status, d.goal, d.method,
+          d.failure_classification ? `${d.failure_classification.class} (${d.failure_classification.confidence})` : '—',
+          d.duration_ms != null ? `${d.duration_ms} ms` : '—',
+        ]),
+        ['ID', 'Status', 'Goal', 'Method', 'Failure class', 'Duration'],
+      ),
+      table(
+        Object.entries(r.execution_summary?.by_status ?? {}).map(([s, n]) => [s, n]),
+        ['Status', 'Count'],
+      ),
+    ], { level: 3 }),
 
-  push('## 9. Findings', r.findings.length ? r.findings.map((f) => `- ${f}`).join('\n') : '_No findings recorded._');
+    section('Evidence', table(
+      (r.evidence_index ?? []).map((e) => [e.evidence_id, e.kind, e.summary, e.path ?? e.sha256 ?? '—']),
+      ['ID', 'Kind', 'Summary', 'Artifact'],
+    ), { level: 3 }),
 
-  push('## 10. External writes',
-    table(r.external_writes.map((w) => [w.system, w.action, w.target ?? '—', w.confirmed ? 'CONFIRMED' : 'NOT CONFIRMED', w.authorised_by, w.url ?? w.result_id ?? '—']),
-      ['System', 'Action', 'Target', 'Provider confirmation', 'Authorised by', 'Reference']),
-    '_An unconfirmed write means the agent attempted it and did not receive a success response. It is reported as attempted, never as done._');
+    section('External writes', [
+      table(
+        (r.external_writes ?? []).map((w) => [
+          w.system, w.action, w.target ?? '—',
+          w.confirmed ? 'CONFIRMED' : 'NOT CONFIRMED',
+          w.authorised_by, w.url ?? w.result_id ?? '—',
+        ]),
+        ['System', 'Action', 'Target', 'Provider confirmation', 'Authorised by', 'Reference'],
+      ),
+      (r.external_writes ?? []).some((w) => !w.confirmed)
+        ? '_An unconfirmed write means the agent attempted it and did not receive a success response. It is reported as attempted, never as done._'
+        : '',
+    ], { level: 3 }),
 
-  push('## 11. Blocked work', table(r.blocked_work.map((b) => [b.execution_id, b.goal, b.reason]), ['Execution', 'Goal', 'Reason']));
-  push('## 12. Deferred work', table(r.deferred_work.map((b) => [b.execution_id, b.goal, b.reason]), ['Execution', 'Goal', 'Reason']));
-  push('## 13. Interrupted work', table(r.interrupted_work.map((b) => [b.execution_id, b.goal, b.reason]), ['Execution', 'Goal', 'Reason']));
+    section('Decisions', table(
+      (r.decision_summaries ?? []).map((d) => [
+        d.decision_id, d.question, d.selected_option, d.confidence,
+        d.reversible ? 'yes' : 'no', d.outcome ?? '—', d.top_reason,
+      ]),
+      ['ID', 'Question', 'Chose', 'Confidence', 'Reversible', 'Outcome', 'Leading reason'],
+    ), { level: 3 }),
 
-  push('## 14. Uncertainty register', r.uncertainty_register.length ? r.uncertainty_register.map((u) => `- ${u}`).join('\n') : '_No open uncertainties._');
-  push('## 15. Coverage gaps', r.coverage_gaps.length ? r.coverage_gaps.map((c) => `- ${c}`).join('\n') : '_None identified. Note: "none identified" is not "none exist"._');
-  push('## 16. Remaining work', table((r.remaining_work ?? []).map((w) => [w.item, w.status, w.reason ?? '—']), ['Item', 'Status', 'Reason']));
-  push('## 17. Recommendations', r.recommendations.length ? r.recommendations.map((c) => `- ${c}`).join('\n') : '_None._');
-  push('## 18. Decision history', r.decision_history.length ? r.decision_history.map((d) => `- ${d}`).join('\n') : '_No decisions recorded._');
+    section('Observations', [
+      '_Recorded for the reader, not filed as defects._',
+      ...observations.map(renderFinding),
+    ], { level: 3 }),
 
-  const m = r.metrics?.metrics ?? {};
-  push('## 19. Evaluation metrics',
-    table(Object.entries(m).map(([k, v]) => [k, v === null ? 'n/a (zero denominator)' : v, r.metrics.definitions?.[k]?.direction ?? '']),
-      ['Metric', 'Value', 'Direction']),
-    `_Sample sizes: ${JSON.stringify(r.metrics?.sample_sizes ?? {})}_`);
+    section('Duplicates suppressed', bullets(duplicates, (f) => `${f.finding_id} — same fingerprint as ${f.duplicate_of}`), { level: 3 }),
 
-  push('## 20. Report integrity self-audit',
-    table([[r.integrity.unevidenced_pass_claims, r.integrity.false_confidence_rate]],
-      ['Unevidenced PASSED claims', 'False confidence rate']),
-    ...(r.integrity.violations.length
-      ? ['**Violations detected:**', ...r.integrity.violations.map((v) => `- ${v}`)]
-      : ['_No integrity violations detected in this report._']),
-    '', '**Checks run:**', ...r.integrity.checks_run.map((c) => `- ${c}`));
+    section('Automation added', table(
+      (r.automation_added ?? []).map((a) => [a.path, a.kind, a.test_count ?? '—', a.converted_from ?? '—']),
+      ['Path', 'Kind', 'Tests', 'Converted from'],
+    ), { level: 3 }),
+  ].filter(Boolean);
 
-  push('---',
-    `Produced by the Autonomous Software Testing skill system v${SYSTEM_VERSION}. Every status in this document is traceable to a record under \`state/\`.`);
+  if (detailBody.length) add(['---', '', section('Detail', detailBody)].join('\n'));
 
-  return L.join('\n');
+  /* ----------------------------------------------------------- 7. appendix */
+
+  const ra = r.risk_assessment;
+  const appendix = [
+    ra ? section('Risk assessment', [
+      `**${ra.risk_score}** (${ra.risk_level}) · profile \`${ra.weights_profile}\` · assessment confidence ${ra.confidence}`,
+      table(
+        ra.factors.map((f) => [f.factor, f.value, f.weight, f.contribution, f.epistemic_class, f.basis]),
+        ['Factor', 'Value', 'Weight', 'Contribution', 'Basis', 'Why'],
+      ),
+      ra.unscored_factors?.length
+        ? `_Excluded for lack of evidence — not scored, not guessed: ${ra.unscored_factors.join(', ')}._`
+        : '',
+    ], { level: 3 }) : '',
+
+    section('Test applicability matrix', table(
+      (r.applicable_categories ?? []).map((a) => [
+        a.category, a.applicable ? 'yes' : 'no', a.priority, a.existing_coverage, a.score, a.reason,
+      ]),
+      ['Category', 'Applicable', 'Priority', 'Coverage', 'Score', 'Reason'],
+    ), { level: 3 }),
+
+    section('Goals', table(
+      (r.goals ?? []).flatMap((g) =>
+        (g.success_criteria?.length ? g.success_criteria : [{ criterion: '_no criteria declared_', status: g.status }])
+          .map((c) => [g.id, g.goal, c.criterion, c.status, (c.evidence ?? []).join(', ') || '—'])),
+      ['Goal', 'Description', 'Success criterion', 'Status', 'Evidence'],
+    ), { level: 3 }),
+
+    section('Evaluation metrics', [
+      table(
+        Object.entries(r.metrics?.metrics ?? {}).map(([k, v]) => [
+          k, v === null ? '_n/a (zero denominator)_' : v, r.metrics.definitions?.[k]?.direction ?? '',
+        ]),
+        ['Metric', 'Value', 'Direction'],
+      ),
+      `_Sample sizes: ${JSON.stringify(r.metrics?.sample_sizes ?? {})}. A null means the denominator was zero — honest, and not to be read as 0._`,
+    ], { level: 3 }),
+
+    section('Integrity self-audit', [
+      table(
+        [[r.integrity.unevidenced_pass_claims, r.integrity.false_confidence_rate]],
+        ['Unevidenced PASSED claims', 'False confidence rate'],
+      ),
+      r.integrity.violations.length
+        ? ['**Violations detected:**', '', bullets(r.integrity.violations)].join('\n')
+        : '_No integrity violations detected in this report._',
+      ['**Checks run:**', '', bullets(r.integrity.checks_run)].join('\n'),
+    ], { level: 3 }),
+  ].filter(Boolean);
+
+  if (appendix.length) add(['---', '', section('Appendix', appendix)].join('\n'));
+
+  add(`---\n\nProduced by the Autonomous Software Testing skill system v${SYSTEM_VERSION}. Every status above is traceable to a record under \`state/\`.`);
+
+  return `${out.join('\n\n')}\n`;
 }

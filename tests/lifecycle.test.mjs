@@ -351,11 +351,83 @@ test('the report is rendered from data and audits its own false confidence', () 
   assert.ok(report.executive_summary.what_was_not_tested.length > 0);
   assert.equal(typeof report.integrity.false_confidence_rate, 'number');
 
-  assert.match(markdown, /## 1\. Executive summary/);
-  assert.match(markdown, /### What was NOT tested/);
-  assert.match(markdown, /## 20\. Report integrity self-audit/);
+  assert.match(markdown, /^# Testing Report · REPORT-/m);
+  assert.match(markdown, /## Verdict/);
+  assert.match(markdown, /## What was not tested/);
+  assert.match(markdown, /### Integrity self-audit/);
   assert.match(markdown, /NOT CONFIRMED/, 'the unconfirmed Jira write must be visible as unconfirmed');
   assert.ok(fs.existsSync(path.join(tmp.dir, 'reports', `${report.report_id}.md`)), 'markdown is written to disk');
+});
+
+test('findings are rendered with their content, not as a list of identifiers', () => {
+  const { report, markdown } = reporting.generate({ recommendations: [] });
+  const critical = report.finding_details.find((f) => f.severity === 'critical');
+  assert.ok(critical, 'the fixture should include a critical finding');
+
+  // The failure this guards against: a report whose most important section is a set of
+  // lookups the reader will not perform.
+  assert.match(markdown, /## Needs attention/);
+  assert.match(markdown, /### Critical/);
+  assert.match(markdown, new RegExp(`#### ${critical.finding_id} — `));
+  // The content that makes a finding actionable without a second lookup.
+  assert.match(markdown, /\| Expected \| Actual \|/);
+  assert.match(markdown, /an order row exists/);
+  assert.match(markdown, new RegExp(`_Evidence: ${critical.evidence[0]}`));
+  // The fixture sets no recommended_action, so that line must be absent rather than
+  // rendered empty -- the same skip-when-empty rule the sections follow.
+  assert.ok(!markdown.includes('**Next.** \n'), 'an absent recommended action must not render a stub');
+});
+
+test('an empty section is not rendered at all', () => {
+  const { markdown } = reporting.generate({ recommendations: [] });
+
+  // A heading over nothing trains the reader to skim past headings, which then hides
+  // the sections that do have content.
+  for (const heading of ['## Automation added', '## Traceability', '## Repository context']) {
+    assert.ok(!markdown.includes(heading), `"${heading}" has no content and must not be rendered`);
+  }
+
+  // Walk the document; a heading is empty only when the NEXT heading is at the same or
+  // a shallower level with nothing between them. A heading followed by a sub-heading is
+  // a container ("Detail" over "Executions"), which is legitimate.
+  const lines = markdown.split('\n');
+  const empties = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    const h = /^(#{2,4}) (.+)$/.exec(lines[i]);
+    if (!h) continue;
+    const level = h[1].length;
+    let body = '';
+    let j = i + 1;
+    for (; j < lines.length; j += 1) {
+      const next = /^(#{1,4}) /.exec(lines[j]);
+      if (next) { if (next[1].length <= level) break; body += 'sub'; break; }
+      body += lines[j].trim();
+    }
+    if (!body) empties.push(h[2]);
+  }
+  assert.deepEqual(empties, [], `sections rendered with an empty body: ${empties.join(', ')}`);
+});
+
+test('not-applicable categories are grouped, not listed one per line', () => {
+  const applicability = Array.from({ length: 12 }, (_, i) => ({
+    category: ['unit', 'api', 'e2e', 'ui', 'visual', 'load', 'stress', 'migration', 'caching', 'localization', 'contract', 'database'][i],
+    applicable: false,
+    reason: 'Repository shows no signal for this category (needs any of: x; missing: x).',
+  }));
+  const { report, markdown } = reporting.generate({ applicability, recommendations: [] });
+
+  assert.equal(report.executive_summary.not_applicable_summary.total, 12);
+  const group = report.executive_summary.not_applicable_summary.groups[0];
+  assert.equal(group.count, 12);
+  assert.match(group.reason, /no matching repository signal/);
+
+  // One grouped line, not twelve repetitions of the same sentence.
+  const notTested = markdown.split('## What was not tested')[1].split(/^## /m)[0];
+  assert.match(notTested, /12 categories — no matching repository signal/);
+  assert.ok(
+    (notTested.match(/Repository shows no signal/g) ?? []).length === 0,
+    'the repeated boilerplate reason must not appear in the summary section',
+  );
 });
 
 test('a second session archives the first rather than clobbering it', () => {

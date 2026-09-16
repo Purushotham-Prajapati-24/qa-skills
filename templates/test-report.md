@@ -1,114 +1,115 @@
-# Software Testing Report — {{REPORT_ID}}
+# Testing Report · {{REPORT_ID}}
 
-> **Do not hand-write this file.** It is rendered by
-> `node bin/ast.mjs report generate` from records under `state/`. This template exists so
-> you can see the shape and know what each section is for.
+> **Do not hand-write this file.** It is rendered by `node bin/ast.mjs report generate`
+> from records under `state/`. This template exists so you can see the shape and know what
+> each part is for.
 >
 > The rendering is the mechanism: if a claim is not in the data, no code path puts it in
 > the document.
 
-**Status** {{OVERALL}} · **Session** {{SESSION-ID}} · **Generated** {{ISO-8601}}
-**Skill version** {{v0.5.0}} · **Report schema** {{v1.0.0}} · **Supersedes** {{REPORT-…}}
+---
+
+## The shape, and why
+
+The report is an **inverted pyramid**. A reader who stops after thirty seconds should still
+come away with an accurate picture.
+
+```
+Header      verdict in one line, plus the facts that make it checkable
+Verdict     the 3-5 things a human must know
+Needs attention   findings, in full, worst first        <- the point of the document
+What was proven   passed executions, each with evidence
+What was not tested   planned-but-not-run, then grouped not-applicable
+Open questions / Remaining work / Recommended next
+---
+Detail      executions, evidence, external writes, decisions, observations
+---
+Appendix    risk, applicability matrix, goals, metrics, integrity self-audit
+```
+
+Two rules do most of the work:
+
+**An empty section is not rendered.** A heading over nothing trains the reader to skim past
+headings, which then hides the sections that do have content. The old format rendered 20
+numbered sections of which 7 were routinely empty.
+
+**Findings are rendered with their content, not as identifiers.** The most important
+section of a testing report should not be a list of lookups the reader will not perform.
 
 ---
 
-## 1. Executive summary
+## Header
 
-{{headline: "N executions run, M defect findings, K items explicitly not tested."}}
+```markdown
+# Testing Report · REPORT-2026-00142
 
-- {{key point}}
+**FAILED** — 3 executions run · 7 findings, worst critical · 4 planned items not run.
 
-### What was NOT tested
-
-*This section is not an appendix. Read it before drawing any conclusion from the results
-above.*
-
-- {{category}}: {{reason it is not applicable}}
-- {{goal}} — BLOCKED: {{reason}}
-
-## 2. Repository context
-
-| Repository | Branch | Commit | PR | Uncommitted changes |
-| --- | --- | --- | --- | --- |
-
-## 3. Testing goals
-
-| Goal | Description | Success criterion | Status | Evidence |
-| --- | --- | --- | --- | --- |
-
-## 4. Risk assessment
-
-**Score** {{0.00}} ({{level}}) · **Profile** {{…}} · **Assessment confidence** {{0.00}}
-
-| Factor | Value | Weight | Contribution | Basis class | Why |
+| Session | Repository | Commit | PR | Generated | Skill |
 | --- | --- | --- | --- | --- | --- |
+| SESSION-0031 | acme/shop (feat/checkout) | abc1234 | #412 | 2026-09-16 11:16Z | v0.6.0 |
 
-*Excluded for lack of evidence (not scored, not guessed): …*
+_Supersedes REPORT-2026-00141._
+```
 
-## 5. Test applicability matrix
+One bold verdict line with the numbers that matter, then the facts that let someone check
+it. Nothing else competes for the top of the page.
 
-| Category | Applicable | Priority | Existing coverage | Score | Reason |
-| --- | --- | --- | --- | --- | --- |
+## Needs attention
 
-## 6. Execution summary
+A severity roll-up table, then each finding in full, worst first:
 
-| Status | Count |
+```markdown
+### Critical
+
+#### FIND-00001 — Order is not persisted after a successful payment
+
+`checkout/payment` · reproduced 3/3 (always) · confidence 0.82
+
+Payment is captured but no order row is created, so the customer is charged with no record.
+
+| Expected | Actual |
 | --- | --- |
+| An order row exists with total_cents = 1250 | `SELECT count(*) FROM orders` returns 0 |
 
-Total executions {{N}} · Test cases {{M}} · Wall clock {{ms}}
+**Impact.** Customer is charged and receives nothing. Requires a manual refund.
 
-## 7. Detailed results
+**Next.** Check the transaction boundary in `src/orders/create.ts:88`.
 
-| Execution | Goal | Category | Method | Status | Failure class | Evidence |
-| --- | --- | --- | --- | --- | --- | --- |
+_Evidence: EV-2026-00021, EV-2026-00022 · github: https://github.com/acme/shop/issues/418_
+```
 
-## 8. Evidence index
+A finding below 0.6 confidence leads with a blockquote saying so. Observations and
+suppressed duplicates are **not** here — they sit in Detail, because they are not asking
+anyone to do anything.
 
-| ID | Kind | Summary | Artifact |
-| --- | --- | --- | --- |
+## What was proven
 
-## 9. Findings
+Only `PASSED` and `COMPLETED` executions, each with its evidence, and one line making the
+boundary explicit: *nothing else in this report is a claim that something works.*
 
-## 10. External writes
+## What was not tested
 
-| System | Action | Target | Provider confirmation | Authorised by | Reference |
-| --- | --- | --- | --- | --- | --- |
+Two kinds, treated differently because they are different:
 
-*An unconfirmed write means the agent attempted it and did not receive a success response.
-It is reported as attempted, never as done.*
+- **Planned, not run** — one line each. Specific and actionable.
+- **Not applicable** — grouped by reason. Thirty repetitions of "no matching repository
+  signal" bury the four lines a reader needs; the full per-category list stays in the
+  appendix.
+- **Coverage gaps** — where an applicable category has no existing coverage.
 
-## 11. Blocked work
-## 12. Deferred work
-## 13. Interrupted work
-## 14. Uncertainty register
-## 15. Coverage gaps
+## Detail
 
-*"None identified" is not "none exist".*
+Executions, evidence index, external writes, decisions, observations, suppressed
+duplicates, automation added. Each subsection appears only when it has rows.
 
-## 16. Remaining work
-## 17. Recommendations
-## 18. Decision history
+External writes show `CONFIRMED` or `NOT CONFIRMED` — an unconfirmed write was attempted
+and never acknowledged by the provider, and it is reported as attempted, never as done.
 
-## 19. Evaluation metrics
+## Appendix
 
-| Metric | Value | Direction |
-| --- | --- | --- |
+Risk assessment with every contribution itemised, the full applicability matrix, goals,
+evaluation metrics, and the integrity self-audit.
 
-*Sample sizes printed alongside. A `null` means the denominator was zero — honest, and not
-to be replaced with 0 or 1.*
-
-## 20. Report integrity self-audit
-
-| Unevidenced PASSED claims | False confidence rate |
-| --- | --- |
-
-**Checks run**
-- every PASSED/COMPLETED claim checked against attached evidence
-- external writes checked for provider confirmation
-- unfinished executions surfaced as INTERRUPTED
-- not-applicable categories listed with reasons
-
----
-
-Produced by the Autonomous Software Testing skill system {{version}}. Every status in this
-document is traceable to a record under `state/`.
+The self-audit states the report's own **false-confidence rate**. A report that cannot
+audit itself is not trustworthy.

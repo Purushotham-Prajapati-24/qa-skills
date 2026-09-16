@@ -73,11 +73,14 @@ function aliasKeys(obj) {
 }
 
 /** Read a JSON payload from --input <file|-> or --json '<literal>'. */
-function payload(flags) {
-  if (flags.json) return aliasKeys(JSON.parse(flags.json));
+function payload(flags, shouldAlias = true) {
+  if (flags.json) {
+    const data = JSON.parse(flags.json);
+    return shouldAlias ? aliasKeys(data) : data;
+  }
   if (flags.input) {
-    if (flags.input === '-') return aliasKeys(JSON.parse(fs.readFileSync(0, 'utf8')));
-    return aliasKeys(readJson(flags.input));
+    const data = flags.input === '-' ? JSON.parse(fs.readFileSync(0, 'utf8')) : readJson(flags.input);
+    return shouldAlias ? aliasKeys(data) : data;
   }
   return {};
 }
@@ -150,7 +153,7 @@ const COMMANDS = {
   },
 
   /* ---- repository profile ---- */
-  'profile save': { help: 'Persist a repository profile: profile save --input profile.json', run: ({ flags }) => state.saveProfile(payload(flags)) },
+  'profile save': { help: 'Persist a repository profile: profile save --input profile.json', run: ({ flags }) => state.saveProfile(payload(flags, false)) },
   'profile show': { help: 'Print the stored repository profile.', run: () => state.loadProfile() ?? { error: 'No profile stored. Run repository-intelligence first.' } },
   'profile signals': {
     help: 'Derive applicability signals from the stored profile.',

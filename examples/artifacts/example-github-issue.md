@@ -54,7 +54,7 @@ Any authenticated user can enumerate and charge other users' stored cards. Finan
 
 ## Evidence
 
-- **EV-2026-00002** (command-output, observed): api: 11/12 passed, 1 failed — `C:\Users\purus\AppData\Local\Temp\ast-demo-ec0s5X\evidence\blobs\output-2026-09-16T10-06-01-375Z-5104.txt`
+- **EV-2026-00002** (command-output, observed): api: 11/12 passed, 1 failed — `C:\Users\purus\AppData\Local\Temp\ast-demo-cRnOgw\evidence\blobs\output-2026-09-16T11-19-16-438Z-18112.txt`
 
 ## Recommended next action
 

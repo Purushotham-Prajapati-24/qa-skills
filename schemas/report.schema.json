@@ -4,123 +4,505 @@
   "title": "Testing Report",
   "description": "Machine-readable form of the testing report. The Markdown report is rendered FROM this, never written by hand, so prose can never outrun the data.",
   "type": "object",
-  "required": ["report_id", "generated_at", "session_id", "executive_summary", "execution_summary", "integrity", "provenance"],
+  "required": [
+    "report_id",
+    "generated_at",
+    "session_id",
+    "executive_summary",
+    "execution_summary",
+    "integrity",
+    "provenance"
+  ],
   "properties": {
-    "report_id": { "$ref": "common.schema.json#/definitions/reportId" },
-    "report_version": { "$ref": "common.schema.json#/definitions/semver" },
-    "generated_at": { "$ref": "common.schema.json#/definitions/timestamp" },
-    "session_id": { "$ref": "common.schema.json#/definitions/sessionId" },
-    "supersedes": { "$ref": "common.schema.json#/definitions/reportId" },
-    "git": { "$ref": "common.schema.json#/definitions/gitRef" },
+    "report_id": {
+      "$ref": "common.schema.json#/definitions/reportId"
+    },
+    "report_version": {
+      "$ref": "common.schema.json#/definitions/semver"
+    },
+    "generated_at": {
+      "$ref": "common.schema.json#/definitions/timestamp"
+    },
+    "session_id": {
+      "$ref": "common.schema.json#/definitions/sessionId"
+    },
+    "supersedes": {
+      "$ref": "common.schema.json#/definitions/reportId"
+    },
+    "git": {
+      "$ref": "common.schema.json#/definitions/gitRef"
+    },
     "executive_summary": {
       "type": "object",
-      "required": ["headline", "overall_status"],
+      "required": [
+        "headline",
+        "overall_status"
+      ],
       "properties": {
-        "headline": { "type": "string" },
-        "overall_status": { "$ref": "common.schema.json#/definitions/status" },
-        "confidence": { "$ref": "common.schema.json#/definitions/confidence" },
-        "key_points": { "type": "array", "items": { "type": "string" } },
-        "what_was_not_tested": { "type": "array", "items": { "type": "string" } }
+        "headline": {
+          "type": "string"
+        },
+        "overall_status": {
+          "$ref": "common.schema.json#/definitions/status"
+        },
+        "confidence": {
+          "$ref": "common.schema.json#/definitions/confidence"
+        },
+        "key_points": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "what_was_not_tested": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "not_applicable_summary": {
+          "type": "object",
+          "description": "Categories judged not applicable, grouped by reason. Grouped rather than listed because thirty repetitions of one sentence bury the handful of items a reader needs; the full per-category list stays in applicable_categories.",
+          "properties": {
+            "total": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "groups": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "reason",
+                  "count",
+                  "categories"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string"
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "categories": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        }
       },
       "additionalProperties": false
     },
-    "repository_context": { "type": "object" },
-    "goals": { "type": "array", "items": { "type": "object" } },
-    "risk_assessment": { "$ref": "testing-plan.schema.json#/definitions/riskAssessment" },
+    "repository_context": {
+      "type": "object"
+    },
+    "goals": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "risk_assessment": {
+      "$ref": "testing-plan.schema.json#/definitions/riskAssessment"
+    },
     "applicable_categories": {
       "type": "array",
-      "items": { "$ref": "testing-plan.schema.json#/definitions/applicabilityRow" }
+      "items": {
+        "$ref": "testing-plan.schema.json#/definitions/applicabilityRow"
+      }
     },
     "execution_summary": {
       "type": "object",
-      "required": ["by_status"],
+      "required": [
+        "by_status"
+      ],
       "properties": {
         "by_status": {
           "type": "object",
-          "patternProperties": { "^[A-Z_]+$": { "type": "integer", "minimum": 0 } }
+          "patternProperties": {
+            "^[A-Z_]+$": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
         },
-        "executions": { "type": "integer", "minimum": 0 },
-        "test_cases": { "type": "integer", "minimum": 0 },
-        "total_duration_ms": { "type": "integer", "minimum": 0 }
+        "executions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "test_cases": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        }
       },
       "additionalProperties": false
     },
-    "detailed_results": { "type": "array", "items": { "type": "object" } },
+    "detailed_results": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
     "evidence_index": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["evidence_id", "kind", "summary"],
+        "required": [
+          "evidence_id",
+          "kind",
+          "summary"
+        ],
         "properties": {
-          "evidence_id": { "$ref": "common.schema.json#/definitions/evidenceId" },
-          "kind": { "type": "string" },
-          "summary": { "type": "string" },
-          "path": { "type": "string" },
-          "sha256": { "type": "string" }
+          "evidence_id": {
+            "$ref": "common.schema.json#/definitions/evidenceId"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          }
         },
         "additionalProperties": false
       }
     },
-    "findings": { "type": "array", "items": { "$ref": "common.schema.json#/definitions/findingId" } },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/definitions/findingId"
+      }
+    },
     "external_writes": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["system", "action", "confirmed"],
+        "required": [
+          "system",
+          "action",
+          "confirmed"
+        ],
         "properties": {
-          "system": { "type": "string" },
-          "action": { "type": "string" },
-          "target": { "type": "string" },
-          "result_id": { "type": "string" },
-          "url": { "type": "string" },
+          "system": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "result_id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
           "confirmed": {
             "type": "boolean",
             "description": "True ONLY when the provider returned a success response. Never set optimistically."
           },
-          "authorised_by": { "type": "string", "enum": ["user-explicit", "policy-default", "not-authorised"] },
-          "decision_id": { "$ref": "common.schema.json#/definitions/decisionId" }
+          "authorised_by": {
+            "type": "string",
+            "enum": [
+              "user-explicit",
+              "policy-default",
+              "not-authorised"
+            ]
+          },
+          "decision_id": {
+            "$ref": "common.schema.json#/definitions/decisionId"
+          }
         },
         "additionalProperties": false
       }
     },
-    "traceability": { "type": "array", "items": { "type": "object" } },
+    "traceability": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
     "automation_added": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["path", "kind"],
+        "required": [
+          "path",
+          "kind"
+        ],
         "properties": {
-          "path": { "type": "string" },
-          "kind": { "type": "string" },
-          "test_count": { "type": "integer", "minimum": 0 },
-          "converted_from": { "$ref": "common.schema.json#/definitions/executionId" },
-          "quality_score": { "type": "number", "minimum": 0, "maximum": 1 }
+          "path": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "test_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "converted_from": {
+            "$ref": "common.schema.json#/definitions/executionId"
+          },
+          "quality_score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
         },
         "additionalProperties": false
       }
     },
-    "blocked_work": { "type": "array", "items": { "type": "object" } },
-    "deferred_work": { "type": "array", "items": { "type": "object" } },
-    "interrupted_work": { "type": "array", "items": { "type": "object" } },
-    "uncertainty_register": { "type": "array", "items": { "$ref": "common.schema.json#/definitions/uncertaintyId" } },
-    "coverage_gaps": { "type": "array", "items": { "type": "string" } },
-    "remaining_work": { "type": "array", "items": { "type": "object" } },
-    "recommendations": { "type": "array", "items": { "type": "string" } },
-    "decision_history": { "type": "array", "items": { "$ref": "common.schema.json#/definitions/decisionId" } },
-    "metrics": { "type": "object" },
+    "blocked_work": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "deferred_work": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "interrupted_work": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "uncertainty_register": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/definitions/uncertaintyId"
+      }
+    },
+    "coverage_gaps": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "remaining_work": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "decision_history": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/definitions/decisionId"
+      }
+    },
+    "metrics": {
+      "type": "object"
+    },
     "integrity": {
       "type": "object",
-      "required": ["unevidenced_pass_claims", "false_confidence_rate", "checks_run"],
+      "required": [
+        "unevidenced_pass_claims",
+        "false_confidence_rate",
+        "checks_run"
+      ],
       "description": "Self-audit of this report. A report that cannot state its own false-confidence rate is not trustworthy.",
       "properties": {
-        "unevidenced_pass_claims": { "type": "integer", "minimum": 0 },
-        "false_confidence_rate": { "type": "number", "minimum": 0, "maximum": 1 },
-        "checks_run": { "type": "array", "items": { "type": "string" } },
-        "violations": { "type": "array", "items": { "type": "string" } }
+        "unevidenced_pass_claims": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "false_confidence_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "checks_run": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "violations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       },
       "additionalProperties": false
     },
-    "provenance": { "$ref": "common.schema.json#/definitions/provenance" }
+    "provenance": {
+      "$ref": "common.schema.json#/definitions/provenance"
+    },
+    "finding_details": {
+      "type": "array",
+      "description": "Findings embedded in full, not merely referenced by ID. A report whose most important section is a list of identifiers forces the reader to look each one up, which in practice means they do not -- and a stored report should stay readable long after the state directory has moved on.",
+      "items": {
+        "type": "object",
+        "required": [
+          "finding_id",
+          "title",
+          "severity",
+          "kind",
+          "confidence"
+        ],
+        "properties": {
+          "finding_id": {
+            "$ref": "common.schema.json#/definitions/findingId"
+          },
+          "title": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "common.schema.json#/definitions/severity"
+          },
+          "confidence": {
+            "$ref": "common.schema.json#/definitions/confidence"
+          },
+          "component": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "expected": {
+            "type": "string"
+          },
+          "actual": {
+            "type": "string"
+          },
+          "reproducible": {
+            "type": "string"
+          },
+          "attempts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "impact": {
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "common.schema.json#/definitions/evidenceRefs"
+          },
+          "recommended_action": {
+            "type": "string"
+          },
+          "duplicate_of": {
+            "$ref": "common.schema.json#/definitions/findingId"
+          },
+          "external_refs": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "uncertainty_details": {
+      "type": "array",
+      "description": "Open questions embedded, not referenced. Same principle as finding_details.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "question",
+          "next_action"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/definitions/uncertaintyId"
+          },
+          "status": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string"
+          },
+          "next_action": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "affected_scope": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "resolved": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "decision_summaries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "decision_id",
+          "question",
+          "selected_option",
+          "confidence"
+        ],
+        "properties": {
+          "decision_id": {
+            "$ref": "common.schema.json#/definitions/decisionId"
+          },
+          "question": {
+            "type": "string"
+          },
+          "selected_option": {
+            "type": "string"
+          },
+          "confidence": {
+            "$ref": "common.schema.json#/definitions/confidence"
+          },
+          "reversible": {
+            "type": "boolean"
+          },
+          "top_reason": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
   },
   "additionalProperties": false
 }

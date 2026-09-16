@@ -21,21 +21,43 @@ node bin/ast.mjs validate
 
 ## Structure
 
-1. Executive summary · 2. Repository context · 3. Testing goals · 4. Risk assessment ·
-5. Applicable categories · 6. Execution summary · 7. Detailed results · 8. Evidence index ·
-9. Findings · 10. External writes · 11. Blocked · 12. Deferred · 13. Interrupted ·
-14. Uncertainty register · 15. Coverage gaps · 16. Remaining work · 17. Recommendations ·
-18. Decision history · 19. Evaluation metrics · 20. Integrity self-audit
+An **inverted pyramid**, not a numbered list of sections. A reader who stops after thirty
+seconds should still come away with an accurate picture.
 
-Section 20 is the one that matters most. A report that cannot state its own
-false-confidence rate is not trustworthy.
+| | Section | Contains |
+| --- | --- | --- |
+| Header | verdict line + facts | status, counts, session, commit, skill version |
+| 1 | **Verdict** | the 3-5 things a human must know |
+| 2 | **Needs attention** | findings, in full, worst first |
+| 3 | **What was proven** | passed executions, each with its evidence |
+| 4 | **What was not tested** | planned-but-not-run, then grouped not-applicable |
+| 5 | Open questions · Remaining work · Recommended next | |
+| — | **Detail** | executions, evidence, external writes, decisions, observations |
+| — | **Appendix** | risk, applicability matrix, goals, metrics, integrity self-audit |
 
-## "What was NOT tested" goes near the top
+Two rules do most of the work, and both are enforced by the renderer:
 
-Not in an appendix. A reader who stops after the summary must still know the boundary of
-what you covered. It is assembled automatically from the not-applicable categories and
-every `BLOCKED` / `SKIPPED` / `DEFERRED` / `NOT_APPLICABLE` execution — which is why those
-must be recorded as executions rather than dropped.
+**An empty section is not rendered.** A heading over nothing trains the reader to skim past
+headings, which then hides the sections that do have content.
+
+**Findings carry their content.** Severity, component, reproducibility, expected vs actual,
+impact, next action and evidence — all inline. The most important section of a testing
+report must not be a list of identifiers the reader will not look up.
+
+The integrity self-audit sits in the appendix but is the section that matters most: a
+report that cannot state its own false-confidence rate is not trustworthy.
+
+## "What was not tested" is section 4, not an appendix
+
+A reader who stops after the summary must still know the boundary of what you covered.
+
+It separates two things that look alike and are not:
+
+- **Planned, not run** — one line each, from every `BLOCKED` / `SKIPPED` / `DEFERRED` /
+  `NOT_APPLICABLE` / `NEEDS_USER_INPUT` execution. This is why blocked work must be
+  recorded as an execution rather than dropped.
+- **Not applicable** — grouped by reason. Thirty repetitions of "no matching repository
+  signal" bury the four lines that matter; the per-category detail stays in the appendix.
 
 ## Writing the summary
 
