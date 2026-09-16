@@ -229,13 +229,23 @@ So the agent asks:
 User: *yes, open it*
 
 ```bash
-node bin/ast.mjs write check --json '{"system":"github","action":"github.create_issue","idempotencyKey":"<fingerprint>"}'
-node bin/ast.mjs finding render FIND-00004
-gh issue create --repo acme/shop --title "[critical] Double-clicking Pay now creates two orders" --body-file body.md --label bug
-node bin/ast.mjs write record --json '{"system":"github","action":"github.create_issue","idempotencyKey":"<fingerprint>","target":"acme/shop","confirmed":true,"resultId":"#418","url":"https://github.com/acme/shop/issues/418","authorisedBy":"user-explicit","decisionId":"DEC-00008"}'
+node bin/ast.mjs github preflight
+node bin/ast.mjs github file-issue FIND-00004 --repo acme/shop --dry-run
+node bin/ast.mjs github file-issue FIND-00004 --repo acme/shop --authorised --quote "yes, open it" --decision DEC-00008
 ```
 
-Unassigned. The agent does not choose the person.
+```json
+{ "ok": true, "status": "COMPLETED", "confirmed": true,
+  "result_id": "#418", "url": "https://github.com/acme/shop/issues/418",
+  "ledger_entry": "sha256:…", "evidence_id": "EV-2026-00019" }
+```
+
+`confirmed: true` because GitHub's own response carried an issue number. Had it exited 0
+with no number, the status would have been `INCONCLUSIVE` and the report would print
+`NOT CONFIRMED` — attempted, not done.
+
+Unassigned. The agent does not choose the person; the adapter refuses without a user-named
+account.
 
 ## 9. Report
 

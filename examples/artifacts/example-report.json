@@ -1,7 +1,7 @@
 {
   "report_id": "REPORT-2026-00001",
   "report_version": "1.0.0",
-  "generated_at": "2026-09-16T09:29:36.998Z",
+  "generated_at": "2026-09-16T10:06:01.433Z",
   "session_id": "SESSION-0001",
   "executive_summary": {
     "headline": "FAILED: 4 execution(s) run, 1 actionable finding(s), 24 item(s) explicitly not tested.",
@@ -49,7 +49,7 @@
       "NOT_APPLICABLE": 1,
       "INTERRUPTED": 1
     },
-    "total_duration_ms": 32,
+    "total_duration_ms": 25,
     "test_cases": 3
   },
   "detailed_results": [
@@ -60,7 +60,7 @@
       "method": "api-client",
       "status": "FAILED",
       "status_reason": "GET /api/payment-methods/:id returned another user's card with HTTP 200.",
-      "duration_ms": 11,
+      "duration_ms": 8,
       "evidence": [
         "EV-2026-00002"
       ],
@@ -72,7 +72,9 @@
           "http-403",
           "caveat: Ambiguous between a product authorisation defect and missing test credentials."
         ],
-        "evidence_refs": "[circular]"
+        "evidence_refs": [
+          "EV-2026-00002"
+        ]
       },
       "decision_id": "DEC-00001"
     },
@@ -103,7 +105,7 @@
         "class": "insufficient-evidence",
         "confidence": 0.9,
         "signals": [],
-        "evidence_refs": "[circular]"
+        "evidence_refs": []
       },
       "decision_id": null
     },
@@ -140,7 +142,7 @@
       "method": "existing-suite",
       "status": "PASSED",
       "status_reason": "vitest suite executed against abc1234; 211 tests passed, 0 failed.",
-      "duration_ms": 15,
+      "duration_ms": 11,
       "evidence": [
         "EV-2026-00001"
       ],
@@ -154,14 +156,14 @@
       "evidence_id": "EV-2026-00001",
       "kind": "command-output",
       "summary": "vitest: 211/211 passed",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-Dv0BrS\\evidence\\blobs\\output-2026-09-16T09-29-36-911Z-13264.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-ec0s5X\\evidence\\blobs\\output-2026-09-16T10-06-01-360Z-5104.txt",
       "sha256": "sha256:08847719b18700defc4e5811a3e0be639fa4d8c92fcbdefd7cff7a429ac59e38"
     },
     {
       "evidence_id": "EV-2026-00002",
       "kind": "command-output",
       "summary": "api: 11/12 passed, 1 failed",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-Dv0BrS\\evidence\\blobs\\output-2026-09-16T09-29-36-931Z-13264.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-ec0s5X\\evidence\\blobs\\output-2026-09-16T10-06-01-375Z-5104.txt",
       "sha256": "sha256:6860525264278abb9c4fb263992a6bcbbfd9d5d8d074c9c5f1779db558c4b2b8"
     }
   ],
@@ -237,7 +239,7 @@
     "DEC-00001"
   ],
   "metrics": {
-    "computed_at": "2026-09-16T09:29:37.017Z",
+    "computed_at": "2026-09-16T10:06:01.448Z",
     "sample_sizes": {
       "executions": 6,
       "decisions": 1,
@@ -255,7 +257,7 @@
       "evidence_completeness": 1,
       "automation_conversion": null,
       "unnecessary_test_rate": 0.5,
-      "runtime_efficiency_ms_per_case": 10.6667,
+      "runtime_efficiency_ms_per_case": 8.3333,
       "flaky_identification_quality": null,
       "interruption_recovery_rate": 0.5,
       "authorization_compliance": 1,
@@ -353,10 +355,10 @@
     "violations": []
   },
   "provenance": {
-    "skill_version": "0.5.0",
+    "skill_version": "0.6.0",
     "skill_name": "test-reporting",
-    "engine_version": "0.5.0",
-    "created_at": "2026-09-16T09:29:36.998Z",
+    "engine_version": "0.6.0",
+    "created_at": "2026-09-16T10:06:01.433Z",
     "created_by": "agent",
     "session_id": "SESSION-0001"
   },

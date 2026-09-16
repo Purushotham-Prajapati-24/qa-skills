@@ -1,7 +1,7 @@
 {
   "name": "autonomous-software-testing",
   "displayName": "Autonomous Software Testing",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "An evidence-driven testing agent: profiles a repository, decides which testing actually applies, scores risk, chooses tools, executes, collects evidence, and reports honestly on what was and was not tested.",
   "author": { "name": "Autonomous Software Testing contributors" },
   "license": "MIT",

@@ -4,7 +4,7 @@ description: Measure and test performance — latency, throughput, load, stress,
 when_to_use: "performance testing", "load test", "is this fast enough", "stress test", "why is this slow", "check for a performance regression"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.5.0
+  system_version: 0.6.0
   role: specialist
 ---
 

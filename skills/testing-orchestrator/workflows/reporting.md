@@ -36,33 +36,33 @@ node bin/ast.mjs finding promote FIND-00001 --authorised --quote "yes, open a Gi
 Warnings do not block, but they change what you write: low confidence must lead the issue
 body, and unverified reproduction must be stated plainly.
 
-## 3. Perform the write, then record what actually happened
+## 3. Perform the write through the adapter
 
-Check the ledger **before**:
-
-```bash
-node bin/ast.mjs write check --json '{"system":"github","action":"github.create_issue","idempotencyKey":"<fingerprint>"}'
-```
-
-Render the body, create the issue through the resolved provider, then record the outcome
-using the provider's own response:
+**Do not run `gh` yourself.** The adapter runs the whole protocol in order — capability,
+authorisation, duplicate ledger, render, perform, parse, record, evidence — and there is no
+path to a ledger entry that skips a gate.
 
 ```bash
-node bin/ast.mjs finding render FIND-00001
-node bin/ast.mjs write record --json '{
-  "system":"github","action":"github.create_issue","idempotencyKey":"<fingerprint>",
-  "target":"owner/repo","confirmed":true,"resultId":"#412",
-  "url":"https://github.com/owner/repo/issues/412","authorisedBy":"user-explicit","decisionId":"DEC-00011"
-}'
+node bin/ast.mjs github preflight                                   # scope, not just auth
+node bin/ast.mjs github file-issue FIND-00001 --repo owner/name --dry-run
+node bin/ast.mjs github file-issue FIND-00001 --repo owner/name --authorised --quote "yes, open it" --decision DEC-00011
 ```
 
-Set `confirmed: true` **only** when the provider returned an identifier. If the call
-errored, timed out, or you cannot tell — record it with `confirmed: false` and the error.
-The report prints it as `NOT CONFIRMED`, and that is the correct outcome, not a failure
-of the report.
+`confirmed: true` is derived by parsing GitHub's own response for an issue number — never
+from an exit code. A status of `INCONCLUSIVE` means it ran and no identifier came back:
+report it as attempted, not done, and verify the target before any retry.
 
-**Assignment:** never pick the person. Not from CODEOWNERS, not from `git blame`, not
-from who seems responsible. The user names the account or it stays unassigned.
+**Assignment:** never pick the person. Not from CODEOWNERS, not from `git blame`, not from
+who seems responsible. The adapter refuses without a user-named account.
+
+**If the capability resolves to an MCP server**, the adapter runs the gates and hands you a
+ticket plus the rendered content; you perform the call and finish with
+`ast adapter complete --ticket WT-…`. Until then nothing is recorded.
+
+Systems with an executable adapter: `ast adapter systems`. Jira and Google Docs have
+written contracts but no module yet — for those, follow
+[../../../integrations/jira/adapter.md](../../../integrations/jira/adapter.md) by hand and
+record the outcome with `ast write record`.
 
 ## 4. Generate the report
 

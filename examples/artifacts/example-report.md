@@ -8,8 +8,8 @@ hand-written approximation of it.
 -->
 # Software Testing Report — REPORT-2026-00001
 
-**Status:** FAILED · **Session:** SESSION-0001 · **Generated:** 2026-09-16T09:29:36.998Z
-**Skill version:** v0.5.0 · **Report schema:** v1.0.0
+**Status:** FAILED · **Session:** SESSION-0001 · **Generated:** 2026-09-16T10:06:01.433Z
+**Skill version:** v0.6.0 · **Report schema:** v1.0.0
 
 ## 1. Executive summary
 FAILED: 4 execution(s) run, 1 actionable finding(s), 24 item(s) explicitly not tested.
@@ -138,7 +138,7 @@ _Excluded for lack of evidence (not scored, not guessed): user_impact, dependenc
 | NOT_APPLICABLE | 1 |
 | INTERRUPTED | 1 |
 
-Total executions: 6 · Test cases: 3 · Wall clock: 32 ms
+Total executions: 6 · Test cases: 3 · Wall clock: 25 ms
 
 ## 7. Detailed results
 | Execution | Goal | Category | Method | Status | Failure class | Evidence |
@@ -154,8 +154,8 @@ Total executions: 6 · Test cases: 3 · Wall clock: 32 ms
 ## 8. Evidence index
 | ID | Kind | Summary | Artifact |
 | --- | --- | --- | --- |
-| EV-2026-00001 | command-output | vitest: 211/211 passed | C:\Users\purus\AppData\Local\Temp\ast-demo-Dv0BrS\evidence\blobs\output-2026-09-16T09-29-36-911Z-13264.txt |
-| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | C:\Users\purus\AppData\Local\Temp\ast-demo-Dv0BrS\evidence\blobs\output-2026-09-16T09-29-36-931Z-13264.txt |
+| EV-2026-00001 | command-output | vitest: 211/211 passed | C:\Users\purus\AppData\Local\Temp\ast-demo-ec0s5X\evidence\blobs\output-2026-09-16T10-06-01-360Z-5104.txt |
+| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | C:\Users\purus\AppData\Local\Temp\ast-demo-ec0s5X\evidence\blobs\output-2026-09-16T10-06-01-375Z-5104.txt |
 
 
 ## 9. Findings
@@ -221,7 +221,7 @@ _None._
 | evidence_completeness | 1 | higher-is-better |
 | automation_conversion | n/a (zero denominator) | higher-is-better |
 | unnecessary_test_rate | 0.5 | lower-is-better |
-| runtime_efficiency_ms_per_case | 10.6667 | lower-is-better |
+| runtime_efficiency_ms_per_case | 8.3333 | lower-is-better |
 | flaky_identification_quality | n/a (zero denominator) | higher-is-better |
 | interruption_recovery_rate | 0.5 | higher-is-better |
 | authorization_compliance | 1 | higher-is-better |
@@ -243,4 +243,4 @@ _No integrity violations detected in this report._
 - not-applicable categories listed with reasons
 
 ---
-Produced by the Autonomous Software Testing skill system v0.5.0. Every status in this document is traceable to a record under `state/`.
+Produced by the Autonomous Software Testing skill system v0.6.0. Every status in this document is traceable to a record under `state/`.

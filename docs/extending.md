@@ -96,6 +96,27 @@ node bin/ast.mjs caps declare mcp-sentry true --note "sentry tools present"
 node bin/ast.mjs caps resolve observability.read_errors
 ```
 
+## Add an executable adapter
+
+`integrations/<system>/adapter.md` specifies a contract. Turning it into a module means the
+write protocol is enforced rather than remembered.
+
+1. `engine/adapters/<system>.mjs` exporting a factory that takes `{ exec }` so tests never
+   shell out.
+2. Reads go through `performRead`; writes go through `performWrite`. **Never write to the
+   ledger directly** — `performWrite` is the only thing that should, because it is the only
+   thing that runs the gates first.
+3. Write a `parseResult(raw)` that returns `{ confirmed, result_id, url }`. It must derive
+   confirmation from a real identifier in the provider's response, never from an exit code.
+   No identifier means `confirmed: false`, and that is the correct answer.
+4. Register it in `engine/adapters/index.mjs`.
+5. Add CLI commands in `bin/ast.mjs`.
+6. Test that each gate refuses **before** the provider is called — assert the fake exec
+   recorded zero calls. That is the property worth protecting.
+
+For an MCP-resolved provider, `performWrite` issues a ticket automatically; you only need
+to supply the parser that `completeWrite` will use.
+
 ## Change how decisions are made
 
 | To change | Edit |

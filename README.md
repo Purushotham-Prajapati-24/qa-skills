@@ -169,7 +169,26 @@ If nothing resolves, the capability is unavailable and the affected testing is `
 never simulated. `scripts/validate-repo.mjs` fails the build if any skill hard-codes an
 `mcp__*` name.
 
-- [integrations/github/](integrations/github/) — MCP or `gh` CLI
+**GitHub has an executable adapter.** One command runs the whole write protocol, in order,
+with no way to skip a gate:
+
+```bash
+node bin/ast.mjs github preflight                                         # scope, not just auth
+node bin/ast.mjs github file-issue FIND-00001 --repo owner/name --dry-run
+node bin/ast.mjs github file-issue FIND-00001 --repo owner/name --authorised --quote "yes, open it"
+```
+
+capability → authorisation → duplicate ledger → render → perform → **parse the provider's
+own response** → record → evidence. `confirmed: true` is set only by a real identifier
+coming back, never by an exit code. No identifier means `INCONCLUSIVE`, and the report
+prints `NOT CONFIRMED`.
+
+When the capability resolves to an MCP server instead, Node cannot call it — so the adapter
+runs the gates, issues a single-use ticket with the rendered content, and the agent
+finishes with `ast adapter complete --ticket WT-…`. A ledger entry cannot exist without a
+ticket, and a ticket cannot exist without passing the gates.
+
+- [integrations/github/](integrations/github/) — MCP or `gh` CLI, **executable adapter**
 - [integrations/jira/](integrations/jira/) — Atlassian connector or REST v3
 - [integrations/google/](integrations/google/) — with an always-available local Markdown
   fallback, because silently dropping the documentation obligation is worse than having no
@@ -191,7 +210,7 @@ Three metrics are alarms, not scores: `false_confidence_rate` (target 0),
 ## Verify the installation
 
 ```bash
-node --test "tests/*.test.mjs"     # 61 tests
+node --test "tests/*.test.mjs"     # 90 tests
 node bin/ast.mjs eval run          # 41 checks
 node scripts/validate-repo.mjs     # links, schemas, cross-references
 ```

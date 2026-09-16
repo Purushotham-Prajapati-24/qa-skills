@@ -6,12 +6,12 @@ completeness.
 
 **Current phase:** core complete and exercised end to end; integrations specified, bound where
 a provider exists.
-**Version:** 0.5.0 · **Last validated:** 2026-09-16
+**Version:** 0.6.0 · **Last validated:** 2026-09-16
 
 ## Validation status
 
 ```
-node --test "tests/*.test.mjs"     61 passed, 0 failed
+node --test "tests/*.test.mjs"     90 passed, 0 failed
 node bin/ast.mjs eval run          41/41 checks across 15 benchmark cases
 node scripts/validate-repo.mjs     0 problems
 node scripts/demo-session.mjs      full pipeline exercised end to end
@@ -48,13 +48,16 @@ Working, tested, exercised by the demo session.
 | Plugin + marketplace manifests | Match the verified plugin layout |
 | Skill installer | `scripts/install-skills.mjs`, with symlink fallback on Windows |
 | Repository self-check | Catches broken links, hard-coded MCP names, dangling references |
+| **GitHub adapter (executable)** | `engine/adapters/github.mjs`; 29 tests assert each gate refuses **before** the provider is called |
+| **Enforced write protocol** | `performWrite` is the only path to a ledger entry, and it runs capability -> authorisation -> ledger -> render -> perform -> parse -> record in order |
+| **Delegated-write tickets** | An MCP-resolved write cannot be recorded without a single-use, hour-limited ticket proving the gates ran |
+| **Provider error classification** | 401/403/404/422/429/network/timeout each map to a status and a stated next action; network errors are never marked retry-safe |
 
 ## PARTIALLY IMPLEMENTED
 
 | Component | State | What is missing |
 | --- | --- | --- |
-| GitHub integration | Contract specified; `gh` CLI probed and resolvable | No executable adapter module — the agent runs `gh` directly following `integrations/github/adapter.md`. Works, but the contract is not enforced in code. |
-| Jira integration | Contract specified; REST fallback probes for env vars | Same. Additionally, ADF parsing is specified but not implemented. |
+| Jira integration | Contract specified; REST fallback probes for env vars | No executable adapter module yet — the agent follows `integrations/jira/adapter.md` by hand. ADF parsing also unimplemented. This is the next obvious piece, now that `performWrite` exists to build on. |
 | Change intelligence | Skill written with concrete commands | No `ast change analyse` subcommand; the agent runs `git`/`gh` itself |
 | Requirement analysis | Skill written | No structured requirement store beyond what a plan carries |
 | Test generation | Guidance in every specialist skill | No scaffolding command; the agent writes tests directly, which is probably correct |
@@ -66,7 +69,6 @@ Working, tested, exercised by the demo session.
 | --- | --- | --- |
 | Google Docs adapter | `integrations/google/docs.md` | No Google MCP server was available. Fallback to `state/reports/` works and is honest. |
 | Google Drive adapter | `integrations/google/drive.md` | Same |
-| Executable adapter modules | `integrations/*/adapter.md` | The contracts are precise; turning them into code is the obvious next stage |
 | Regression suite from real sessions | `evaluation/regression-suite/README.md` | Needs real sessions to derive cases from |
 | Decision outcome assessment at scale | `ast decision assess` exists | Nothing prompts the agent to assess past decisions; `decision_assessment_rate` will read low until something does |
 | External trigger layer | `ARCHITECTURE.md` | Belongs to CI, not to this system. Documented rather than claimed. |

@@ -3,7 +3,63 @@
 Semantic versioning. See [docs/versioning.md](docs/versioning.md) for what is versioned
 independently — document schemas and policy files carry their own versions.
 
-## [0.5.0] — 2026-09-16
+## [0.6.0] - 2026-09-16
+
+The GitHub adapter contract becomes executable, so the external-write protocol is enforced
+in code rather than remembered by the agent.
+
+### Added
+
+- `engine/adapters/base.mjs` - `performWrite`, the single path to a ledger entry. It runs
+  capability -> authorisation -> duplicate ledger -> render -> perform -> parse -> record ->
+  evidence, in that order, and a caller cannot use half of it. `performRead` for the read
+  side, which always produces corroborating (never execution) evidence.
+- `engine/adapters/github.mjs` - the GitHubAdapter: five reads, four writes, `preflight`
+  that distinguishes authentication from scope, and parsers that derive confirmation from
+  GitHub's own response.
+- **Delegated-write tickets.** Node cannot call an MCP tool, so when a capability resolves
+  to an MCP provider the adapter runs the gates, issues a single-use ticket with the
+  rendered content, and `completeWrite` finishes the protocol. A ledger entry cannot be
+  created without a ticket; a ticket cannot be issued without passing the gates. Tickets
+  expire after an hour, because authorisation is per-session and does not keep.
+- **Provider error classification** covering 401, 403, 404, 422, 429, network errors and
+  timeouts. Each carries a status and a stated next action. Network errors and timeouts are
+  explicitly **not** retry-safe: the write may have landed, and retrying blindly is how
+  duplicate issues get created.
+- The exact body sent to each external system is kept under
+  `state/external-writes/bodies/`, so "what did the agent actually put in that issue?"
+  stays answerable.
+- CLI: `github preflight`, `github read`, `github file-issue`, `github comment`,
+  `github assign`, `adapter complete`, `adapter pending`, `adapter systems`.
+- 29 adapter tests. The central property: each gate is asserted to refuse **before** the
+  provider is called, by checking the injected executor recorded zero calls.
+
+### Changed
+
+- `skills/defect-reporting` and the orchestrator's reporting workflow now route through
+  `ast github file-issue` instead of instructing the agent to run `gh` itself. The
+  behavioural guarantee is replaced by a structural one.
+- `bin/ast.mjs` awaits command results. Adapter commands are async, and without this a
+  promise serialised as `{}` - which looks exactly like a successful empty result. A
+  refused or blocked adapter call now also exits non-zero.
+
+### Fixed
+
+- The URL parser dropped the `#issuecomment-N` anchor, so a confirmed comment could not be
+  distinguished from its parent issue. A comment URL without its anchor is now reported
+  unconfirmed rather than being keyed to the issue.
+- A `*/` inside `integrations/*/adapter.md` in a block comment terminated the comment early
+  and broke the module. Paths in comments now use `<system>`.
+
+### Notes
+
+- `confirmed: true` is still only ever set by parsing a real identifier out of the
+  provider's response. Exit code 0 with no identifier is `INCONCLUSIVE`, and the report
+  prints `NOT CONFIRMED`.
+- The delegated path is weaker than the CLI path: the agent could perform a call and never
+  return. It cannot fabricate a *confirmed* write, because confirmation is derived here.
+
+## [0.5.0] - 2026-09-16
 
 Initial implementation. Core engines are implemented and tested; integration adapters are
 specified, and bound where a provider exists. See [PROGRESS.md](PROGRESS.md) for the honest
@@ -108,4 +164,5 @@ Recorded because they are the kind that would otherwise recur:
 - Decision accuracy is self-assessed unless a human sets the verdict.
 - Redaction cannot recognise a secret that looks like ordinary text.
 
+[0.6.0]: https://github.com/your-org/autonomous-software-testing/releases/tag/v0.6.0
 [0.5.0]: https://github.com/your-org/autonomous-software-testing/releases/tag/v0.5.0

@@ -4,7 +4,7 @@ description: Write, run and assess unit and component tests — the repository's
 when_to_use: "write unit tests", "run the unit suite", "is this covered by tests", "add tests for this function"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.5.0
+  system_version: 0.6.0
   role: specialist
 ---
 
