@@ -3,6 +3,11 @@
 An adapter is the mapping from a capability verb to one provider's concrete calls. This
 document specifies the contract any GitHub provider must satisfy.
 
+> **Implemented.** `engine/adapters/github.mjs` satisfies this contract against the `gh`
+> CLI, and delegates via a single-use ticket when the capability resolves to the GitHub MCP
+> server. Covered by `tests/adapters.test.mjs`. This document remains the specification, the
+> module is the implementation, and the tests are what keep them honest.
+
 ## Shape
 
 ```

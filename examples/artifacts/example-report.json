@@ -1,43 +1,54 @@
 {
   "report_id": "REPORT-2026-00001",
-  "report_version": "1.0.0",
-  "generated_at": "2026-09-16T09:29:36.998Z",
+  "report_version": "1.1.0",
+  "generated_at": "2026-09-16T11:19:16.491Z",
   "session_id": "SESSION-0001",
   "executive_summary": {
-    "headline": "FAILED: 4 execution(s) run, 1 actionable finding(s), 24 item(s) explicitly not tested.",
+    "headline": "**FAILED** — 4 executions run · 1 finding, worst critical · 2 planned items not run.",
     "overall_status": "FAILED",
     "confidence": 1,
     "key_points": [
-      "1 execution(s) failed — see Detailed Results for the failure classification of each.",
+      "1 execution(s) failed — each carries a failure classification below.",
       "1 execution(s) blocked; their scope was NOT covered by anything else.",
       "1 finding(s) at critical severity or above."
     ],
     "what_was_not_tested": [
-      "agent-tool-eval: Repository shows no signal for this category (needs any of: agent-tools; missing: agent-tools).",
-      "ai-llm: Repository shows no signal for this category (needs any of: llm; missing: llm).",
-      "caching: Repository shows no signal for this category (needs any of: cache; missing: cache).",
-      "compatibility: Repository shows no signal for this category (needs any of: multi-browser, container; missing: multi-browser, container).",
-      "concurrency: Repository shows no signal for this category (needs any of: concurrency; missing: concurrency).",
-      "contract: Repository shows no signal for this category (needs any of: public-contract; missing: public-contract).",
-      "cross-browser: Repository shows no signal for this category (needs any of: multi-browser; missing: multi-browser).",
-      "deployment: Repository shows no signal for this category (needs any of: deploy-config; missing: deploy-config).",
-      "endurance: Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive).",
-      "infrastructure: Repository shows no signal for this category (needs any of: container, deploy-config; missing: container, deploy-config).",
-      "load: Repository shows no signal for this category (needs all of: perf-sensitive, http-api; missing: perf-sensitive).",
-      "localization: Repository shows no signal for this category (needs any of: i18n; missing: i18n).",
-      "logging-monitoring: Repository shows no signal for this category (needs any of: observability; missing: observability).",
-      "mobile-viewport: Repository shows no signal for this category (needs any of: responsive; missing: responsive).",
-      "non-functional: Repository shows no signal for this category (needs any of: perf-sensitive, observability; missing: perf-sensitive, observability).",
-      "observability: Repository shows no signal for this category (needs any of: observability; missing: observability).",
-      "performance: Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive).",
-      "rag-evaluation: Repository shows no signal for this category (needs any of: rag; missing: rag).",
-      "responsive: Repository shows no signal for this category (needs any of: responsive; missing: responsive).",
-      "rollback: Repository shows no signal for this category (needs any of: rollback-path; missing: rollback-path).",
-      "spike: Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive).",
-      "stress: Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive).",
       "Payment E2E against the real provider — BLOCKED: STRIPE_SECRET_KEY is unset; refusing to transact against a live key.",
       "Localisation testing — NOT_APPLICABLE: No i18n resources exist in the repository; nothing is translated."
-    ]
+    ],
+    "not_applicable_summary": {
+      "total": 22,
+      "groups": [
+        {
+          "reason": "no matching repository signal",
+          "count": 22,
+          "categories": [
+            "agent-tool-eval",
+            "ai-llm",
+            "caching",
+            "compatibility",
+            "concurrency",
+            "contract",
+            "cross-browser",
+            "deployment",
+            "endurance",
+            "infrastructure",
+            "load",
+            "localization",
+            "logging-monitoring",
+            "mobile-viewport",
+            "non-functional",
+            "observability",
+            "performance",
+            "rag-evaluation",
+            "responsive",
+            "rollback",
+            "spike",
+            "stress"
+          ]
+        }
+      ]
+    }
   },
   "execution_summary": {
     "executions": 6,
@@ -49,7 +60,7 @@
       "NOT_APPLICABLE": 1,
       "INTERRUPTED": 1
     },
-    "total_duration_ms": 32,
+    "total_duration_ms": 24,
     "test_cases": 3
   },
   "detailed_results": [
@@ -60,7 +71,7 @@
       "method": "api-client",
       "status": "FAILED",
       "status_reason": "GET /api/payment-methods/:id returned another user's card with HTTP 200.",
-      "duration_ms": 11,
+      "duration_ms": 8,
       "evidence": [
         "EV-2026-00002"
       ],
@@ -72,7 +83,9 @@
           "http-403",
           "caveat: Ambiguous between a product authorisation defect and missing test credentials."
         ],
-        "evidence_refs": "[circular]"
+        "evidence_refs": [
+          "EV-2026-00002"
+        ]
       },
       "decision_id": "DEC-00001"
     },
@@ -96,14 +109,14 @@
       "method": "existing-suite",
       "status": "INCONCLUSIVE",
       "status_reason": "Checkout works. [DOWNGRADED from PASSED: \"[REDACTED]\" claims something was executed, but no evidence is attached. Absence of failure is not proof of correctness.]",
-      "duration_ms": 6,
+      "duration_ms": 5,
       "evidence": [],
       "findings": [],
       "failure_classification": {
         "class": "insufficient-evidence",
         "confidence": 0.9,
         "signals": [],
-        "evidence_refs": "[circular]"
+        "evidence_refs": []
       },
       "decision_id": null
     },
@@ -140,7 +153,7 @@
       "method": "existing-suite",
       "status": "PASSED",
       "status_reason": "vitest suite executed against abc1234; 211 tests passed, 0 failed.",
-      "duration_ms": 15,
+      "duration_ms": 11,
       "evidence": [
         "EV-2026-00001"
       ],
@@ -154,20 +167,54 @@
       "evidence_id": "EV-2026-00001",
       "kind": "command-output",
       "summary": "vitest: 211/211 passed",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-Dv0BrS\\evidence\\blobs\\output-2026-09-16T09-29-36-911Z-13264.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-cRnOgw\\evidence\\blobs\\output-2026-09-16T11-19-16-425Z-18112.txt",
       "sha256": "sha256:08847719b18700defc4e5811a3e0be639fa4d8c92fcbdefd7cff7a429ac59e38"
     },
     {
       "evidence_id": "EV-2026-00002",
       "kind": "command-output",
       "summary": "api: 11/12 passed, 1 failed",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-Dv0BrS\\evidence\\blobs\\output-2026-09-16T09-29-36-931Z-13264.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-cRnOgw\\evidence\\blobs\\output-2026-09-16T11-19-16-438Z-18112.txt",
       "sha256": "sha256:6860525264278abb9c4fb263992a6bcbbfd9d5d8d074c9c5f1779db558c4b2b8"
     }
   ],
   "findings": [
     "FIND-00001",
     "FIND-00002"
+  ],
+  "finding_details": [
+    {
+      "finding_id": "FIND-00001",
+      "title": "Saved card belonging to another user is selectable and chargeable",
+      "kind": "security-issue",
+      "severity": "critical",
+      "confidence": 0.86,
+      "component": "server/payments",
+      "summary": "The payment-method lookup does not compare the record owner to the session user, so any authenticated user can select and charge a card saved by someone else.",
+      "expected": "403 Forbidden, or 404 if the design hides existence",
+      "actual": "200 OK with user B's card brand, last4 and billing postcode",
+      "reproducible": "always",
+      "attempts": 3,
+      "impact": "Any authenticated user can enumerate and charge other users' stored cards. Financial and personal data exposure.",
+      "evidence": [
+        "EV-2026-00002"
+      ],
+      "recommended_action": "Add an ownership check in server/payments/stripe.ts:52 before returning or using a payment method.",
+      "external_refs": []
+    },
+    {
+      "finding_id": "FIND-00002",
+      "title": "Saved  card belonging to another user IS selectable, and chargeable!",
+      "kind": "security-issue",
+      "severity": "critical",
+      "confidence": 0.86,
+      "component": "server/payments",
+      "expected": "403 Forbidden, or 404 if the design hides existence",
+      "actual": "200 OK with user B's card brand, last4 and billing postcode",
+      "evidence": [],
+      "duplicate_of": "FIND-00001",
+      "external_refs": []
+    }
   ],
   "external_writes": [
     {
@@ -206,6 +253,19 @@
   "uncertainty_register": [
     "U-00001"
   ],
+  "uncertainty_details": [
+    {
+      "id": "U-00001",
+      "status": "user-input-required",
+      "question": "Should payment E2E use a real provider sandbox key, or a mock at the HTTP boundary?",
+      "next_action": "ask the user which environment and credentials to use",
+      "owner": "user",
+      "affected_scope": [
+        "payment-e2e"
+      ],
+      "resolved": false
+    }
+  ],
   "coverage_gaps": [
     "security: no existing coverage",
     "migration: no existing coverage"
@@ -236,8 +296,18 @@
   "decision_history": [
     "DEC-00001"
   ],
+  "decision_summaries": [
+    {
+      "decision_id": "DEC-00001",
+      "question": "How should the changed saved-card checkout UI be tested?",
+      "selected_option": "hybrid",
+      "confidence": 0.78,
+      "reversible": true,
+      "top_reason": "Scenario: Saved-card checkout flow was changed; existing Playwright coverage is partial and the new branch has not been examined."
+    }
+  ],
   "metrics": {
-    "computed_at": "2026-09-16T09:29:37.017Z",
+    "computed_at": "2026-09-16T11:19:16.506Z",
     "sample_sizes": {
       "executions": 6,
       "decisions": 1,
@@ -255,7 +325,7 @@
       "evidence_completeness": 1,
       "automation_conversion": null,
       "unnecessary_test_rate": 0.5,
-      "runtime_efficiency_ms_per_case": 10.6667,
+      "runtime_efficiency_ms_per_case": 8,
       "flaky_identification_quality": null,
       "interruption_recovery_rate": 0.5,
       "authorization_compliance": 1,
@@ -353,10 +423,10 @@
     "violations": []
   },
   "provenance": {
-    "skill_version": "0.5.0",
+    "skill_version": "0.6.0",
     "skill_name": "test-reporting",
-    "engine_version": "0.5.0",
-    "created_at": "2026-09-16T09:29:36.998Z",
+    "engine_version": "0.6.0",
+    "created_at": "2026-09-16T11:19:16.491Z",
     "created_by": "agent",
     "session_id": "SESSION-0001"
   },

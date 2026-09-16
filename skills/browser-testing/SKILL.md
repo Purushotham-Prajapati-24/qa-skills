@@ -4,7 +4,7 @@ description: Choose and run the right browser testing method — agent-driven ex
 when_to_use: "explore the app for UI bugs", "test this page", "should I use Playwright MCP or a script", "create regression tests for this flow", "capture a trace", "the UI is broken"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.5.0
+  system_version: 0.7.0
   role: specialist
 ---
 

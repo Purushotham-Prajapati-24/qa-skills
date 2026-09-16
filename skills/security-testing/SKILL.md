@@ -4,7 +4,7 @@ description: Test authentication, authorisation, session management, input valid
 when_to_use: "security testing", "test the auth", "can user A access user B's data", "dependency scan", "check for injection", "session handling test"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.5.0
+  system_version: 0.7.0
   role: specialist
 ---
 

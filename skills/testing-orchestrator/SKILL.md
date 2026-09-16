@@ -4,7 +4,7 @@ description: Plan and run software testing for a repository, a pull request, a c
 when_to_use: "test this repo", "test this PR", "test the checkout flow", "what should we test", "create a test plan", "explore the app for bugs", "create regression tests", "read this Jira ticket and plan testing", "continue testing", "what's untested", "run QA on this"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.5.0
+  system_version: 0.7.0
   role: orchestrator
 ---
 

@@ -4,7 +4,7 @@ description: Find and read the requirements that testing should validate — Jir
 when_to_use: "read Jira ticket XYZ and plan testing", "what are the acceptance criteria", "derive test cases from this ticket", "what is this supposed to do"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell
 metadata:
-  system_version: 0.5.0
+  system_version: 0.7.0
   role: specialist
 ---
 

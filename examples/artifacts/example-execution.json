@@ -1,7 +1,7 @@
 {
   "execution_id": "EXEC-2026-00003",
   "session_id": "SESSION-0001",
-  "started_at": "2026-09-16T09:29:36.925Z",
+  "started_at": "2026-09-16T11:19:16.434Z",
   "goal": "User A cannot select user B's saved card",
   "method": "api-client",
   "status": "FAILED",
@@ -13,10 +13,10 @@
   "uncertainties": [],
   "retries": 0,
   "provenance": {
-    "skill_version": "0.5.0",
+    "skill_version": "0.6.0",
     "skill_name": "testing-orchestrator",
-    "engine_version": "0.5.0",
-    "created_at": "2026-09-16T09:29:36.925Z",
+    "engine_version": "0.6.0",
+    "created_at": "2026-09-16T11:19:16.434Z",
     "created_by": "agent",
     "session_id": "SESSION-0001"
   },
@@ -31,8 +31,8 @@
     "pull_request": "412",
     "dirty": false
   },
-  "finished_at": "2026-09-16T09:29:36.936Z",
-  "duration_ms": 11,
+  "finished_at": "2026-09-16T11:19:16.442Z",
+  "duration_ms": 8,
   "test_results": [
     {
       "name": "saved card belonging to another user is not selectable",
@@ -45,7 +45,7 @@
   ],
   "totals": {
     "total": 1,
-    "passed": "[REDACTED]",
+    "passed": 0,
     "failed": 1,
     "skipped": 0,
     "errored": 0
@@ -57,6 +57,8 @@
       "http-403",
       "caveat: Ambiguous between a product authorisation defect and missing test credentials."
     ],
-    "evidence_refs": "[circular]"
+    "evidence_refs": [
+      "EV-2026-00002"
+    ]
   }
 }

@@ -4,7 +4,7 @@ description: Work out exactly what changed in a pull request, commit range, bran
 when_to_use: "test this PR", "what changed", "what should I re-run", "scope the regression for this commit", "what does this change break"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell
 metadata:
-  system_version: 0.5.0
+  system_version: 0.7.0
   role: specialist
 ---
 

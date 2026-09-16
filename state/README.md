@@ -23,6 +23,8 @@ state/
 ├── uncertainties/U-*.json
 ├── reports/REPORT-*.json|.md
 ├── external-writes/*.json      the idempotency ledger
+│   ├── bodies/                 the exact content sent to each external system
+│   └── pending/                delegated-write tickets, authorised but not yet completed
 ├── history/SESSION-*.json      archived previous sessions
 └── telemetry/*.jsonl           append-only, redacted event stream
 ```

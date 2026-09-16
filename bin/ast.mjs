@@ -33,6 +33,7 @@ import * as flakiness from '../engine/flakiness/index.mjs';
 import * as trace from '../engine/traceability/index.mjs';
 import * as reporting from '../engine/reporting-engine/index.mjs';
 import * as evaluation from '../engine/evaluation-engine/index.mjs';
+import * as adapters from '../engine/adapters/index.mjs';
 import { compute as computeMetrics } from '../engine/evaluation-engine/metrics.mjs';
 import { validate as validateSchema } from '../engine/schema/validate.mjs';
 import { classify } from '../engine/failure-classifier/index.mjs';
@@ -72,11 +73,14 @@ function aliasKeys(obj) {
 }
 
 /** Read a JSON payload from --input <file|-> or --json '<literal>'. */
-function payload(flags) {
-  if (flags.json) return aliasKeys(JSON.parse(flags.json));
+function payload(flags, shouldAlias = true) {
+  if (flags.json) {
+    const data = JSON.parse(flags.json);
+    return shouldAlias ? aliasKeys(data) : data;
+  }
   if (flags.input) {
-    if (flags.input === '-') return aliasKeys(JSON.parse(fs.readFileSync(0, 'utf8')));
-    return aliasKeys(readJson(flags.input));
+    const data = flags.input === '-' ? JSON.parse(fs.readFileSync(0, 'utf8')) : readJson(flags.input);
+    return shouldAlias ? aliasKeys(data) : data;
   }
   return {};
 }
@@ -149,7 +153,7 @@ const COMMANDS = {
   },
 
   /* ---- repository profile ---- */
-  'profile save': { help: 'Persist a repository profile: profile save --input profile.json', run: ({ flags }) => state.saveProfile(payload(flags)) },
+  'profile save': { help: 'Persist a repository profile: profile save --input profile.json', run: ({ flags }) => state.saveProfile(payload(flags, false)) },
   'profile show': { help: 'Print the stored repository profile.', run: () => state.loadProfile() ?? { error: 'No profile stored. Run repository-intelligence first.' } },
   'profile signals': {
     help: 'Derive applicability signals from the stored profile.',
@@ -299,6 +303,69 @@ const COMMANDS = {
   'eval run': { help: 'Run the benchmark suite: eval run [--only case-03]', run: ({ flags }) => evaluation.run({ only: flags.only ?? null }) },
   'eval cases': { help: 'List benchmark cases.', run: () => evaluation.loadCases().map((c) => ({ id: c.id, title: c.title, file: c.file })) },
 
+  /* ---- adapters: the enforced external-write path ---- */
+  'github preflight': {
+    help: 'Report what the GitHub token can actually do (auth is not the same as scope).',
+    run: () => adapters.preflight('github'),
+  },
+  'github read': {
+    help: 'Read from GitHub: github read repo|pr|files|issues|runs --input args.json',
+    run: ({ positional, flags }) => {
+      const gh = adapters.getAdapter('github');
+      const args = payload(flags);
+      const ops = { repo: gh.readRepo, pr: gh.readPr, files: gh.listChangedFiles, issues: gh.searchIssues, runs: gh.readRuns };
+      const op = ops[positional[2]];
+      if (!op) throw new Error(`Unknown read "${positional[2]}". One of: ${Object.keys(ops).join(', ')}`);
+      return op(args);
+    },
+  },
+  'github file-issue': {
+    help: 'File a finding as a GitHub issue, through every gate: github file-issue FIND-00001 --repo owner/name [--authorised --quote "..."] [--dry-run]',
+    run: ({ positional, flags }) => adapters.getAdapter('github').createIssueFromFinding({
+      findingId: positional[2],
+      repo: flags.repo,
+      decisionId: flags.decision ?? null,
+      dryRun: Boolean(flags['dry-run']),
+      authorisation: { userAuthorised: Boolean(flags.authorised), authorisationQuote: flags.quote ?? '' },
+    }),
+  },
+  'github comment': {
+    help: 'Comment on an issue: github comment --repo owner/name --number 412 --input body.json [--authorised]',
+    run: ({ flags }) => adapters.getAdapter('github').comment({
+      repo: flags.repo, number: flags.number, body: payload(flags).body,
+      idempotencyKey: flags.key, decisionId: flags.decision ?? null,
+      dryRun: Boolean(flags['dry-run']),
+      authorisation: { userAuthorised: Boolean(flags.authorised), authorisationQuote: flags.quote ?? '' },
+    }),
+  },
+  'github assign': {
+    help: 'Assign an issue to a USER-NAMED account: github assign --repo owner/name --number 412 --assignee octocat --authorised',
+    run: ({ flags }) => adapters.getAdapter('github').assign({
+      repo: flags.repo, number: flags.number, assignee: flags.assignee ?? null,
+      decisionId: flags.decision ?? null, dryRun: Boolean(flags['dry-run']),
+      authorisation: { userAuthorised: Boolean(flags.authorised), authorisationQuote: flags.quote ?? '' },
+    }),
+  },
+  'adapter complete': {
+    help: 'Finish a delegated (MCP) write: adapter complete --ticket WT-... --json \'<provider response>\'',
+    run: ({ flags }) => {
+      const ticket = adapters.readTicket(flags.ticket);
+      if (!ticket) throw new Error(`No such ticket: ${flags.ticket}. Run \`ast adapter pending\` to list open ones.`);
+      return adapters.getAdapter(ticket.system).complete({
+        ticket: flags.ticket,
+        response: flags.json ? JSON.parse(flags.json) : payload(flags),
+      });
+    },
+  },
+  'adapter pending': {
+    help: 'List delegated writes that were authorised but never completed.',
+    run: () => adapters.pending(),
+  },
+  'adapter systems': {
+    help: 'List systems with an executable adapter.',
+    run: () => ({ implemented: adapters.SYSTEMS, contracts_only: ['jira', 'google-docs', 'google-drive'] }),
+  },
+
   /* ---- integrity ---- */
   'validate': {
     help: 'Validate every stored record against its schema and check referential integrity.',
@@ -416,7 +483,7 @@ function printHelp() {
   process.stdout.write(`${lines.join('\n')}\n`);
 }
 
-function main() {
+async function main() {
   const argv = process.argv.slice(2);
   const { positional, flags } = parseArgs(argv);
 
@@ -432,14 +499,20 @@ function main() {
   }
 
   try {
-    const result = COMMANDS[key].run({ positional, flags });
+    // Adapter commands talk to providers and are async. Awaiting unconditionally keeps
+    // the synchronous commands working unchanged -- and without it a promise serialises
+    // as "{}", which looks exactly like a successful empty result.
+    const result = await COMMANDS[key].run({ positional, flags });
     if (COMMANDS[key].raw?.(flags)) process.stdout.write(`${result}\n`);
     else out(result, flags);
-    if (result && result.valid === false) process.exitCode = 1;
+
+    // A refused or blocked adapter call is not a crash, but it is not success either.
+    // Exit non-zero so a caller scripting this cannot mistake one for the other.
+    if (result && (result.valid === false || result.ok === false)) process.exitCode = 1;
   } catch (err) {
     fail(err.message, err.hint);
     if (flags.debug) process.stderr.write(`${err.stack}\n`);
   }
 }
 
-main();
+await main();

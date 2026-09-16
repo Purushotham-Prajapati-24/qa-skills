@@ -65,30 +65,52 @@ Assigning work to a real person on a guess is the kind of mistake that is both w
 socially costly. The correct move is to leave it unassigned and tell the user the
 candidates you saw.
 
-## The write protocol
+## The write protocol — now executable
 
-Every write, without exception:
+This used to be a five-step sequence you had to remember. It is now one command, and the
+sequence is enforced in code (`engine/adapters/base.mjs`):
 
 ```bash
-# 1. Verify authorisation
-node bin/ast.mjs auth check --json '{"action":"github.create_issue","target":"owner/repo","userAuthorised":true,"authorisationQuote":"yes, open an issue for that"}'
-
-# 2. Check the ledger for a duplicate
-node bin/ast.mjs write check --json '{"system":"github","action":"github.create_issue","idempotencyKey":"<finding fingerprint>"}'
-
-# 3. Render and READ the content before sending it
-node bin/ast.mjs finding render FIND-00001
-
-# 4. Perform it through the resolved provider
-gh issue create --repo owner/repo --title "..." --body-file body.md --label bug
-
-# 5. Record the provider's actual response
-node bin/ast.mjs write record --json '{"system":"github","action":"github.create_issue","idempotencyKey":"<fingerprint>","target":"owner/repo","confirmed":true,"resultId":"#412","url":"https://github.com/owner/repo/issues/412","authorisedBy":"user-explicit","decisionId":"DEC-00011"}'
+node bin/ast.mjs github preflight                                       # scope, not just auth
+node bin/ast.mjs github file-issue FIND-00001 --repo owner/name --dry-run
+node bin/ast.mjs github file-issue FIND-00001 --repo owner/name --authorised --quote "yes, open it"
 ```
 
-`confirmed: true` requires an identifier from GitHub. If the command errored, timed out,
-or you cannot tell — `confirmed: false` with the error. The report prints `NOT CONFIRMED`,
-which is the honest outcome.
+Internally, in this order, with no way to skip a step:
+
+1. **Capability** — resolve `github.create_issue`. Unavailable → `BLOCKED`, provider never called.
+2. **Authorisation** — `auth.check`. Refused → `NEEDS_USER_INPUT`, provider never called.
+3. **Ledger** — duplicate fingerprint → `SKIPPED`, provider never called.
+4. **Render** — the body is produced and written to `state/external-writes/bodies/`, so
+   "what did the agent actually put in that issue?" stays answerable.
+5. **Perform** — via the resolved provider.
+6. **Parse** — GitHub's own output is scraped for an issue number. **This is the only thing
+   that sets `confirmed: true`.** A `gh` command can exit 0 having printed a warning and
+   created nothing, so exit status is not evidence.
+7. **Record** — ledger entry plus evidence, classed `observed` when confirmed and
+   `inferred` when not.
+
+If the command errored, timed out, or returned no identifier, the result is `INCONCLUSIVE`
+and the report prints `NOT CONFIRMED`. That is the honest outcome, not a failure of the
+adapter.
+
+### Delegation when the provider is MCP
+
+Node cannot call an MCP tool — those live in the agent's tool list. So the adapter runs
+gates 1–4, issues a single-use ticket with the rendered content, and the agent finishes it:
+
+```bash
+node bin/ast.mjs adapter complete --ticket WT-… --json '<the provider response>'
+node bin/ast.mjs adapter pending          # tickets authorised but never completed
+```
+
+A ledger entry cannot be created without a ticket, and a ticket cannot be issued without
+passing the gates. Tickets expire after an hour, because authorisation is per-session and
+does not keep.
+
+This path is weaker than the CLI path — the agent could perform the call and never come
+back. It cannot, however, fabricate a *confirmed* write, because confirmation is still
+derived from parsing the provider's own response.
 
 ## Idempotency
 

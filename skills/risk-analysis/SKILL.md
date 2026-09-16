@@ -4,7 +4,7 @@ description: Score the risk of a change or component from evidence — business 
 when_to_use: "how risky is this change", "what should we test first", "is this worth deep testing", "prioritise the testing"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell
 metadata:
-  system_version: 0.5.0
+  system_version: 0.7.0
   role: specialist
 ---
 

@@ -4,7 +4,7 @@ description: Turn a test failure or observation into an actionable defect report
 when_to_use: "write up this bug", "create a GitHub issue for this", "report this defect", "is this worth filing"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell
 metadata:
-  system_version: 0.5.0
+  system_version: 0.7.0
   role: specialist
 ---
 
@@ -105,19 +105,61 @@ body with the uncertainty; unverified reproduction must be stated plainly.
 
 ## Filing
 
+**Use the adapter. Do not run `gh issue create` yourself.**
+
 ```bash
-node bin/ast.mjs finding render FIND-00001    # title, body, labels
-node bin/ast.mjs write check   --json '{"system":"github","action":"github.create_issue","idempotencyKey":"<fingerprint>"}'
-# create the issue via the resolved provider, then:
-node bin/ast.mjs write record  --json '{"system":"github","action":"github.create_issue","idempotencyKey":"<fingerprint>","target":"owner/repo","confirmed":true,"resultId":"#412","url":"…","authorisedBy":"user-explicit"}'
+node bin/ast.mjs github file-issue FIND-00001 --repo owner/name --dry-run
+node bin/ast.mjs github file-issue FIND-00001 --repo owner/name --authorised --quote "yes, open a GitHub issue"
 ```
 
-`confirmed: true` **only** when the provider returned an identifier. Otherwise
-`confirmed: false` with the error — the report will print `NOT CONFIRMED`, which is the
-correct outcome.
+One command runs the whole protocol in order: capability → authorisation → duplicate
+ledger → render → perform → parse the provider's response → record → evidence. You cannot
+use half of it, and there is no path to a ledger entry that skips a gate.
+
+Start with `--dry-run`. It passes every gate, shows you the exact title, body, labels and
+command, and calls nothing.
+
+Read the result's `status`:
+
+| Status | Meaning |
+| --- | --- |
+| `COMPLETED` + `confirmed: true` | Filed. `result_id` and `url` came from GitHub. |
+| `SKIPPED` | Duplicate — the ledger or the fingerprint already has it. |
+| `NEEDS_USER_INPUT` | A gate refused. Read `reason` and `required_of_user`. |
+| `BLOCKED` | Capability unavailable, or the provider returned 401/403/404/429. |
+| `INCONCLUSIVE` | It ran and **no identifier came back**. Attempted, not done. |
+
+`INCONCLUSIVE` is the one to take seriously. A `gh` command can exit 0 having printed a
+warning and created nothing, so the adapter derives confirmation by parsing GitHub's own
+output for an issue number. No number, no confirmation — and the report prints
+`NOT CONFIRMED`.
+
+**Before filing anywhere**, check the token can actually do it:
+
+```bash
+node bin/ast.mjs github preflight
+```
+
+Authentication succeeding is not the same as having the `repo` scope. Reads can work while
+writes fail.
 
 **Assignment:** never choose the person. Not from CODEOWNERS, not from `git blame`. The
-user names the account, or it stays unassigned and you tell them the candidates.
+adapter refuses without a user-named account:
+
+```bash
+node bin/ast.mjs github assign --repo owner/name --number 418 --assignee octocat --authorised
+```
+
+**When the capability resolves to an MCP server** rather than the CLI, the adapter cannot
+call it — MCP tools live in your tool list, not in Node. It runs the gates, hands you a
+ticket and the rendered content, and you finish it:
+
+```bash
+# perform the call with your own GitHub MCP tools, then:
+node bin/ast.mjs adapter complete --ticket WT-… --json '<the provider response>'
+```
+
+Nothing is recorded until you do. `ast adapter pending` lists tickets left open.
 
 ## Low-confidence findings
 

@@ -12,41 +12,90 @@ node --version
 node bin/ast.mjs version
 ```
 
-## Two ways to install
+## Install
 
-### A. As a Claude Code plugin (recommended)
-
-Skills arrive namespaced (`/autonomous-software-testing:testing-orchestrator`), and you get
-the subagents, hooks and MCP config with them.
+### The one command
 
 ```bash
-# In an interactive claude session:
-/plugin marketplace add /absolute/path/to/autonomous-software-testing
+npx --yes github:Purushotham-Prajapati-24/qa-skills
+```
+
+Run it from the root of the repository you want to test. No clone, no `npm install` —
+there are no dependencies to fetch.
+
+It writes only inside `.claude/`:
+
+```
+.claude/
+  skills/     21 skills        where Claude Code looks for them
+  agents/     4 subagents
+  ast/        the runtime      CLI, engines, schemas, docs, templates
+```
+
+**Why a runtime directory?** The skills call the `ast` CLI for everything that must be
+deterministic. In this source repository that CLI is at `bin/ast.mjs`; in your repository it
+is not. So the installer copies the runtime to `.claude/ast/` and rewrites the command in
+every installed skill to match. It then runs the installed CLI to prove the rewrite worked,
+and warns if any skill still points at the old path.
+
+### Options
+
+| Flag | Effect |
+| --- | --- |
+| *(none)* | Install into `./.claude` — this repository only |
+| `--user`, `--global` | Install into `~/.claude` — every project on this machine |
+| `--target <dir>` | Install into a specific directory's `.claude` |
+| `--only a,b,c` | Install only these skills |
+| `--hooks` | Also wire SessionStart and PreToolUse into `.claude/settings.json` |
+| `--force` | Overwrite an existing install (it refuses by default) |
+| `--dry-run` | Print the plan and change nothing |
+| `--help` | |
+
+### Pin a version
+
+Tracking the default branch means you get changes as they land. To pin:
+
+```bash
+npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.6.0
+```
+
+Or install from a release tarball, which needs no git:
+
+```bash
+npx --yes https://github.com/Purushotham-Prajapati-24/qa-skills/releases/download/v0.6.0/autonomous-software-testing-0.6.0.tgz
+```
+
+### If npx picks the wrong command
+
+The package declares two binaries (`autonomous-software-testing` for the installer, `ast`
+for the CLI). If npx cannot work out which you meant, say so:
+
+```bash
+npx --yes -p github:Purushotham-Prajapati-24/qa-skills autonomous-software-testing
+```
+
+### As a Claude Code plugin
+
+Namespaced skills plus the subagents, hooks and MCP config in one go:
+
+```bash
+/plugin marketplace add https://github.com/Purushotham-Prajapati-24/qa-skills
 /plugin install autonomous-software-testing
 ```
 
-Or point the marketplace at a git URL once you have pushed it.
-
-### B. As project skills
-
-Copy the skills into a repository's `.claude/skills/`, or your personal `~/.claude/skills/`:
+### From a clone
 
 ```bash
-node scripts/install-skills.mjs --target /path/to/your/repo/.claude/skills
-node scripts/install-skills.mjs --target ~/.claude/skills --link   # symlink instead of copy
+git clone https://github.com/Purushotham-Prajapati-24/qa-skills.git
+cd qa-skills
+node bin/install.mjs --target /path/to/your/repo
 ```
-
-Symlinks mean edits here take effect immediately, which is what you want while developing.
-Copies are what you want when shipping to a team that will not have this checkout.
-
-This path gives you skills only — no subagents, no hooks. Add those by hand if you want
-them.
 
 ## Initialise state
 
 ```bash
-node bin/ast.mjs init
-node bin/ast.mjs caps probe
+node .claude/ast/bin/ast.mjs init
+node .claude/ast/bin/ast.mjs caps probe
 ```
 
 `caps probe` reports what this environment can actually do. Read it before trusting any
@@ -117,7 +166,7 @@ quietly dropping the obligation.
 ## Verify the installation
 
 ```bash
-node --test "tests/*.test.mjs"     # 61 tests
+node --test "tests/*.test.mjs"     # 100 tests
 node bin/ast.mjs eval run          # 15 benchmark cases, 41 checks
 node scripts/validate-repo.mjs     # links, schemas, cross-references
 ```
@@ -137,10 +186,16 @@ and come back with what it found and what it proposes — before running anythin
 ## Uninstalling
 
 ```bash
+# npx install
+rm -rf .claude/ast .claude/agents
+node -e "require('fs').readdirSync('.claude/skills').forEach(s=>require('fs').rmSync('.claude/skills/'+s,{recursive:true,force:true}))"
+
+# plugin install
 /plugin uninstall autonomous-software-testing
 ```
 
-State under `state/` is yours and is not removed. Delete it deliberately if you want to.
+Nothing is written outside `.claude/`. Your testing history under `.claude/ast/state/` is
+yours and is not removed — delete it deliberately if you want to.
 
 ## Troubleshooting
 
