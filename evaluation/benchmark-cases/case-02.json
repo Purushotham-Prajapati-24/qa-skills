@@ -1,0 +1,82 @@
+{
+  "id": "case-02",
+  "title": "Authentication change: session token rotation added on login",
+  "context": "Auth middleware modified to rotate the session ID on login. Moderate diff, thin existing coverage of the session path.",
+  "given": {
+    "risk_profile": "security-critical",
+    "risk_factors": {
+      "security_sensitivity": {
+        "value": 1.0,
+        "basis": "diff modifies auth/session.ts middleware"
+      },
+      "business_criticality": {
+        "value": 0.8,
+        "basis": "every authenticated journey depends on it"
+      },
+      "data_sensitivity": {
+        "value": 0.7,
+        "basis": "session tokens grant account access"
+      },
+      "change_magnitude": {
+        "value": 0.5,
+        "basis": "88 changed lines across 3 files"
+      },
+      "coverage_deficit": {
+        "value": 0.9,
+        "basis": "no test asserts session ID rotation"
+      },
+      "irreversibility": {
+        "value": 0.3,
+        "basis": "revertible, but leaked sessions cannot be un-leaked"
+      }
+    },
+    "signals": [
+      "ui",
+      "web-ui",
+      "http-api",
+      "auth",
+      "authz",
+      "sessions",
+      "user-input",
+      "secrets",
+      "existing-tests",
+      "ci",
+      "pii"
+    ],
+    "coverage": {
+      "unit": "partial",
+      "security": "none",
+      "authn-authz": "none",
+      "session-management": "none"
+    },
+    "capabilities": {
+      "browser.explore": true,
+      "browser.run_deterministic_test": true
+    }
+  },
+  "expect": {
+    "risk_level": {
+      "one_of": [
+        "high",
+        "critical"
+      ]
+    },
+    "applicable_includes": [
+      "authn-authz",
+      "session-management",
+      "security",
+      "input-validation"
+    ],
+    "selected_includes": [
+      "authn-authz"
+    ],
+    "risk_score": {
+      "at_least": 0.65
+    }
+  },
+  "reasoning_notes": [
+    "Session fixation is the specific defect this change either fixes or introduces; session-management must be applicable and prioritised.",
+    "The security-critical profile should push this to critical even though the diff is small -- magnitude is not the driver here.",
+    "Calibration note: scores 0.727 -> high under the security-critical profile. The assertion that matters is 'at least high', so the band is expressed as one_of rather than pinned. Pinning it would turn this into a test of weights.json rather than of the reasoning."
+  ]
+}

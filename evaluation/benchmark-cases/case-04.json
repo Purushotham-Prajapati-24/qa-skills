@@ -1,0 +1,61 @@
+{
+  "id": "case-04",
+  "title": "API schema change: response field removed from a public endpoint",
+  "context": "A field is removed from a documented REST response consumed by other teams.",
+  "given": {
+    "risk_profile": "balanced",
+    "risk_factors": {
+      "business_criticality": {
+        "value": 0.7,
+        "basis": "three internal services consume this endpoint"
+      },
+      "integration_complexity": {
+        "value": 0.8,
+        "basis": "consumers are deployed independently"
+      },
+      "change_magnitude": {
+        "value": 0.3,
+        "basis": "one field removed from one response"
+      },
+      "coverage_deficit": {
+        "value": 0.6,
+        "basis": "contract tests exist but do not assert this field"
+      },
+      "irreversibility": {
+        "value": 0.6,
+        "basis": "consumers may already have broken by the time it is noticed"
+      }
+    },
+    "signals": [
+      "http-api",
+      "public-contract",
+      "database",
+      "auth",
+      "user-input",
+      "existing-tests",
+      "ci",
+      "third-party-deps"
+    ],
+    "coverage": {
+      "api": "partial",
+      "contract": "minimal"
+    },
+    "capabilities": {}
+  },
+  "expect": {
+    "applicable_includes": [
+      "api",
+      "contract"
+    ],
+    "applicable_excludes": [
+      "visual",
+      "cross-browser",
+      "responsive",
+      "localization"
+    ]
+  },
+  "reasoning_notes": [
+    "Removing a response field is a breaking change regardless of diff size. Contract testing must be applicable.",
+    "No UI signal, so every browser-oriented category must be excluded -- this is the main thing this case checks."
+  ]
+}

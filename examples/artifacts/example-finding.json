@@ -1,0 +1,57 @@
+{
+  "finding_id": "FIND-00001",
+  "timestamp": "2026-09-16T09:29:36.942Z",
+  "title": "Saved card belonging to another user is selectable and chargeable",
+  "kind": "security-issue",
+  "severity": "critical",
+  "confidence": 0.86,
+  "epistemic_class": "observed",
+  "summary": "The payment-method lookup does not compare the record owner to the session user, so any authenticated user can select and charge a card saved by someone else.",
+  "component": "server/payments",
+  "environment": "local-docker",
+  "impact": "Any authenticated user can enumerate and charge other users' stored cards. Financial and personal data exposure.",
+  "evidence": [
+    "EV-2026-00002"
+  ],
+  "related_requirements": [
+    "REQ-3"
+  ],
+  "recommended_action": "Add an ownership check in server/payments/stripe.ts:52 before returning or using a payment method.",
+  "fingerprint": "sha256:8e75ed09c720ff3b2d0d11c070217e76cd94e69c7cf0f2993e59016addb1f112",
+  "triage": {
+    "state": "new",
+    "decided_by": "agent"
+  },
+  "provenance": {
+    "skill_version": "0.5.0",
+    "skill_name": "defect-reporting",
+    "engine_version": "0.5.0",
+    "created_at": "2026-09-16T09:29:36.942Z",
+    "created_by": "agent",
+    "session_id": "SESSION-0001"
+  },
+  "session_id": "SESSION-0001",
+  "execution_id": "EXEC-2026-00003",
+  "git": {
+    "repository": "acme/shop",
+    "branch": "feat/SHOP-412-saved-card",
+    "commit": "abc1234",
+    "pull_request": "412",
+    "dirty": false
+  },
+  "reproduction": {
+    "preconditions": [
+      "User A and user B both exist",
+      "User B has a saved card"
+    ],
+    "steps": [
+      "Authenticate as user A",
+      "Request GET /api/payment-methods/<user B's card id>",
+      "Observe the response"
+    ],
+    "expected": "403 Forbidden, or 404 if the design hides existence",
+    "actual": "200 OK with user B's card brand, last4 and billing postcode",
+    "reproducible": "always",
+    "attempts": 3
+  }
+}

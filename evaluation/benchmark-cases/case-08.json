@@ -1,0 +1,48 @@
+{
+  "id": "case-08",
+  "title": "Unknown UI flow requiring exploration",
+  "context": "A new onboarding wizard nobody has seen. No specification, no existing browser coverage.",
+  "given": {
+    "signals": [
+      "ui",
+      "web-ui",
+      "http-api",
+      "component-framework",
+      "existing-tests"
+    ],
+    "coverage": {
+      "e2e": "none",
+      "ui": "none",
+      "exploratory": "none"
+    },
+    "capabilities": {
+      "browser.explore": true,
+      "browser.run_deterministic_test": true
+    },
+    "browser_factors": {
+      "ui_known": 0.1,
+      "repeatability": 0.2,
+      "determinism_required": 0.3,
+      "exploratory_value": 0.95,
+      "ci_suitability": 0.2,
+      "existing_automation": 0.05,
+      "assertion_complexity": 0.3,
+      "maintenance_cost_tolerance": 0.5,
+      "tool_reliability": 0.7
+    },
+    "automation_factors": {
+      "repeatability": 0.2,
+      "business_criticality": 0.5,
+      "environment_stability": 0.6,
+      "expected_runtime_minutes": 5
+    }
+  },
+  "expect": {
+    "browser_method": "playwright-mcp",
+    "automate": false
+  },
+  "reasoning_notes": [
+    "Unknown UI plus LOW repeatability is the one case where pure exploration is right -- the hybrid trigger must not fire.",
+    "should-automate must refuse: a one-off scenario does not earn a permanent test."
+  ]
+}

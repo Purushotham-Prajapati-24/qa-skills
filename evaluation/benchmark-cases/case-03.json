@@ -1,0 +1,107 @@
+{
+  "id": "case-03",
+  "title": "Payment flow change: saved-card support added to guest checkout",
+  "context": "Checkout now accepts a saved card. Calls a live payment provider. Partial E2E coverage, no coverage of the new branch.",
+  "given": {
+    "risk_profile": "security-critical",
+    "risk_factors": {
+      "business_criticality": {
+        "value": 1.0,
+        "basis": "checkout is the only revenue path"
+      },
+      "security_sensitivity": {
+        "value": 0.9,
+        "basis": "handles stored payment instruments"
+      },
+      "data_sensitivity": {
+        "value": 1.0,
+        "basis": "financial data and stored card references"
+      },
+      "change_magnitude": {
+        "value": 0.6,
+        "basis": "312 changed lines across 7 files"
+      },
+      "coverage_deficit": {
+        "value": 0.9,
+        "basis": "no test exercises the saved-card branch"
+      },
+      "irreversibility": {
+        "value": 0.9,
+        "basis": "captures real payments; refunds are manual"
+      },
+      "external_system_dependency": {
+        "value": 0.8,
+        "basis": "depends on the Stripe sandbox being reachable"
+      }
+    },
+    "signals": [
+      "ui",
+      "web-ui",
+      "http-api",
+      "database",
+      "auth",
+      "sessions",
+      "user-input",
+      "payments",
+      "pii",
+      "external-integration",
+      "existing-tests",
+      "browser-tooling",
+      "component-framework",
+      "ci",
+      "third-party-deps"
+    ],
+    "coverage": {
+      "e2e": "partial",
+      "unit": "partial",
+      "security": "none",
+      "api": "minimal"
+    },
+    "capabilities": {
+      "browser.explore": true,
+      "browser.run_deterministic_test": true
+    },
+    "browser_factors": {
+      "ui_known": 0.2,
+      "repeatability": 0.9,
+      "determinism_required": 0.7,
+      "exploratory_value": 0.8,
+      "ci_suitability": 0.6,
+      "business_criticality": 0.95,
+      "assertion_complexity": 0.7,
+      "execution_frequency": 0.8,
+      "existing_automation": 0.35,
+      "environment_stability": 0.7,
+      "evidence_requirements": 0.9,
+      "network_mocking_required": 0.5,
+      "maintenance_cost_tolerance": 0.6,
+      "tool_reliability": 0.7
+    },
+    "automation_factors": {
+      "repeatability": 0.9,
+      "business_criticality": 0.95,
+      "environment_stability": 0.7,
+      "expected_runtime_minutes": 4
+    },
+    "authorization": {
+      "action": "payment.execute",
+      "userAuthorised": true
+    }
+  },
+  "expect": {
+    "risk_level": "critical",
+    "browser_method": "hybrid",
+    "automate": true,
+    "authorization_allowed": false,
+    "applicable_includes": [
+      "e2e",
+      "api",
+      "security",
+      "database"
+    ]
+  },
+  "reasoning_notes": [
+    "The reference pattern: unknown UI plus a recurring critical flow selects explore-then-automate.",
+    "payment.execute stays prohibited even when the user said yes -- executing a real payment is never part of testing."
+  ]
+}

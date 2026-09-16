@@ -1,0 +1,21 @@
+# Runtime state. Yours, not the project's.
+# Commit it deliberately if you want testing history to travel with the repository —
+# but read it first: evidence excerpts can contain data from whatever you tested.
+# Ignore the CONTENTS, not the directory -- git cannot un-ignore a file inside an
+# ignored directory, so `state/` plus `!state/README.md` would silently drop the README.
+state/*
+!state/README.md
+demo-state/
+
+# Evidence artefacts produced by browser tooling
+.playwright-mcp/
+test-results/
+playwright-report/
+
+node_modules/
+npm-debug.log*
+*.tmp
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

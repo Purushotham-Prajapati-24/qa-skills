@@ -1,0 +1,74 @@
+{
+  "id": "case-01",
+  "title": "Simple React UI change: copy tweak on a settings page",
+  "context": "A one-line label change in a React component. Strong existing unit coverage, no API or data involvement.",
+  "given": {
+    "risk_profile": "balanced",
+    "risk_factors": {
+      "business_criticality": {
+        "value": 0.2,
+        "basis": "internal settings label, not on a revenue path"
+      },
+      "change_magnitude": {
+        "value": 0.05,
+        "basis": "1 changed line in a 120-line component"
+      },
+      "coverage_deficit": {
+        "value": 0.2,
+        "basis": "component has a snapshot and 4 behavioural tests"
+      },
+      "user_impact": {
+        "value": 0.2,
+        "basis": "cosmetic; no behaviour changes"
+      },
+      "irreversibility": {
+        "value": 0.0,
+        "basis": "pure UI text, revert is a one-line commit"
+      }
+    },
+    "signals": [
+      "ui",
+      "web-ui",
+      "component-framework",
+      "existing-tests",
+      "third-party-deps",
+      "ci"
+    ],
+    "coverage": {
+      "unit": "substantial",
+      "component": "substantial",
+      "e2e": "partial"
+    },
+    "capabilities": {
+      "browser.explore": true,
+      "browser.run_deterministic_test": true
+    },
+    "browser_factors": {
+      "ui_known": 0.9,
+      "repeatability": 0.3,
+      "determinism_required": 0.4,
+      "exploratory_value": 0.1,
+      "ci_suitability": 0.3,
+      "existing_automation": 0.8,
+      "business_criticality": 0.2
+    }
+  },
+  "expect": {
+    "risk_level": "negligible",
+    "applicable_excludes": [
+      "migration",
+      "database",
+      "rag-evaluation",
+      "localization"
+    ],
+    "browser_method": "existing-tests"
+  },
+  "reasoning_notes": [
+    "A cosmetic change must not trigger deep testing. The correct answer is: run what already exists and stop.",
+    "Selecting anything other than the existing suite here is over-testing, which the unnecessary_test_rate metric penalises.",
+    "Calibration note: this scores 0.14 -> negligible. The expectation originally said 'low'; the engine was right and the expectation was wrong. A cosmetic change with strong existing coverage genuinely carries negligible risk."
+  ],
+  "not_covered": [
+    "Whether the agent correctly judged the change to be cosmetic in the first place."
+  ]
+}

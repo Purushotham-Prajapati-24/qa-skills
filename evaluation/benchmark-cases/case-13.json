@@ -1,0 +1,23 @@
+{
+  "id": "case-13",
+  "title": "Existing flaky test",
+  "context": "A test that passes on retry. Only one run is on record.",
+  "given": {
+    "failure_signals": [
+      "passed-on-retry",
+      "timing-variance-high"
+    ],
+    "evidence_ids": [
+      "EV-2026-00004"
+    ],
+    "history": []
+  },
+  "expect": {
+    "failure_class": "flaky-test",
+    "failure_confidence_at_most": 0.35
+  },
+  "reasoning_notes": [
+    "Flakiness must never be asserted from one run. Calling a real defect flaky teaches people to ignore true signals.",
+    "The engine caps confidence and demands at least three runs at the same commit."
+  ]
+}

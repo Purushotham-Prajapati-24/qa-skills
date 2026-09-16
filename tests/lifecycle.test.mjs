@@ -364,3 +364,53 @@ test('a second session archives the first rather than clobbering it', () => {
   assert.notEqual(next.session_id, before);
   assert.ok(fs.existsSync(path.join(tmp.dir, 'history', `${before}.json`)));
 });
+
+test('records are keyed by their own ID, not by a foreign key they happen to carry', () => {
+  // Regression: an execution carries decision_id, and evidence/findings carry
+  // execution_id. A fallback chain keyed every record by a foreign ID and then reported
+  // every genuine reference as dangling.
+  const d = decisions.record({
+    question: 'Which suite should run first?',
+    options: ['unit', 'e2e'],
+    selected: 'unit',
+    reason: ['cheapest reliable evidence'],
+    confidence: 0.8,
+    reversible: true,
+  });
+  const e = execution.start({ goal: 'linked run', method: 'existing-suite', decisionId: d.decision_id, git: GIT });
+  const ev = evidence.captureOutput({
+    argv: 'npm test', cwd: tmp.dir, exitCode: 0, durationMs: 10,
+    stdout: 'ok', summary: 'linked evidence', executionId: e.execution_id,
+  });
+  execution.finish(e.execution_id, { status: 'PASSED', statusReason: 'linked run passed', evidence: [ev.evidence_id] });
+
+  const exec = state.get('executions', e.execution_id);
+  assert.equal(exec.decision_id, d.decision_id);
+  assert.notEqual(exec.execution_id, exec.decision_id);
+
+  const stored = state.get('evidence', ev.evidence_id);
+  assert.equal(stored.execution_id, e.execution_id);
+  assert.notEqual(stored.evidence_id, stored.execution_id);
+
+  // Every referenced evidence ID must resolve against the evidence collection.
+  const evidenceIds = new Set(state.list('evidence').map((e) => e.evidence_id));
+  for (const e of state.list('executions')) {
+    for (const ref of e.evidence ?? []) {
+      assert.ok(evidenceIds.has(ref), `${e.execution_id} references ${ref}, which must exist`);
+    }
+  }
+});
+
+test('an execution with a shared evidence array survives persistence intact', () => {
+  const failed = state.list('executions').find((e) => e.failure_classification);
+  assert.ok(failed);
+  assert.ok(Array.isArray(failed.failure_classification.evidence_refs),
+    'evidence_refs must survive redaction as an array, not "[circular]"');
+  assert.deepEqual(failed.failure_classification.evidence_refs, failed.evidence);
+});
+
+test('test totals survive redaction', () => {
+  const withTotals = state.list('executions').find((e) => e.totals);
+  assert.ok(withTotals);
+  assert.equal(typeof withTotals.totals.passed, 'number', '"passed" must not be masked as a password');
+});

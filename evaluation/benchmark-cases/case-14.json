@@ -1,0 +1,53 @@
+{
+  "id": "case-14",
+  "title": "Existing suite with insufficient coverage",
+  "context": "A large test suite that passes, but nothing covers the changed behaviour.",
+  "given": {
+    "risk_profile": "balanced",
+    "risk_factors": {
+      "coverage_deficit": {
+        "value": 1.0,
+        "basis": "no test imports or exercises the changed module"
+      },
+      "business_criticality": {
+        "value": 0.7,
+        "basis": "order fulfilment path"
+      },
+      "change_magnitude": {
+        "value": 0.6,
+        "basis": "140 changed lines"
+      },
+      "test_flakiness": {
+        "value": 0.3,
+        "basis": "two tests in this suite have mixed history"
+      }
+    },
+    "signals": [
+      "http-api",
+      "database",
+      "existing-tests",
+      "ci",
+      "user-input",
+      "auth"
+    ],
+    "coverage": {
+      "unit": "none",
+      "integration": "none",
+      "api": "minimal"
+    },
+    "capabilities": {}
+  },
+  "expect": {
+    "risk_level": "high",
+    "applicable_includes": [
+      "unit",
+      "integration",
+      "api",
+      "regression"
+    ]
+  },
+  "reasoning_notes": [
+    "A green suite that does not touch the change is not evidence about the change. coverage_deficit at 1.0 must dominate.",
+    "This is the case where an agent most easily produces a false-confidence report."
+  ]
+}

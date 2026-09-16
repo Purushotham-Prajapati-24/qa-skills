@@ -1,0 +1,21 @@
+{
+  "id": "case-12",
+  "title": "User interrupts execution halfway",
+  "context": "The user stops the run during an E2E execution. A later session resumes.",
+  "given": {
+    "failure_signals": [],
+    "evidence_ids": [],
+    "authorization": {
+      "action": "github.create_issue",
+      "userAuthorised": false
+    }
+  },
+  "expect": {
+    "failure_class": "insufficient-evidence",
+    "authorization_allowed": false
+  },
+  "reasoning_notes": [
+    "An interrupted execution must come back INTERRUPTED with no inferred outcome -- covered directly by tests/lifecycle.test.mjs.",
+    "Authorisation from the interrupted session does not carry into the resumed one."
+  ]
+}

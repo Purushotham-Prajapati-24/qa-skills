@@ -1,0 +1,60 @@
+{
+  "id": "case-15",
+  "title": "Repository with no testing infrastructure",
+  "context": "A working application with no test framework, no CI and no test files.",
+  "given": {
+    "risk_profile": "prototype",
+    "risk_factors": {
+      "coverage_deficit": {
+        "value": 1.0,
+        "basis": "no test framework is present in the repository"
+      },
+      "business_criticality": {
+        "value": 0.5,
+        "basis": "early-stage product with real users"
+      },
+      "security_sensitivity": {
+        "value": 0.6,
+        "basis": "handles user accounts"
+      },
+      "change_magnitude": {
+        "value": 0.4,
+        "basis": "routine feature work"
+      }
+    },
+    "signals": [
+      "ui",
+      "web-ui",
+      "http-api",
+      "database",
+      "auth",
+      "user-input",
+      "third-party-deps"
+    ],
+    "coverage": {},
+    "capabilities": {
+      "browser.explore": true
+    },
+    "browser_factors": {
+      "ui_known": 0.2,
+      "repeatability": 0.6,
+      "exploratory_value": 0.8,
+      "determinism_required": 0.4,
+      "ci_suitability": 0.2,
+      "existing_automation": 0.0
+    }
+  },
+  "expect": {
+    "applicable_excludes": [
+      "regression"
+    ],
+    "browser_method": "hybrid"
+  },
+  "reasoning_notes": [
+    "Regression testing requires the existing-tests signal. With no suite, it is genuinely not applicable -- that is the correct answer, not an oversight.",
+    "The first recommendation should be establishing a runnable harness, not scattering tests into a repository with no way to run them."
+  ],
+  "not_covered": [
+    "Whether the agent recommends the right first harness for this stack."
+  ]
+}

@@ -1,0 +1,1415 @@
+{
+  "report_id": "REPORT-2026-00001",
+  "report_version": "1.0.0",
+  "generated_at": "2026-09-16T09:29:36.998Z",
+  "session_id": "SESSION-0001",
+  "executive_summary": {
+    "headline": "FAILED: 4 execution(s) run, 1 actionable finding(s), 24 item(s) explicitly not tested.",
+    "overall_status": "FAILED",
+    "confidence": 1,
+    "key_points": [
+      "1 execution(s) failed — see Detailed Results for the failure classification of each.",
+      "1 execution(s) blocked; their scope was NOT covered by anything else.",
+      "1 finding(s) at critical severity or above."
+    ],
+    "what_was_not_tested": [
+      "agent-tool-eval: Repository shows no signal for this category (needs any of: agent-tools; missing: agent-tools).",
+      "ai-llm: Repository shows no signal for this category (needs any of: llm; missing: llm).",
+      "caching: Repository shows no signal for this category (needs any of: cache; missing: cache).",
+      "compatibility: Repository shows no signal for this category (needs any of: multi-browser, container; missing: multi-browser, container).",
+      "concurrency: Repository shows no signal for this category (needs any of: concurrency; missing: concurrency).",
+      "contract: Repository shows no signal for this category (needs any of: public-contract; missing: public-contract).",
+      "cross-browser: Repository shows no signal for this category (needs any of: multi-browser; missing: multi-browser).",
+      "deployment: Repository shows no signal for this category (needs any of: deploy-config; missing: deploy-config).",
+      "endurance: Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive).",
+      "infrastructure: Repository shows no signal for this category (needs any of: container, deploy-config; missing: container, deploy-config).",
+      "load: Repository shows no signal for this category (needs all of: perf-sensitive, http-api; missing: perf-sensitive).",
+      "localization: Repository shows no signal for this category (needs any of: i18n; missing: i18n).",
+      "logging-monitoring: Repository shows no signal for this category (needs any of: observability; missing: observability).",
+      "mobile-viewport: Repository shows no signal for this category (needs any of: responsive; missing: responsive).",
+      "non-functional: Repository shows no signal for this category (needs any of: perf-sensitive, observability; missing: perf-sensitive, observability).",
+      "observability: Repository shows no signal for this category (needs any of: observability; missing: observability).",
+      "performance: Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive).",
+      "rag-evaluation: Repository shows no signal for this category (needs any of: rag; missing: rag).",
+      "responsive: Repository shows no signal for this category (needs any of: responsive; missing: responsive).",
+      "rollback: Repository shows no signal for this category (needs any of: rollback-path; missing: rollback-path).",
+      "spike: Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive).",
+      "stress: Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive).",
+      "Payment E2E against the real provider — BLOCKED: STRIPE_SECRET_KEY is unset; refusing to transact against a live key.",
+      "Localisation testing — NOT_APPLICABLE: No i18n resources exist in the repository; nothing is translated."
+    ]
+  },
+  "execution_summary": {
+    "executions": 6,
+    "by_status": {
+      "INCONCLUSIVE": 1,
+      "PASSED": 1,
+      "FAILED": 1,
+      "BLOCKED": 1,
+      "NOT_APPLICABLE": 1,
+      "INTERRUPTED": 1
+    },
+    "total_duration_ms": 32,
+    "test_cases": 3
+  },
+  "detailed_results": [
+    {
+      "execution_id": "EXEC-2026-00003",
+      "goal": "User A cannot select user B's saved card",
+      "category": "authn-authz",
+      "method": "api-client",
+      "status": "FAILED",
+      "status_reason": "GET /api/payment-methods/:id returned another user's card with HTTP 200.",
+      "duration_ms": 11,
+      "evidence": [
+        "EV-2026-00002"
+      ],
+      "findings": [],
+      "failure_classification": {
+        "class": "authentication-failure",
+        "confidence": 0.5,
+        "signals": [
+          "http-403",
+          "caveat: Ambiguous between a product authorisation defect and missing test credentials."
+        ],
+        "evidence_refs": "[circular]"
+      },
+      "decision_id": "DEC-00001"
+    },
+    {
+      "execution_id": "EXEC-2026-00004",
+      "goal": "Payment E2E against the real provider",
+      "category": "e2e",
+      "method": "not-executed",
+      "status": "BLOCKED",
+      "status_reason": "STRIPE_SECRET_KEY is unset; refusing to transact against a live key.",
+      "duration_ms": 0,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00001",
+      "goal": "Quick smoke of the checkout page",
+      "category": "smoke",
+      "method": "existing-suite",
+      "status": "INCONCLUSIVE",
+      "status_reason": "Checkout works. [DOWNGRADED from PASSED: \"[REDACTED]\" claims something was executed, but no evidence is attached. Absence of failure is not proof of correctness.]",
+      "duration_ms": 6,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": {
+        "class": "insufficient-evidence",
+        "confidence": 0.9,
+        "signals": [],
+        "evidence_refs": "[circular]"
+      },
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00006",
+      "goal": "Accessibility scan of the checkout pages",
+      "category": "accessibility",
+      "method": "static-analysis",
+      "status": "INTERRUPTED",
+      "status_reason": "Session ended before this execution was finalised. No outcome may be inferred.",
+      "duration_ms": null,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00005",
+      "goal": "Localisation testing",
+      "category": "localization",
+      "method": "not-executed",
+      "status": "NOT_APPLICABLE",
+      "status_reason": "No i18n resources exist in the repository; nothing is translated.",
+      "duration_ms": 0,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00002",
+      "goal": "Baseline: full unit suite at head",
+      "category": "regression",
+      "method": "existing-suite",
+      "status": "PASSED",
+      "status_reason": "vitest suite executed against abc1234; 211 tests passed, 0 failed.",
+      "duration_ms": 15,
+      "evidence": [
+        "EV-2026-00001"
+      ],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": "DEC-00001"
+    }
+  ],
+  "evidence_index": [
+    {
+      "evidence_id": "EV-2026-00001",
+      "kind": "command-output",
+      "summary": "vitest: 211/211 passed",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-Dv0BrS\\evidence\\blobs\\output-2026-09-16T09-29-36-911Z-13264.txt",
+      "sha256": "sha256:08847719b18700defc4e5811a3e0be639fa4d8c92fcbdefd7cff7a429ac59e38"
+    },
+    {
+      "evidence_id": "EV-2026-00002",
+      "kind": "command-output",
+      "summary": "api: 11/12 passed, 1 failed",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-Dv0BrS\\evidence\\blobs\\output-2026-09-16T09-29-36-931Z-13264.txt",
+      "sha256": "sha256:6860525264278abb9c4fb263992a6bcbbfd9d5d8d074c9c5f1779db558c4b2b8"
+    }
+  ],
+  "findings": [
+    "FIND-00001",
+    "FIND-00002"
+  ],
+  "external_writes": [
+    {
+      "system": "github",
+      "action": "github.create_issue",
+      "target": "acme/shop",
+      "result_id": "#418",
+      "url": "https://github.com/acme/shop/issues/418",
+      "confirmed": true,
+      "authorised_by": "user-explicit",
+      "decision_id": "DEC-00001"
+    },
+    {
+      "system": "jira",
+      "action": "jira.comment",
+      "target": "SHOP-412",
+      "confirmed": false,
+      "authorised_by": "user-explicit"
+    }
+  ],
+  "blocked_work": [
+    {
+      "execution_id": "EXEC-2026-00004",
+      "goal": "Payment E2E against the real provider",
+      "reason": "STRIPE_SECRET_KEY is unset; refusing to transact against a live key."
+    }
+  ],
+  "deferred_work": [],
+  "interrupted_work": [
+    {
+      "execution_id": "EXEC-2026-00006",
+      "goal": "Accessibility scan of the checkout pages",
+      "reason": "Session ended before this execution was finalised. No outcome may be inferred."
+    }
+  ],
+  "uncertainty_register": [
+    "U-00001"
+  ],
+  "coverage_gaps": [
+    "security: no existing coverage",
+    "migration: no existing coverage"
+  ],
+  "remaining_work": [
+    {
+      "item": "Payment E2E against a provider sandbox",
+      "status": "BLOCKED",
+      "reason": "awaiting an environment decision",
+      "blocked_by": "U-00001"
+    },
+    {
+      "item": "Accessibility scan of the checkout pages",
+      "status": "INTERRUPTED",
+      "reason": "user redirected mid-run; must restart from the beginning"
+    },
+    {
+      "item": "Migration rollback compatibility check",
+      "status": "DEFERRED",
+      "reason": "deferred for budget; the forward migration was verified"
+    }
+  ],
+  "recommendations": [
+    "Add the ownership check in server/payments/stripe.ts:52 before anything else ships.",
+    "Decide the payment E2E environment so the drafted spec can run.",
+    "Add a rollback-compatibility check to CI — the forward migration passes but the previous app version was not tested against the new schema."
+  ],
+  "decision_history": [
+    "DEC-00001"
+  ],
+  "metrics": {
+    "computed_at": "2026-09-16T09:29:37.017Z",
+    "sample_sizes": {
+      "executions": 6,
+      "decisions": 1,
+      "findings": 2,
+      "external_writes": 1,
+      "declared_requirements": 3
+    },
+    "metrics": {
+      "false_confidence_rate": 0,
+      "requirement_coverage": 0.6667,
+      "high_risk_coverage": 0,
+      "decision_accuracy": null,
+      "decision_assessment_rate": 0,
+      "actionable_finding_rate": 0,
+      "evidence_completeness": 1,
+      "automation_conversion": null,
+      "unnecessary_test_rate": 0.5,
+      "runtime_efficiency_ms_per_case": 10.6667,
+      "flaky_identification_quality": null,
+      "interruption_recovery_rate": 0.5,
+      "authorization_compliance": 1,
+      "reproducibility": 0.5
+    },
+    "violations": [],
+    "notes": [
+      "A null metric means the denominator was zero. Nulls are honest; do not substitute 0 or 1.",
+      "Metrics with a small sample_size are noise. Report the denominator alongside the ratio.",
+      "Categories executed: smoke, regression, authn-authz, accessibility."
+    ],
+    "definitions": {
+      "false_confidence_rate": {
+        "formula": "unverified PASSED/COMPLETED claims / total PASSED/COMPLETED claims",
+        "direction": "lower-is-better",
+        "target": 0,
+        "why": "The single most dangerous failure mode of a testing agent is a confident, unevidenced \"it works\".",
+        "blind_spot": "Cannot detect a claim backed by evidence that is itself wrong (e.g. a test that asserts nothing)."
+      },
+      "requirement_coverage": {
+        "formula": "requirements validated by a passing test / applicable requirements declared",
+        "direction": "higher-is-better",
+        "blind_spot": "Only counts requirements someone wrote down. Undocumented expectations are invisible."
+      },
+      "high_risk_coverage": {
+        "formula": "high-risk behaviours with at least one executed test / high-risk behaviours identified",
+        "direction": "higher-is-better",
+        "blind_spot": "Depends on the risk engine having identified the right risks in the first place."
+      },
+      "decision_accuracy": {
+        "formula": "decisions whose recorded outcome is correct|acceptable / decisions with an assessed outcome",
+        "direction": "higher-is-better",
+        "blind_spot": "Self-assessed unless a human sets the outcome verdict. Treat agent self-scores as weak evidence."
+      },
+      "decision_assessment_rate": {
+        "formula": "decisions with an outcome verdict / total decisions",
+        "direction": "higher-is-better",
+        "why": "Guards the metric above: a 100% accuracy over 2 assessed decisions out of 40 means nothing."
+      },
+      "actionable_finding_rate": {
+        "formula": "findings triaged confirmed|reported|resolved / total findings excluding duplicates",
+        "direction": "higher-is-better",
+        "blind_spot": "A low rate may mean noisy reporting OR a thorough agent surfacing genuine ambiguity."
+      },
+      "evidence_completeness": {
+        "formula": "executions with at least one execution-grade evidence item / executions that claim a status",
+        "direction": "higher-is-better"
+      },
+      "automation_conversion": {
+        "formula": "exploratory scenarios converted into committed tests / scenarios that met the conversion threshold",
+        "direction": "higher-is-better",
+        "why": "Measures whether exploratory work leaves a durable asset behind or evaporates."
+      },
+      "unnecessary_test_rate": {
+        "formula": "executions that changed no decision and found nothing / total executions",
+        "direction": "lower-is-better",
+        "why": "More testing is not better testing. This penalises running things for the sake of a full-looking report.",
+        "blind_spot": "A passing regression test that finds nothing is valuable insurance; this metric undercounts that. Read it alongside high_risk_coverage."
+      },
+      "runtime_efficiency_ms_per_case": {
+        "formula": "total execution duration / test cases executed",
+        "direction": "lower-is-better"
+      },
+      "flaky_identification_quality": {
+        "formula": "1 - (tests labelled flaky with fewer than 3 runs / tests labelled flaky)",
+        "direction": "higher-is-better",
+        "why": "Calling a real defect \"flaky\" teaches humans to ignore true signals."
+      },
+      "interruption_recovery_rate": {
+        "formula": "interruptions with a recovered_at timestamp / total interruptions",
+        "direction": "higher-is-better"
+      },
+      "authorization_compliance": {
+        "formula": "1 - (external writes lacking user-explicit authorisation / external writes performed)",
+        "direction": "higher-is-better",
+        "target": 1,
+        "why": "Any value below 1 is a policy violation, not a performance score."
+      },
+      "reproducibility": {
+        "formula": "executions carrying commit + environment + command / executions with method != not-executed",
+        "direction": "higher-is-better",
+        "why": "A result nobody can re-run is an anecdote."
+      }
+    }
+  },
+  "integrity": {
+    "unevidenced_pass_claims": 0,
+    "false_confidence_rate": 0,
+    "checks_run": [
+      "every PASSED/COMPLETED claim checked against attached evidence",
+      "external writes checked for provider confirmation",
+      "unfinished executions surfaced as INTERRUPTED",
+      "not-applicable categories listed with reasons"
+    ],
+    "violations": []
+  },
+  "provenance": {
+    "skill_version": "0.5.0",
+    "skill_name": "test-reporting",
+    "engine_version": "0.5.0",
+    "created_at": "2026-09-16T09:29:36.998Z",
+    "created_by": "agent",
+    "session_id": "SESSION-0001"
+  },
+  "git": {
+    "repository": "acme/shop",
+    "branch": "feat/SHOP-412-saved-card",
+    "commit": "abc1234",
+    "pull_request": "412",
+    "dirty": false
+  },
+  "risk_assessment": {
+    "risk_score": 0.8905,
+    "risk_level": "critical",
+    "weights_profile": "security-critical",
+    "confidence": 0.6176,
+    "factors": [
+      {
+        "factor": "security_sensitivity",
+        "value": 0.9,
+        "weight": 2,
+        "contribution": 1.8,
+        "basis": "payment-method lookup reads session identity (stripe.ts:52)",
+        "epistemic_class": "observed"
+      },
+      {
+        "factor": "data_sensitivity",
+        "value": 1,
+        "weight": 1.8,
+        "contribution": 1.8,
+        "basis": "stored card references and billing addresses",
+        "epistemic_class": "observed"
+      },
+      {
+        "factor": "irreversibility",
+        "value": 0.9,
+        "weight": 1.5,
+        "contribution": 1.35,
+        "basis": "captures real payments; refunds are manual",
+        "epistemic_class": "inferred"
+      },
+      {
+        "factor": "business_criticality",
+        "value": 1,
+        "weight": 1,
+        "contribution": 1,
+        "basis": "checkout is the only revenue path",
+        "epistemic_class": "observed"
+      },
+      {
+        "factor": "coverage_deficit",
+        "value": 0.8,
+        "weight": 1.2,
+        "contribution": 0.96,
+        "basis": "no test exercises the saved-card branch (grep across e2e/ and server/)",
+        "epistemic_class": "observed"
+      },
+      {
+        "factor": "change_magnitude",
+        "value": 0.6,
+        "weight": 0.6,
+        "contribution": 0.36,
+        "basis": "312 changed lines across 7 files (git diff --stat)",
+        "epistemic_class": "observed"
+      },
+      {
+        "factor": "change_frequency",
+        "value": 0.7,
+        "weight": 0.3,
+        "contribution": 0.21,
+        "basis": "31 commits to server/payments in 6 months",
+        "epistemic_class": "observed"
+      }
+    ],
+    "unscored_factors": [
+      "user_impact",
+      "dependency_complexity",
+      "integration_complexity",
+      "historical_failures",
+      "test_flakiness",
+      "deployment_exposure",
+      "external_system_dependency"
+    ]
+  },
+  "applicable_categories": [
+    {
+      "category": "dependency-scan",
+      "applicable": true,
+      "reason": "Signals present: third-party-deps. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): security_sensitivity.",
+      "priority": "P0",
+      "expected_value": 0.7,
+      "risk_addressed": [
+        "security_sensitivity"
+      ],
+      "estimated_cost_minutes": 10,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "a package manager audit command"
+      ],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: security-testing",
+      "score": 0.84,
+      "execution_priority": 1
+    },
+    {
+      "category": "security",
+      "applicable": true,
+      "reason": "Signals present: user-input, auth, pii. Existing coverage \"none\" leaves a deficit of 1; addresses risk factor(s): security_sensitivity, data_sensitivity.",
+      "priority": "P0",
+      "expected_value": 1,
+      "risk_addressed": [
+        "security_sensitivity",
+        "data_sensitivity"
+      ],
+      "estimated_cost_minutes": 50,
+      "existing_coverage": "none",
+      "tool_available": true,
+      "prerequisites": [
+        "written authorisation to test the target"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: security-testing",
+      "score": 0.6,
+      "execution_priority": 2
+    },
+    {
+      "category": "input-validation",
+      "applicable": true,
+      "reason": "Signals present: user-input. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): security_sensitivity.",
+      "priority": "P0",
+      "expected_value": 0.7,
+      "risk_addressed": [
+        "security_sensitivity"
+      ],
+      "estimated_cost_minutes": 30,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: security-testing",
+      "score": 0.56,
+      "execution_priority": 3
+    },
+    {
+      "category": "session-management",
+      "applicable": true,
+      "reason": "Signals present: sessions. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): security_sensitivity.",
+      "priority": "P0",
+      "expected_value": 0.7,
+      "risk_addressed": [
+        "security_sensitivity"
+      ],
+      "estimated_cost_minutes": 30,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "ability to observe session tokens safely"
+      ],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: security-testing",
+      "score": 0.56,
+      "execution_priority": 4
+    },
+    {
+      "category": "database",
+      "applicable": true,
+      "reason": "Signals present: database. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): data_sensitivity. Deferred: would exceed the 150-minute budget (already committed 120 minutes on higher- or equal-priority work).",
+      "priority": "P0",
+      "expected_value": 0.7,
+      "risk_addressed": [
+        "data_sensitivity"
+      ],
+      "estimated_cost_minutes": 35,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "a disposable database"
+      ],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: database-testing",
+      "score": 0.5169,
+      "execution_priority": 5
+    },
+    {
+      "category": "authn-authz",
+      "applicable": true,
+      "reason": "Signals present: auth, authz. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): security_sensitivity. Deferred: would exceed the 150-minute budget (already committed 120 minutes on higher- or equal-priority work).",
+      "priority": "P0",
+      "expected_value": 0.7,
+      "risk_addressed": [
+        "security_sensitivity"
+      ],
+      "estimated_cost_minutes": 40,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "test accounts across roles"
+      ],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: security-testing",
+      "score": 0.48,
+      "execution_priority": 6
+    },
+    {
+      "category": "data-integrity",
+      "applicable": true,
+      "reason": "Signals present: database. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): data_sensitivity, irreversibility. Deferred: would exceed the 150-minute budget (already committed 120 minutes on higher- or equal-priority work).",
+      "priority": "P0",
+      "expected_value": 0.6125,
+      "risk_addressed": [
+        "data_sensitivity",
+        "irreversibility"
+      ],
+      "estimated_cost_minutes": 35,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "representative seed data"
+      ],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: database-testing",
+      "score": 0.4523,
+      "execution_priority": 7
+    },
+    {
+      "category": "migration",
+      "applicable": true,
+      "reason": "Signals present: migrations. Existing coverage \"none\" leaves a deficit of 1; addresses risk factor(s): irreversibility. Deferred: would exceed the 150-minute budget (already committed 120 minutes on higher- or equal-priority work).",
+      "priority": "P0",
+      "expected_value": 0.75,
+      "risk_addressed": [
+        "irreversibility"
+      ],
+      "estimated_cost_minutes": 50,
+      "existing_coverage": "none",
+      "tool_available": true,
+      "prerequisites": [
+        "a copy of a realistic pre-migration dataset"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: database-testing",
+      "score": 0.45,
+      "execution_priority": 8
+    },
+    {
+      "category": "acceptance",
+      "applicable": true,
+      "reason": "Signals present: any repository. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): business_criticality. Deferred: would exceed the 150-minute budget (already committed 120 minutes on higher- or equal-priority work).",
+      "priority": "P2",
+      "expected_value": 0.3889,
+      "risk_addressed": [
+        "business_criticality"
+      ],
+      "estimated_cost_minutes": 35,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "stated acceptance criteria"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: test-strategy",
+      "score": 0.2872,
+      "execution_priority": 9
+    },
+    {
+      "category": "regression",
+      "applicable": true,
+      "reason": "Signals present: existing-tests. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): coverage_deficit, change_frequency.",
+      "priority": "P2",
+      "expected_value": 0.2275,
+      "risk_addressed": [
+        "coverage_deficit",
+        "change_frequency"
+      ],
+      "estimated_cost_minutes": 20,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "a runnable existing suite"
+      ],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: regression-testing",
+      "score": 0.2184,
+      "execution_priority": 10
+    },
+    {
+      "category": "api",
+      "applicable": true,
+      "reason": "Signals present: http-api. Existing coverage \"minimal\" leaves a deficit of 0.8; addresses risk factor(s): integration_complexity, coverage_deficit. Deferred: would exceed the 150-minute budget (already committed 140 minutes on higher- or equal-priority work).",
+      "priority": "P2",
+      "expected_value": 0.2133,
+      "risk_addressed": [
+        "integration_complexity",
+        "coverage_deficit"
+      ],
+      "estimated_cost_minutes": 25,
+      "existing_coverage": "minimal",
+      "tool_available": true,
+      "prerequisites": [
+        "reachable API instance"
+      ],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: api-testing",
+      "score": 0.1862,
+      "execution_priority": 11
+    },
+    {
+      "category": "accessibility",
+      "applicable": true,
+      "reason": "Signals present: web-ui. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): user_impact, business_criticality. Deferred: would exceed the 150-minute budget (already committed 140 minutes on higher- or equal-priority work).",
+      "priority": "P2",
+      "expected_value": 0.1944,
+      "risk_addressed": [
+        "user_impact",
+        "business_criticality"
+      ],
+      "estimated_cost_minutes": 25,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "rendered pages"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: accessibility-testing",
+      "score": 0.1697,
+      "execution_priority": 12
+    },
+    {
+      "category": "sanity",
+      "applicable": true,
+      "reason": "Signals present: any repository. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): change_magnitude.",
+      "priority": "P2",
+      "expected_value": 0.14,
+      "risk_addressed": [
+        "change_magnitude"
+      ],
+      "estimated_cost_minutes": 10,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: regression-testing",
+      "score": 0.168,
+      "execution_priority": 13
+    },
+    {
+      "category": "component",
+      "applicable": true,
+      "reason": "Signals present: component-framework. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): coverage_deficit, user_impact. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
+      "priority": "P2",
+      "expected_value": 0.1867,
+      "risk_addressed": [
+        "coverage_deficit",
+        "user_impact"
+      ],
+      "estimated_cost_minutes": 25,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "component test harness"
+      ],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: ui-testing",
+      "score": 0.1629,
+      "execution_priority": 14
+    },
+    {
+      "category": "exploratory",
+      "applicable": true,
+      "reason": "Signals present: ui, http-api. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): coverage_deficit, historical_failures. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
+      "priority": "P3",
+      "expected_value": 0.1867,
+      "risk_addressed": [
+        "coverage_deficit",
+        "historical_failures"
+      ],
+      "estimated_cost_minutes": 30,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "a running instance"
+      ],
+      "automation_suitability": "low",
+      "recommended_method": "delegate to skill: browser-testing",
+      "score": 0.1494,
+      "execution_priority": 15
+    },
+    {
+      "category": "unit",
+      "applicable": true,
+      "reason": "Signals present: any repository. Existing coverage \"substantial\" leaves a deficit of 0.2; addresses risk factor(s): change_magnitude, coverage_deficit. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
+      "priority": "P3",
+      "expected_value": 0.0733,
+      "risk_addressed": [
+        "change_magnitude",
+        "coverage_deficit"
+      ],
+      "estimated_cost_minutes": 15,
+      "existing_coverage": "substantial",
+      "tool_available": true,
+      "prerequisites": [],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: unit-testing",
+      "score": 0.0782,
+      "execution_priority": 16
+    },
+    {
+      "category": "e2e",
+      "applicable": true,
+      "reason": "Signals present: web-ui. Existing coverage \"partial\" leaves a deficit of 0.5; addresses risk factor(s): business_criticality, user_impact. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
+      "priority": "P3",
+      "expected_value": 0.1389,
+      "risk_addressed": [
+        "business_criticality",
+        "user_impact"
+      ],
+      "estimated_cost_minutes": 60,
+      "existing_coverage": "partial",
+      "tool_available": true,
+      "prerequisites": [
+        "deployed or locally runnable application"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: e2e-testing",
+      "score": 0.0741,
+      "execution_priority": 17
+    },
+    {
+      "category": "smoke",
+      "applicable": true,
+      "reason": "Signals present: any repository. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): deployment_exposure. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "deployment_exposure"
+      ],
+      "estimated_cost_minutes": 10,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: regression-testing",
+      "score": 0.042,
+      "execution_priority": 18
+    },
+    {
+      "category": "ci-cd",
+      "applicable": true,
+      "reason": "Signals present: ci. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): deployment_exposure. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "deployment_exposure"
+      ],
+      "estimated_cost_minutes": 20,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: integration-testing",
+      "score": 0.0336,
+      "execution_priority": 19
+    },
+    {
+      "category": "functional",
+      "applicable": true,
+      "reason": "Signals present: any repository. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): user_impact. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "user_impact"
+      ],
+      "estimated_cost_minutes": 30,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: test-strategy",
+      "score": 0.028,
+      "execution_priority": 20
+    },
+    {
+      "category": "ui",
+      "applicable": true,
+      "reason": "Signals present: ui. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): user_impact. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "user_impact"
+      ],
+      "estimated_cost_minutes": 30,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "runnable UI"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: ui-testing",
+      "score": 0.028,
+      "execution_priority": 21
+    },
+    {
+      "category": "integration",
+      "applicable": true,
+      "reason": "Signals present: database, http-api, external-integration. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): dependency_complexity, integration_complexity. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "dependency_complexity",
+        "integration_complexity"
+      ],
+      "estimated_cost_minutes": 35,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "test doubles or a disposable environment"
+      ],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: integration-testing",
+      "score": 0.0258,
+      "execution_priority": 22
+    },
+    {
+      "category": "visual",
+      "applicable": true,
+      "reason": "Signals present: web-ui. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): user_impact. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "user_impact"
+      ],
+      "estimated_cost_minutes": 35,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "stable baseline screenshots"
+      ],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: ui-testing",
+      "score": 0.0258,
+      "execution_priority": 23
+    },
+    {
+      "category": "browser-automation",
+      "applicable": true,
+      "reason": "Signals present: web-ui. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): user_impact. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "user_impact"
+      ],
+      "estimated_cost_minutes": 40,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "a browser driver"
+      ],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: browser-testing",
+      "score": 0.024,
+      "execution_priority": 24
+    },
+    {
+      "category": "resilience",
+      "applicable": true,
+      "reason": "Signals present: external-integration. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): external_system_dependency. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "external_system_dependency"
+      ],
+      "estimated_cost_minutes": 60,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "a fault injection mechanism",
+        "isolated environment"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: integration-testing",
+      "score": 0.0187,
+      "execution_priority": 25
+    },
+    {
+      "category": "agent-tool-eval",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: agent-tools; missing: agent-tools).",
+      "priority": "P3",
+      "expected_value": 0.6125,
+      "risk_addressed": [
+        "security_sensitivity",
+        "irreversibility"
+      ],
+      "estimated_cost_minutes": 75,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "a sandbox where tool calls are safe"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: ai-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "ai-llm",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: llm; missing: llm).",
+      "priority": "P3",
+      "expected_value": 0.35,
+      "risk_addressed": [
+        "user_impact",
+        "security_sensitivity"
+      ],
+      "estimated_cost_minutes": 60,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "a model endpoint or recorded fixtures",
+        "a rubric or golden set"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: ai-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "caching",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: cache; missing: cache).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "dependency_complexity"
+      ],
+      "estimated_cost_minutes": 30,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "control over cache state"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: integration-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "compatibility",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: multi-browser, container; missing: multi-browser, container).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "dependency_complexity"
+      ],
+      "estimated_cost_minutes": 40,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "a stated support matrix"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: compatibility-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "concurrency",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: concurrency; missing: concurrency).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "historical_failures"
+      ],
+      "estimated_cost_minutes": 50,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: integration-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "contract",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: public-contract; missing: public-contract).",
+      "priority": "P3",
+      "expected_value": 0.2625,
+      "risk_addressed": [
+        "integration_complexity",
+        "irreversibility"
+      ],
+      "estimated_cost_minutes": 40,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "a published schema or consumer expectations"
+      ],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: api-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "cross-browser",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: multi-browser; missing: multi-browser).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "user_impact"
+      ],
+      "estimated_cost_minutes": 45,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "more than one browser engine installed"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: compatibility-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "deployment",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: deploy-config; missing: deploy-config).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "deployment_exposure"
+      ],
+      "estimated_cost_minutes": 30,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "a non-production target"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: integration-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "endurance",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "historical_failures"
+      ],
+      "estimated_cost_minutes": 240,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "long-running environment",
+        "explicit authorisation"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: performance-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "infrastructure",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: container, deploy-config; missing: container, deploy-config).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "deployment_exposure"
+      ],
+      "estimated_cost_minutes": 35,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "a container runtime or IaC plan command"
+      ],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: integration-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "load",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs all of: perf-sensitive, http-api; missing: perf-sensitive).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "user_impact"
+      ],
+      "estimated_cost_minutes": 90,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "isolated environment",
+        "explicit authorisation -- load tests are a form of attack traffic"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: performance-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "localization",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: i18n; missing: i18n).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "user_impact"
+      ],
+      "estimated_cost_minutes": 30,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "translation resources"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: compatibility-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "logging-monitoring",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: observability; missing: observability).",
+      "priority": "P3",
+      "expected_value": 0.7,
+      "risk_addressed": [
+        "security_sensitivity"
+      ],
+      "estimated_cost_minutes": 20,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: integration-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "mobile-viewport",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: responsive; missing: responsive).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "user_impact"
+      ],
+      "estimated_cost_minutes": 25,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "runnable UI"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: compatibility-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "non-functional",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: perf-sensitive, observability; missing: perf-sensitive, observability).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "user_impact"
+      ],
+      "estimated_cost_minutes": 45,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "stated non-functional requirements"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: performance-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "observability",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: observability; missing: observability).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "historical_failures"
+      ],
+      "estimated_cost_minutes": 25,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "access to the telemetry sink"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: integration-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "performance",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive).",
+      "priority": "P3",
+      "expected_value": 0.1944,
+      "risk_addressed": [
+        "user_impact",
+        "business_criticality"
+      ],
+      "estimated_cost_minutes": 60,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "an environment representative enough to measure"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: performance-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "rag-evaluation",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: rag; missing: rag).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "user_impact"
+      ],
+      "estimated_cost_minutes": 90,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "a labelled question/answer set"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: ai-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "responsive",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: responsive; missing: responsive).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "user_impact"
+      ],
+      "estimated_cost_minutes": 25,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "runnable UI"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: compatibility-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "rollback",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: rollback-path; missing: rollback-path).",
+      "priority": "P3",
+      "expected_value": 0.525,
+      "risk_addressed": [
+        "irreversibility"
+      ],
+      "estimated_cost_minutes": 40,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "a non-production target"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: integration-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "spike",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive).",
+      "priority": "P3",
+      "expected_value": 0.035,
+      "risk_addressed": [
+        "user_impact"
+      ],
+      "estimated_cost_minutes": 60,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "isolated environment",
+        "explicit authorisation"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: performance-testing",
+      "score": 0,
+      "execution_priority": 0
+    },
+    {
+      "category": "stress",
+      "applicable": false,
+      "reason": "Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive).",
+      "priority": "P3",
+      "expected_value": 0.525,
+      "risk_addressed": [
+        "irreversibility"
+      ],
+      "estimated_cost_minutes": 90,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "isolated environment",
+        "explicit authorisation"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: performance-testing",
+      "score": 0,
+      "execution_priority": 0
+    }
+  ],
+  "goals": [
+    {
+      "id": "G-01",
+      "goal": "Validate the saved-card payment flow",
+      "target": "src/checkout, server/payments",
+      "status": "PARTIAL",
+      "success_criteria": [
+        {
+          "criterion": "A saved card completes and creates exactly one order",
+          "status": "NEEDS_USER_INPUT"
+        },
+        {
+          "criterion": "A declined card errors and creates no order",
+          "status": "NEEDS_USER_INPUT"
+        },
+        {
+          "criterion": "A user cannot select another user's saved card",
+          "status": "FAILED",
+          "evidence": [
+            "EV-2026-00002"
+          ],
+          "execution_id": "EXEC-2026-00003"
+        }
+      ]
+    }
+  ]
+}

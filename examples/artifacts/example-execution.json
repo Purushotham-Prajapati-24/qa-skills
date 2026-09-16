@@ -1,0 +1,62 @@
+{
+  "execution_id": "EXEC-2026-00003",
+  "session_id": "SESSION-0001",
+  "started_at": "2026-09-16T09:29:36.925Z",
+  "goal": "User A cannot select user B's saved card",
+  "method": "api-client",
+  "status": "FAILED",
+  "status_reason": "GET /api/payment-methods/:id returned another user's card with HTTP 200.",
+  "evidence": [
+    "EV-2026-00002"
+  ],
+  "findings": [],
+  "uncertainties": [],
+  "retries": 0,
+  "provenance": {
+    "skill_version": "0.5.0",
+    "skill_name": "testing-orchestrator",
+    "engine_version": "0.5.0",
+    "created_at": "2026-09-16T09:29:36.925Z",
+    "created_by": "agent",
+    "session_id": "SESSION-0001"
+  },
+  "test_category": "authn-authz",
+  "decision_id": "DEC-00001",
+  "command": "npm run test:api -- saved-cards",
+  "environment": "local-docker",
+  "git": {
+    "repository": "acme/shop",
+    "branch": "feat/SHOP-412-saved-card",
+    "commit": "abc1234",
+    "pull_request": "412",
+    "dirty": false
+  },
+  "finished_at": "2026-09-16T09:29:36.936Z",
+  "duration_ms": 11,
+  "test_results": [
+    {
+      "name": "saved card belonging to another user is not selectable",
+      "status": "FAILED",
+      "file": "test/api/saved-cards.test.ts",
+      "validates_requirements": [
+        "REQ-3"
+      ]
+    }
+  ],
+  "totals": {
+    "total": 1,
+    "passed": "[REDACTED]",
+    "failed": 1,
+    "skipped": 0,
+    "errored": 0
+  },
+  "failure_classification": {
+    "class": "authentication-failure",
+    "confidence": 0.5,
+    "signals": [
+      "http-403",
+      "caveat: Ambiguous between a product authorisation defect and missing test credentials."
+    ],
+    "evidence_refs": "[circular]"
+  }
+}

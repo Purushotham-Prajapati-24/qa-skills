@@ -1,0 +1,75 @@
+{
+  "id": "case-05",
+  "title": "Database migration: column split across two tables",
+  "context": "A migration splits a denormalised column into a new table. Runs against production data on deploy.",
+  "given": {
+    "risk_profile": "balanced",
+    "risk_factors": {
+      "data_sensitivity": {
+        "value": 0.8,
+        "basis": "customer address data is being moved"
+      },
+      "irreversibility": {
+        "value": 1.0,
+        "basis": "the down migration is lossy; the source column is dropped"
+      },
+      "business_criticality": {
+        "value": 0.8,
+        "basis": "orders cannot be fulfilled without addresses"
+      },
+      "change_magnitude": {
+        "value": 0.5,
+        "basis": "one migration file plus 4 query call sites"
+      },
+      "coverage_deficit": {
+        "value": 0.9,
+        "basis": "no migration test exists in this repository"
+      },
+      "deployment_exposure": {
+        "value": 0.8,
+        "basis": "migrations run automatically on deploy"
+      }
+    },
+    "signals": [
+      "http-api",
+      "database",
+      "migrations",
+      "existing-tests",
+      "ci",
+      "container",
+      "deploy-config"
+    ],
+    "coverage": {
+      "database": "minimal",
+      "migration": "none",
+      "data-integrity": "none"
+    },
+    "capabilities": {
+      "database.query": true
+    }
+  },
+  "expect": {
+    "risk_level": {
+      "one_of": [
+        "high",
+        "critical"
+      ]
+    },
+    "applicable_includes": [
+      "migration",
+      "data-integrity",
+      "database"
+    ],
+    "selected_includes": [
+      "migration"
+    ],
+    "risk_score": {
+      "at_least": 0.75
+    }
+  },
+  "reasoning_notes": [
+    "A lossy down migration should drive irreversibility to 1.0 and dominate the score.",
+    "Rollback compatibility -- can the previous app version run against the new schema -- is the check teams most often skip.",
+    "Calibration note: scores 0.810 -> high under the balanced profile, just below the 0.85 critical threshold, because balanced weights irreversibility at 0.8. A team that ships lossy migrations should use the security-critical profile (irreversibility 1.5), which pushes this to critical. That is a real signal about profile choice, not a scoring bug."
+  ]
+}

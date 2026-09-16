@@ -1,0 +1,62 @@
+{
+  "id": "case-07",
+  "title": "Performance-sensitive API change: new join added to a hot endpoint",
+  "context": "A list endpoint with a stated p95 target gains a join. No baseline has been captured.",
+  "given": {
+    "risk_profile": "balanced",
+    "risk_factors": {
+      "user_impact": {
+        "value": 0.7,
+        "basis": "endpoint backs the main dashboard"
+      },
+      "business_criticality": {
+        "value": 0.6,
+        "basis": "degrades the primary workflow but does not break it"
+      },
+      "change_magnitude": {
+        "value": 0.3,
+        "basis": "one query modified"
+      },
+      "coverage_deficit": {
+        "value": 1.0,
+        "basis": "no performance test exists"
+      },
+      "dependency_complexity": {
+        "value": 0.4,
+        "basis": "one query call site"
+      }
+    },
+    "signals": [
+      "http-api",
+      "database",
+      "perf-sensitive",
+      "observability",
+      "existing-tests",
+      "ci"
+    ],
+    "coverage": {
+      "performance": "none",
+      "api": "partial"
+    },
+    "capabilities": {},
+    "failure_signals": [
+      "latency-above-baseline"
+    ],
+    "evidence_ids": [
+      "EV-2026-00002"
+    ]
+  },
+  "expect": {
+    "applicable_includes": [
+      "performance",
+      "non-functional",
+      "api"
+    ],
+    "failure_class": "performance-degradation",
+    "failure_confidence_at_most": 0.7
+  },
+  "reasoning_notes": [
+    "A stated target makes performance testing applicable; without one it would be a requirement ambiguity, not a test.",
+    "Load and stress must not be selected automatically -- they need authorisation and an isolated target."
+  ]
+}

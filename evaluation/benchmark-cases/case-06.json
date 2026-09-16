@@ -1,0 +1,69 @@
+{
+  "id": "case-06",
+  "title": "Authorization change: role check moved into a shared helper",
+  "context": "Refactor moving permission checks into one helper. No behaviour intended to change.",
+  "given": {
+    "risk_profile": "security-critical",
+    "risk_factors": {
+      "security_sensitivity": {
+        "value": 1.0,
+        "basis": "every authorisation decision now flows through one helper"
+      },
+      "business_criticality": {
+        "value": 0.8,
+        "basis": "controls access to all customer data"
+      },
+      "data_sensitivity": {
+        "value": 0.9,
+        "basis": "customer records"
+      },
+      "change_magnitude": {
+        "value": 0.7,
+        "basis": "touches 22 call sites"
+      },
+      "dependency_complexity": {
+        "value": 0.8,
+        "basis": "22 modules now depend on the new helper"
+      },
+      "coverage_deficit": {
+        "value": 0.7,
+        "basis": "tests cover the helper but not every migrated call site"
+      }
+    },
+    "signals": [
+      "http-api",
+      "auth",
+      "authz",
+      "sessions",
+      "database",
+      "user-input",
+      "pii",
+      "existing-tests",
+      "ci"
+    ],
+    "coverage": {
+      "authn-authz": "partial",
+      "security": "minimal"
+    },
+    "capabilities": {},
+    "failure_signals": [
+      "http-403"
+    ],
+    "evidence_ids": [
+      "EV-2026-00001"
+    ]
+  },
+  "expect": {
+    "risk_level": "critical",
+    "applicable_includes": [
+      "authn-authz",
+      "security"
+    ],
+    "failure_class": "authentication-failure",
+    "failure_confidence_at_most": 0.5
+  },
+  "reasoning_notes": [
+    "A no-behaviour-change refactor of authorisation is exactly where silent privilege escalation appears. Existing tests passing is not sufficient evidence.",
+    "A 403 is genuinely ambiguous between a product defect and missing test credentials, so classifier confidence must stay capped."
+  ]
+}

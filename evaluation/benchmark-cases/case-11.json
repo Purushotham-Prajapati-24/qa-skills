@@ -1,0 +1,55 @@
+{
+  "id": "case-11",
+  "title": "Missing external dependency: no browser installed",
+  "context": "The repository has Playwright specs, but no browser binary is available in this environment.",
+  "given": {
+    "signals": [
+      "ui",
+      "web-ui",
+      "http-api",
+      "existing-tests",
+      "browser-tooling",
+      "component-framework",
+      "ci"
+    ],
+    "coverage": {
+      "e2e": "partial",
+      "unit": "substantial"
+    },
+    "capabilities": {
+      "browser.explore": false,
+      "browser.run_deterministic_test": false
+    },
+    "browser_factors": {
+      "ui_known": 0.7,
+      "repeatability": 0.8,
+      "determinism_required": 0.8,
+      "exploratory_value": 0.3,
+      "ci_suitability": 0.7,
+      "existing_automation": 0.6
+    },
+    "failure_signals": [
+      "browser-not-installed"
+    ],
+    "evidence_ids": [
+      "EV-2026-00003"
+    ]
+  },
+  "expect": {
+    "failure_class": "environment-defect",
+    "browser_method": {
+      "one_of": [
+        "existing-tests",
+        "existing-other-tooling"
+      ]
+    }
+  },
+  "reasoning_notes": [
+    "A missing capability must degrade the plan honestly: browser categories become BLOCKED, never silently skipped and never simulated.",
+    "The engine must not report a browser failure as a product defect.",
+    "Calibration note: the engine returns existing-other-tooling. The factor set contains nothing that names WHICH framework the repository uses, so the matrix cannot distinguish C from E -- that choice comes from the repository profile, not from these factors. The assertion that matters here is 'run what already exists, write nothing new', so both are accepted."
+  ],
+  "not_covered": [
+    "Which existing browser framework to invoke. That comes from the repository profile, not the decision matrix."
+  ]
+}

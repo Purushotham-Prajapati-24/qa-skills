@@ -1,0 +1,30 @@
+{
+  "id": "U-00001",
+  "timestamp": "2026-09-16T09:29:36.956Z",
+  "question": "Should payment E2E use a real provider sandbox key, or a mock at the HTTP boundary?",
+  "status": "user-input-required",
+  "impact": "cannot safely execute a real transaction; will not transact against a live key",
+  "affected_scope": [
+    "payment-e2e"
+  ],
+  "blocks_categories": [
+    "e2e"
+  ],
+  "next_action": "ask the user which environment and credentials to use",
+  "owner": "user",
+  "evidence": [],
+  "independent_work_continued": [
+    "Ran the unit suite (211/211 at abc1234)",
+    "Ran API tests against a mocked provider (11/12)",
+    "Drafted e2e/payment.spec.ts so it is ready either way"
+  ],
+  "provenance": {
+    "skill_version": "0.5.0",
+    "skill_name": "testing-orchestrator",
+    "engine_version": "0.5.0",
+    "created_at": "2026-09-16T09:29:36.956Z",
+    "created_by": "agent",
+    "session_id": "SESSION-0001"
+  },
+  "session_id": "SESSION-0001"
+}

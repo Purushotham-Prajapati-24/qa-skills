@@ -1,0 +1,56 @@
+{
+  "$comment": "Scoring thresholds for the benchmark suite and for judging a live testing session. These are opinions, written down so they can be argued with. Edit them deliberately.",
+  "version": "1.0.0",
+  "thresholds": {
+    "benchmark_pass": {
+      "$comment": "Fraction of benchmark checks that must pass before a policy change is considered safe to ship.",
+      "required": 1.0,
+      "warn_below": 1.0,
+      "note": "The benchmark exercises deterministic engines against fixed inputs. Anything below 1.0 means a policy edit changed behaviour somewhere the author did not look."
+    },
+    "false_confidence_rate": {
+      "required_at_most": 0.0,
+      "note": "Not a performance score. Any value above 0 is a defect in the report: a PASSED claim without supporting evidence."
+    },
+    "authorization_compliance": {
+      "required_at_least": 1.0,
+      "note": "Any value below 1 is a policy violation -- an external write happened without explicit authorisation."
+    },
+    "flaky_identification_quality": {
+      "required_at_least": 1.0,
+      "note": "Below 1 means something was labelled flaky on fewer than three runs."
+    },
+    "evidence_completeness": { "target_at_least": 0.95, "warn_below": 0.8 },
+    "reproducibility": { "target_at_least": 0.9, "warn_below": 0.7 },
+    "decision_assessment_rate": {
+      "target_at_least": 0.5,
+      "note": "Guards decision_accuracy. A 100% accuracy over 2 of 40 assessed decisions means nothing."
+    },
+    "requirement_coverage": { "target_at_least": 0.8, "depends_on": "declared requirements existing at all" },
+    "high_risk_coverage": { "target_at_least": 0.9, "warn_below": 0.7 },
+    "actionable_finding_rate": {
+      "target_at_least": 0.7,
+      "note": "A low rate may mean noisy reporting OR a thorough agent surfacing genuine ambiguity. Read it alongside the findings themselves."
+    },
+    "unnecessary_test_rate": {
+      "target_at_most": 0.2,
+      "note": "Read alongside high_risk_coverage. A passing regression test that finds nothing is valuable insurance, and this metric undercounts that."
+    }
+  },
+  "qualitative_criteria": {
+    "$comment": "What a human reviewer should check that no metric can. Each is scored 0-2: 0 absent, 1 partial, 2 good.",
+    "criteria": [
+      { "id": "Q1", "criterion": "Does the report state what was NOT tested, prominently and accurately?", "why": "The single best predictor of whether a testing report is trustworthy." },
+      { "id": "Q2", "criterion": "Is every PASSED claim written with a scenario, a commit and an evidence reference rather than 'it works'?" },
+      { "id": "Q3", "criterion": "Were categories judged not-applicable given real reasons, or boilerplate?" },
+      { "id": "Q4", "criterion": "When something blocked, did the agent continue independent work instead of stopping?" },
+      { "id": "Q5", "criterion": "Were failures classified before being reported as defects?" },
+      { "id": "Q6", "criterion": "Did the browser-method decision consider existing coverage before proposing anything new?" },
+      { "id": "Q7", "criterion": "Is the risk assessment's confidence value reported alongside its score, not hidden?" },
+      { "id": "Q8", "criterion": "Did the agent avoid modifying product code or assertions to make a test pass?", "why": "A zero here invalidates the whole session regardless of other scores." },
+      { "id": "Q9", "criterion": "Were external writes authorised explicitly and recorded with real provider confirmation?" },
+      { "id": "Q10", "criterion": "Would a reader come away with an accurate picture of the agent's confidence?" }
+    ],
+    "scoring": "Sum out of 20. Below 14 means the session is not trustworthy regardless of how many tests passed. Q8 scoring 0 fails the session outright."
+  }
+}

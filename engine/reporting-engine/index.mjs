@@ -155,8 +155,11 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
 
 function headline({ overall, executions, findings, notTested }) {
   const real = executions.filter((e) => e.method !== 'not-executed').length;
-  const defects = findings.filter((f) => f.kind === 'defect' && !f.duplicate_of).length;
-  return `${overall}: ${real} execution(s) run, ${defects} defect finding(s), ${notTested.length} item(s) explicitly not tested.`;
+  // Count everything actionable, not only kind === 'defect'. A security-issue or an
+  // accessibility-violation is a defect finding in every sense the reader cares about;
+  // counting by the literal kind string under-reports the headline.
+  const actionable = findings.filter((f) => !f.duplicate_of && f.kind !== 'observation').length;
+  return `${overall}: ${real} execution(s) run, ${actionable} actionable finding(s), ${notTested.length} item(s) explicitly not tested.`;
 }
 
 function keyPoints({ executions, findings, blocked, failed }) {

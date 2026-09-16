@@ -1,0 +1,30 @@
+{
+  "id": "case-10",
+  "title": "Ambiguous requirement",
+  "context": "The ticket says checkout should be fast. No number, no condition.",
+  "given": {
+    "signals": [
+      "ui",
+      "web-ui",
+      "http-api",
+      "perf-sensitive",
+      "existing-tests"
+    ],
+    "coverage": {
+      "performance": "none"
+    },
+    "capabilities": {},
+    "failure_signals": [
+      "requirement-unclear"
+    ],
+    "evidence_ids": []
+  },
+  "expect": {
+    "failure_class": "ambiguous-requirement",
+    "failure_confidence_at_most": 0.75
+  },
+  "reasoning_notes": [
+    "The correct behaviour is to raise an uncertainty and continue everything else -- not to invent a threshold and test against it.",
+    "Confidence must stay capped because no evidence was attached."
+  ]
+}

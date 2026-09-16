@@ -1,0 +1,74 @@
+{
+  "decision_id": "DEC-00001",
+  "timestamp": "2026-09-16T09:29:36.879Z",
+  "category": "browser-method",
+  "question": "How should the changed saved-card checkout UI be tested?",
+  "candidate_options": [
+    {
+      "id": "hybrid",
+      "label": "D. Explore first, then convert the stable path into a deterministic script",
+      "score": 0.7822
+    },
+    {
+      "id": "playwright-script",
+      "label": "B. Deterministic Playwright (or equivalent) script committed to the repo",
+      "score": 0.6404,
+      "rejected_because": "no-script-for-unknown-ui: Writing selectors for a UI nobody has looked at produces brittle tests that encode guesses. Explore first."
+    },
+    {
+      "id": "existing-other-tooling",
+      "label": "E. Use the browser automation stack the repository already standardised on (Cypress, Selenium, WebdriverIO, ...)",
+      "score": 0.5643
+    },
+    {
+      "id": "existing-tests",
+      "label": "C. Run the browser tests the repository already has",
+      "score": 0.5589
+    },
+    {
+      "id": "playwright-mcp",
+      "label": "A. Agent-driven exploratory browser session (Playwright MCP or equivalent)",
+      "score": 0.4842
+    }
+  ],
+  "selected_option": "hybrid",
+  "reason": [
+    "Scenario: Saved-card checkout flow was changed; existing Playwright coverage is partial and the new branch has not been examined.",
+    "exploratory_value=0.8 >= 0.55 and repeatability=0.9 >= 0.55: the behaviour must be discovered before it can be asserted, and it will be re-run often enough to justify committing a script afterwards.",
+    "Hard rule \"no-script-for-unknown-ui\" removed [playwright-script]: Writing selectors for a UI nobody has looked at produces brittle tests that encode guesses. Explore first."
+  ],
+  "evidence_refs": [],
+  "confidence": 0.78,
+  "reversible": true,
+  "downstream_effect": [
+    "An exploratory execution runs first",
+    "A committed spec is added to e2e/ if the scenario meets the conversion threshold"
+  ],
+  "policy_refs": [
+    "browser-decision.matrix@1.0.0"
+  ],
+  "provenance": {
+    "skill_version": "0.5.0",
+    "skill_name": "browser-testing",
+    "engine_version": "0.5.0",
+    "created_at": "2026-09-16T09:29:36.879Z",
+    "created_by": "agent",
+    "session_id": "SESSION-0001"
+  },
+  "session_id": "SESSION-0001",
+  "context": {
+    "summary": "Scenario: Saved-card checkout flow was changed; existing Playwright coverage is partial and the new branch has not been examined.",
+    "git": {
+      "repository": "acme/shop",
+      "branch": "feat/SHOP-412-saved-card",
+      "commit": "abc1234",
+      "pull_request": "412",
+      "dirty": false
+    }
+  },
+  "risk": {
+    "level": "critical",
+    "score": 0.8905,
+    "note": "payment path with no coverage of the new branch"
+  }
+}

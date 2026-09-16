@@ -76,3 +76,42 @@ test('schema validator resolves cross-file $refs', () => {
 test('assertValid throws with a readable message', () => {
   assert.throws(() => assertValid({}, 'evidence'), /Schema validation failed for "evidence"/);
 });
+
+/* ------------------------------------------------------------ regressions */
+
+test('redaction does not mask "passed" — an optional suffix made `pass` match on its own', () => {
+  const out = redact({ totals: { total: 2, passed: 2, failed: 0, skipped: 0 } });
+  assert.deepEqual(out.totals, { total: 2, passed: 2, failed: 0, skipped: 0 });
+});
+
+test('redaction still masks real password-shaped keys', () => {
+  const out = redact({ password: 'hunter2', passphrase: 'x', passwd: 'y', db_password: 'z' });
+  for (const v of Object.values(out)) assert.equal(v, '[REDACTED]');
+});
+
+test('redaction matches "token" as a whole segment, not as a prefix', () => {
+  const out = redact({ access_token: 'abc12345', token: 'def12345', tokens_used: 4120, tokenizer: 'bpe' });
+  assert.equal(out.access_token, '[REDACTED]');
+  assert.equal(out.token, '[REDACTED]');
+  assert.equal(out.tokens_used, 4120, 'a token-count metric is not a secret');
+  assert.equal(out.tokenizer, 'bpe');
+});
+
+test('a shared reference is not a cycle', () => {
+  // Executions routinely hold the same array in two places. A visited-set treats the
+  // second reference as circular and silently corrupts the record.
+  const shared = ['EV-2026-00001'];
+  const out = redact({ evidence: shared, failure_classification: { evidence_refs: shared } });
+  assert.deepEqual(out.evidence, ['EV-2026-00001']);
+  assert.deepEqual(out.failure_classification.evidence_refs, ['EV-2026-00001']);
+});
+
+test('a genuine cycle is still caught', () => {
+  const a = { name: 'a' };
+  a.self = a;
+  assert.equal(redact(a).self, '[circular]');
+  const x = { name: 'x' };
+  const y = { name: 'y', back: x };
+  x.forward = y;
+  assert.equal(redact(x).forward.back, '[circular]');
+});

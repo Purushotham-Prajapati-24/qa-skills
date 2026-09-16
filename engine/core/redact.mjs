@@ -10,8 +10,22 @@
  * capturing credential material as evidence.
  */
 
+/**
+ * Field names whose VALUES are masked.
+ *
+ * Two lessons are baked into this pattern, both learned the hard way:
+ *
+ *  - `pass` must not match on its own. An earlier version used `pass(word|phrase)?`,
+ *    which made the suffix optional -- so it matched `passed` and redacted test pass
+ *    counts into "[REDACTED]", corrupting every execution record with totals.
+ *  - `token` must match as a whole segment (`access_token`, `token`) rather than as a
+ *    prefix, or it swallows `tokens_used` and similar metric fields.
+ *
+ * Over-redaction is not a safe failure. It destroys the records this module exists to
+ * protect, and it does so silently.
+ */
 const KEY_HINTS =
-  /(pass(word|phrase)?|secret|[-_]?token|^token|credential|api[-_]?key|apikey|access[-_]?key|private[-_]?key|bearer|cookie|authorization|authorisation|connection[-_]?string|dsn)/i;
+  /(password|passphrase|passwd|secret|(^|[-_])token([-_]|$)|credential|api[-_]?key|apikey|access[-_]?key|private[-_]?key|bearer|cookie|authorization|authorisation|connection[-_]?string|dsn)/i;
 
 /**
  * Field names this system uses for its own record-keeping. They win over
@@ -53,24 +67,36 @@ export function redactText(input) {
   return out;
 }
 
-/** Deep-redact an arbitrary JSON-serialisable value. */
-export function redact(value, seen = new WeakSet()) {
+/**
+ * Deep-redact an arbitrary JSON-serialisable value.
+ *
+ * `stack` tracks the current DFS path, not every node visited. That distinction matters:
+ * records routinely hold the SAME array in two places (an execution's `evidence` and its
+ * `failure_classification.evidence_refs` are often one array). A visited-set treats the
+ * second reference as a cycle and replaces it with "[circular]", producing a record that
+ * fails its own schema. Only a genuine ancestor is a cycle.
+ */
+export function redact(value, stack = new Set()) {
   if (typeof value === 'string') return redactText(value);
   if (value === null || typeof value !== 'object') return value;
-  if (seen.has(value)) return '[circular]';
-  seen.add(value);
+  if (stack.has(value)) return '[circular]';
 
-  if (Array.isArray(value)) return value.map((v) => redact(v, seen));
+  stack.add(value);
+  try {
+    if (Array.isArray(value)) return value.map((v) => redact(v, stack));
 
-  const out = {};
-  for (const [k, v] of Object.entries(value)) {
-    if (!SAFE_KEYS.has(k) && KEY_HINTS.test(k) && (typeof v === 'string' || typeof v === 'number')) {
-      out[k] = '[REDACTED]';
-    } else {
-      out[k] = redact(v, seen);
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+      if (!SAFE_KEYS.has(k) && KEY_HINTS.test(k) && (typeof v === 'string' || typeof v === 'number')) {
+        out[k] = '[REDACTED]';
+      } else {
+        out[k] = redact(v, stack);
+      }
     }
+    return out;
+  } finally {
+    stack.delete(value);
   }
-  return out;
 }
 
 /** True when the value still contains something that looks like a live secret. */

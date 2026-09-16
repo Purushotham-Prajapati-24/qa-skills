@@ -1,0 +1,40 @@
+{
+  "id": "case-09",
+  "title": "Stable UI regression needing a deterministic CI gate",
+  "context": "A well-understood checkout flow that must be protected by an unattended CI check.",
+  "given": {
+    "browser_factors": {
+      "ui_known": 0.9,
+      "repeatability": 0.95,
+      "determinism_required": 0.95,
+      "exploratory_value": 0.05,
+      "ci_suitability": 0.95,
+      "business_criticality": 0.9,
+      "assertion_complexity": 0.8,
+      "execution_frequency": 0.9,
+      "existing_automation": 0.1,
+      "environment_stability": 0.8,
+      "evidence_requirements": 0.7,
+      "network_mocking_required": 0.7,
+      "maintenance_cost_tolerance": 0.6,
+      "tool_reliability": 0.8
+    },
+    "automation_factors": {
+      "repeatability": 0.95,
+      "business_criticality": 0.9,
+      "environment_stability": 0.8,
+      "expected_runtime_minutes": 3
+    },
+    "capabilities": {
+      "browser.explore": true,
+      "browser.run_deterministic_test": true
+    }
+  },
+  "expect": {
+    "browser_method": "playwright-script",
+    "automate": true
+  },
+  "reasoning_notes": [
+    "The hard rule no-mcp-for-ci-gate must remove the agent-driven session entirely, not merely rank it lower."
+  ]
+}

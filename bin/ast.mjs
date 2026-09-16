@@ -308,13 +308,21 @@ const COMMANDS = {
 
 /* ------------------------------------------------------------ ast validate */
 
+/**
+ * Collection -> { schema, the field holding THAT record's own ID }.
+ *
+ * The ID field must be pinned per collection. A fallback chain like
+ * `item.decision_id ?? item.execution_id ?? ...` looks harmless and is not: an execution
+ * carries a `decision_id`, and evidence and findings carry an `execution_id`, so the chain
+ * keys every record by a foreign ID and then reports every real reference as dangling.
+ */
 const COLLECTION_SCHEMAS = {
-  decisions: 'decision',
-  executions: 'execution',
-  evidence: 'evidence',
-  findings: 'finding',
-  uncertainties: 'uncertainty',
-  reports: 'report',
+  decisions: { schema: 'decision', idField: 'decision_id' },
+  executions: { schema: 'execution', idField: 'execution_id' },
+  evidence: { schema: 'evidence', idField: 'evidence_id' },
+  findings: { schema: 'finding', idField: 'finding_id' },
+  uncertainties: { schema: 'uncertainty', idField: 'id' },
+  reports: { schema: 'report', idField: 'report_id' },
 };
 
 function validateAll() {
@@ -337,13 +345,17 @@ function validateAll() {
 
   const known = { evidence: new Set(), decisions: new Set(), findings: new Set(), uncertainties: new Set(), executions: new Set() };
 
-  for (const [collection, schemaName] of Object.entries(COLLECTION_SCHEMAS)) {
+  for (const [collection, { schema: schemaName, idField }] of Object.entries(COLLECTION_SCHEMAS)) {
     const items = state.list(collection);
     counts[collection] = items.length;
     for (const item of items) {
-      const r = validateSchema(item, schemaName);
-      const id = item.decision_id ?? item.execution_id ?? item.evidence_id ?? item.finding_id ?? item.id ?? item.report_id;
+      const id = item[idField];
+      if (!id) {
+        problems.push(`${collection}: a record is missing its "${idField}"`);
+        continue;
+      }
       if (known[collection]) known[collection].add(id);
+      const r = validateSchema(item, schemaName);
       if (!r.valid) problems.push(...r.errors.map((e) => `${collection}/${id} ${e.path}: ${e.message}`));
     }
   }
