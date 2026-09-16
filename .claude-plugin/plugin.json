@@ -1,19 +1,34 @@
 {
   "name": "autonomous-software-testing",
   "displayName": "Autonomous Software Testing",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "An evidence-driven testing agent: profiles a repository, decides which testing actually applies, scores risk, chooses tools, executes, collects evidence, and reports honestly on what was and was not tested.",
-  "author": { "name": "Autonomous Software Testing contributors" },
+  "author": {
+    "name": "Autonomous Software Testing contributors"
+  },
   "license": "MIT",
-  "keywords": ["testing", "qa", "sdet", "playwright", "regression", "evidence", "test-automation"],
-  "repository": "https://github.com/your-org/autonomous-software-testing",
+  "keywords": [
+    "testing",
+    "qa",
+    "sdet",
+    "playwright",
+    "regression",
+    "evidence",
+    "test-automation"
+  ],
+  "repository": "https://github.com/Purushotham-Prajapati-24/qa-skills",
   "defaultEnabled": true,
   "userConfig": {
     "risk_profile": {
       "type": "string",
       "title": "Default risk weighting profile",
       "description": "Which weighting the risk engine uses when the orchestrator does not choose one explicitly.",
-      "options": ["balanced", "security-critical", "internal-tooling", "prototype"],
+      "options": [
+        "balanced",
+        "security-critical",
+        "internal-tooling",
+        "prototype"
+      ],
       "default": "balanced"
     },
     "state_dir": {

@@ -4,7 +4,7 @@ description: Turn a test failure or observation into an actionable defect report
 when_to_use: "write up this bug", "create a GitHub issue for this", "report this defect", "is this worth filing"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell
 metadata:
-  system_version: 0.6.0
+  system_version: 0.7.0
   role: specialist
 ---
 

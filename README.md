@@ -10,9 +10,10 @@ It is built around one belief:
 Everything else — the evidence gate, the status model, the authorisation policy, the
 integrity self-audit — follows from that.
 
+Install it into any repository, on any computer:
+
 ```bash
-node bin/ast.mjs init
-node bin/ast.mjs caps probe
+npx --yes github:Purushotham-Prajapati-24/qa-skills
 ```
 
 Then, in Claude Code: **"Test this repository."**
@@ -63,27 +64,83 @@ Bookkeeping done by judgement drifts. Judgement encoded as code becomes a checkl
 
 Full detail: [ARCHITECTURE.md](ARCHITECTURE.md).
 
-## Quick start
+## Install
 
-**Requirements:** Node ≥ 20.6. That is all — there are no dependencies, and no
-`npm install`.
+Into **any repository, on any computer**. One command, no clone, no `npm install` — this
+package has zero dependencies.
+
+**Requirements:** Node ≥ 20.6 and git. That is all.
 
 ```bash
-# As a Claude Code plugin (recommended)
-/plugin marketplace add /path/to/autonomous-software-testing
+npx --yes github:Purushotham-Prajapati-24/qa-skills
+```
+
+Run it from the root of the repository you want to test. It installs into `./.claude/`:
+
+```
+.claude/
+  skills/     21 skills        where Claude Code looks for them
+  agents/     4 subagents
+  ast/        the runtime      CLI, engines, schemas, docs, templates
+```
+
+### Other ways to install
+
+```bash
+# Every project on this machine, not just this repo
+npx --yes github:Purushotham-Prajapati-24/qa-skills --user
+
+# Show the plan and change nothing
+npx --yes github:Purushotham-Prajapati-24/qa-skills --dry-run
+
+# Only the skills you want
+npx --yes github:Purushotham-Prajapati-24/qa-skills --only unit-testing,api-testing,browser-testing
+
+# Also wire the SessionStart and PreToolUse hooks into .claude/settings.json
+npx --yes github:Purushotham-Prajapati-24/qa-skills --hooks
+
+# Pin to a release instead of tracking the default branch
+npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.6.0
+
+# Overwrite an existing install (it refuses by default)
+npx --yes github:Purushotham-Prajapati-24/qa-skills --force
+
+npx --yes github:Purushotham-Prajapati-24/qa-skills --help
+```
+
+If npx cannot work out which command to run, name it explicitly:
+
+```bash
+npx --yes -p github:Purushotham-Prajapati-24/qa-skills autonomous-software-testing
+```
+
+### As a Claude Code plugin
+
+Gives you namespaced skills (`/autonomous-software-testing:testing-orchestrator`) plus the
+subagents, hooks and MCP config together:
+
+```bash
+/plugin marketplace add https://github.com/Purushotham-Prajapati-24/qa-skills
 /plugin install autonomous-software-testing
-
-# Or as project skills
-node scripts/install-skills.mjs --target /path/to/repo/.claude/skills
 ```
+
+### Verify it took
 
 ```bash
-node bin/ast.mjs init
-node bin/ast.mjs caps probe
-node bin/ast.mjs caps declare mcp-playwright true --note "browser_* tools present"
+node .claude/ast/bin/ast.mjs init
+node .claude/ast/bin/ast.mjs caps probe
 ```
 
-Then ask for what you want:
+`caps probe` reports what this machine can actually do. Read it before trusting any plan —
+anything it cannot see is reported unavailable rather than assumed.
+
+Tell it about the providers only the agent can see:
+
+```bash
+node .claude/ast/bin/ast.mjs caps declare mcp-playwright true --note "browser_* tools present"
+```
+
+### Then just ask
 
 - *Test this repository.*
 - *Test PR #412.*
@@ -92,7 +149,17 @@ Then ask for what you want:
 - *Continue the previous testing session.*
 - *What remains untested?*
 
-Full setup: [docs/installation.md](docs/installation.md).
+### Uninstall
+
+```bash
+rm -rf .claude/ast .claude/agents
+rm -rf .claude/skills/{testing-orchestrator,repository-intelligence,change-intelligence}  # ...etc
+```
+
+Nothing is installed outside `.claude/`. Your testing history lives in `.claude/ast/state/`
+and is yours to keep or delete.
+
+Full setup and troubleshooting: [docs/installation.md](docs/installation.md).
 New to agent skills? [docs/concepts.md](docs/concepts.md) explains every term from scratch.
 
 ## See it work
@@ -210,7 +277,7 @@ Three metrics are alarms, not scores: `false_confidence_rate` (target 0),
 ## Verify the installation
 
 ```bash
-node --test "tests/*.test.mjs"     # 90 tests
+node --test "tests/*.test.mjs"     # 100 tests
 node bin/ast.mjs eval run          # 41 checks
 node scripts/validate-repo.mjs     # links, schemas, cross-references
 ```

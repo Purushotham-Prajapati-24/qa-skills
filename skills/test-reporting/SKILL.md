@@ -4,7 +4,7 @@ description: Produce the testing report and maintain the versioned testing log â
 when_to_use: "write the test report", "summarise the testing", "what did you test", "update the testing log", "what remains untested"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write
 metadata:
-  system_version: 0.6.0
+  system_version: 0.7.0
   role: specialist
 ---
 

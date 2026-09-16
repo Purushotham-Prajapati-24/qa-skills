@@ -6,12 +6,12 @@ completeness.
 
 **Current phase:** core complete and exercised end to end; integrations specified, bound where
 a provider exists.
-**Version:** 0.6.0 · **Last validated:** 2026-09-16
+**Version:** 0.7.0 · **Last validated:** 2026-09-16
 
 ## Validation status
 
 ```
-node --test "tests/*.test.mjs"     90 passed, 0 failed
+node --test "tests/*.test.mjs"     100 passed, 0 failed
 node bin/ast.mjs eval run          41/41 checks across 15 benchmark cases
 node scripts/validate-repo.mjs     0 problems
 node scripts/demo-session.mjs      full pipeline exercised end to end
@@ -39,14 +39,14 @@ Working, tested, exercised by the demo session.
 | Capability registry | 37 verbs, 13 providers, three-state availability |
 | Authorization + write ledger | Prohibited-by-default list; assignment refused without a named account |
 | Traceability graph | `what-remains-untested` correctly reports REQ-3 uncovered |
-| Reporting engine | 20 sections rendered from data, with integrity self-audit |
+| Reporting engine | Inverted-pyramid report rendered from data; empty sections skipped, findings embedded in full, integrity self-audit |
 | Evaluation engine | 15 cases, 41 checks, 14 metrics with stated blind spots |
 | Secret redaction | Token shapes and sensitive keys, with a `SAFE_KEYS` allowlist |
 | 21 skills | Frontmatter and links validated; all under the 500-line guidance |
 | 4 subagents | `agents/*.md` |
 | 2 Claude Code hooks | Both tested by hand; `SessionStart` and `PreToolUse` |
 | Plugin + marketplace manifests | Match the verified plugin layout |
-| Skill installer | `scripts/install-skills.mjs`, with symlink fallback on Windows |
+| **npx installer** | `bin/install.mjs`; 7 tests install into a throwaway repo and assert the CLI runs, every link resolves and no skill still points at the source layout |
 | Repository self-check | Catches broken links, hard-coded MCP names, dangling references |
 | **GitHub adapter (executable)** | `engine/adapters/github.mjs`; 29 tests assert each gate refuses **before** the provider is called |
 | **Enforced write protocol** | `performWrite` is the only path to a ledger entry, and it runs capability -> authorisation -> ledger -> render -> perform -> parse -> record in order |

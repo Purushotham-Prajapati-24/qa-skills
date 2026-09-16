@@ -3,6 +3,59 @@
 Semantic versioning. See [docs/versioning.md](docs/versioning.md) for what is versioned
 independently — document schemas and policy files carry their own versions.
 
+## [0.7.0] - 2026-09-16
+
+Installable into any repository on any machine with one command, and a report format
+rebuilt around what a reader actually needs.
+
+### Added
+
+- **`npx --yes github:Purushotham-Prajapati-24/qa-skills`** installs 21 skills, 4 subagents
+  and the runtime into `./.claude/`. No clone, no `npm install` -- there are still zero
+  dependencies. `--user` installs for every project, `--only` for a subset, `--hooks` to
+  wire the hooks into settings.json, `--dry-run` to see the plan.
+- The installer rewrites what only makes sense inside this repository: skills call the CLI
+  at `bin/ast.mjs`, which does not exist anywhere else, so it becomes
+  `.claude/ast/bin/ast.mjs` (relative for a project install, absolute for a user install),
+  and links that walk up into `templates/`, `docs/` or `integrations/` are redirected
+  through `ast/`. It then runs the installed CLI to prove the rewrite worked and warns
+  about any skill it missed.
+- 7 installer tests that install into a throwaway repository and assert the CLI runs there,
+  the benchmark passes from the installed copy, every link resolves, no skill still points
+  at the source layout, a user-scope install uses an absolute path, and a second install
+  refuses rather than silently overwriting.
+- `files` and a `bin` map in package.json so `npx`, a release tarball and (should you want
+  it) `npm publish` all work.
+
+### Changed
+
+- **The report is an inverted pyramid.** Verdict, then what needs action, then what was
+  proven, then the gaps, then detail, then reference. Measured against a real session: 3
+  stub sections became 0, 31 lines of repeated "no matching repository signal" in the
+  summary became 1 grouped line, and the findings section went from 8 bare identifiers to
+  125 lines of content you can act on without opening anything else.
+- An empty section is no longer rendered at all. A heading over nothing trains the reader
+  to skim past headings, which then hides the sections that do have content.
+- Findings, open questions and decisions carry their content rather than their identifiers.
+- README and docs/installation.md lead with the npx command.
+
+### Removed
+
+- `scripts/install-skills.mjs`. It copied skills without the runtime, so everything it
+  installed referenced a CLI that was not there. Superseded by `bin/install.mjs`.
+
+### Schema
+
+- `report.schema.json` gains `finding_details`, `uncertainty_details`,
+  `decision_summaries` and `executive_summary.not_applicable_summary`, so a stored report
+  stays readable long after the state directory has moved on. Report document version
+  1.0.0 -> 1.1.0; additive, so older reports still validate.
+
+### Verification
+
+100 tests, 41 benchmark checks, clean repository self-check, and the installer exercised
+end to end into a clean repository.
+
 ## [0.6.0] - 2026-09-16
 
 The GitHub adapter contract becomes executable, so the external-write protocol is enforced
@@ -164,5 +217,6 @@ Recorded because they are the kind that would otherwise recur:
 - Decision accuracy is self-assessed unless a human sets the verdict.
 - Redaction cannot recognise a secret that looks like ordinary text.
 
-[0.6.0]: https://github.com/your-org/autonomous-software-testing/releases/tag/v0.6.0
-[0.5.0]: https://github.com/your-org/autonomous-software-testing/releases/tag/v0.5.0
+[0.7.0]: https://github.com/Purushotham-Prajapati-24/qa-skills/releases/tag/v0.7.0
+[0.6.0]: https://github.com/Purushotham-Prajapati-24/qa-skills/releases/tag/v0.6.0
+[0.5.0]: https://github.com/Purushotham-Prajapati-24/qa-skills/releases/tag/v0.5.0
