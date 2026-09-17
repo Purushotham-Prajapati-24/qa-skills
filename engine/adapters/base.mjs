@@ -19,8 +19,11 @@
  *     without a ticket, and a ticket cannot be issued without passing the gates.
  *
  * The second path is weaker than the first -- the agent could perform the call and never
- * come back. It cannot, however, fabricate a confirmed write, because confirmation is
- * derived here by parsing the provider's own output.
+ * come back. It cannot, however, fabricate a confirmed write: `completeWrite` treats
+ * whatever the agent hands it as an unverified claim, not as the provider's own output,
+ * and independently re-reads the claimed object (via `verifyRead`) before `confirmed` is
+ * ever set to true. A ticket proves the gates ran; only a successful read-back proves the
+ * write did.
  */
 import crypto from 'node:crypto';
 import path from 'node:path';
@@ -418,7 +421,9 @@ function finalise({ verb, action, system, idempotencyKey, target, decisionId, pr
       verb, provider, confirmed: false,
       reason: parseError
         ? `The provider's response could not be parsed for an identifier: ${parseError}`
-        : 'The provider returned success but no identifier could be parsed from its output. Without an identifier the write cannot be confirmed.',
+        : parsed.result_id
+          ? `An identifier (${parsed.result_id}) was reported but could not be independently confirmed. Without confirmation the write cannot be treated as done.`
+          : 'The provider returned success but no identifier could be parsed from its output. Without an identifier the write cannot be confirmed.',
       ledger_entry: entry.key, evidence_id: ev.evidence_id,
       caller_should: 'Report this as attempted, not done. Verify the target before any retry.',
       excerpt: redactText(raw.stdout ?? '').slice(0, 1000),
@@ -438,8 +443,19 @@ function finalise({ verb, action, system, idempotencyKey, target, decisionId, pr
 /**
  * Finish a delegated (MCP) write. The ticket proves the gates ran; without one there is
  * no way to create a ledger entry through this module.
+ *
+ * `response` is whatever the agent hands in -- it is a self-attestation, not a provider
+ * response this module obtained itself, so parsing an identifier out of it is NOT proof
+ * anything happened (an agent can type a plausible-looking JSON object without ever
+ * calling its MCP tools). `verifyRead` closes that gap: it independently re-reads the
+ * claimed object -- e.g. `gh issue view <number>` run directly from this process, not
+ * through the agent -- and `confirmed: true` is only set when that read-back succeeds.
+ * Without a `verifyRead`, the parsed identifier is downgraded to unconfirmed rather than
+ * trusted, because a self-attestation alone is exactly the fabrication this exists to stop.
+ *
+ * @param {function} [o.verifyRead]  async ({ resultId, url, target }) => { exists, reason }
  */
-export function completeWrite({ ticket, response, parseResult, now = new Date() } = {}) {
+export async function completeWrite({ ticket, response, parseResult, verifyRead, now = new Date() } = {}) {
   const rec = readTicket(ticket);
   if (!rec) {
     return outcome(OUTCOME.FAILED, {
@@ -463,13 +479,41 @@ export function completeWrite({ ticket, response, parseResult, now = new Date() 
     duration_ms: 0,
   };
 
+  let claimed = { confirmed: false, result_id: null, url: null };
+  try {
+    claimed = { confirmed: false, result_id: null, url: null, ...(parseResult(raw) ?? {}) };
+  } catch {
+    // Left unconfirmed; `finalise` re-runs parseResult and reports the same parse error.
+  }
+
+  let verifyReason = 'No independent read-back is configured for this adapter, so a self-reported identifier cannot be confirmed. Treating the write as unconfirmed.';
+  let verified = false;
+  if (claimed.confirmed && claimed.result_id) {
+    if (verifyRead) {
+      const check = await verifyRead({ resultId: claimed.result_id, url: claimed.url, target: rec.target });
+      verified = check.exists === true;
+      verifyReason = check.reason;
+    }
+  } else {
+    verifyReason = 'The response contained no identifier to verify.';
+  }
+
+  // Only a successful, independent read-back may set `confirmed: true`. The agent's own
+  // claim is downgraded to a candidate otherwise, however plausible it looks.
+  const attested = claimed.confirmed && !verified ? { ...claimed, confirmed: false } : claimed;
+
   const result = finalise({
     verb: rec.verb, action: rec.action, system: rec.system,
     idempotencyKey: rec.idempotency_key, target: rec.target,
     decisionId: rec.decision_id, provider: rec.provider,
-    raw, failure: null, parseResult, now,
+    raw, failure: null, parseResult: () => attested, now,
   });
 
   consumeTicket(ticket);
-  return { ...result, ticket };
+  return {
+    ...result,
+    ticket,
+    verified,
+    verify_reason: result.confirmed ? undefined : verifyReason,
+  };
 }

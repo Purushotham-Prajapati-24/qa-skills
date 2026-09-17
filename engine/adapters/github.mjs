@@ -231,7 +231,10 @@ export function createGitHubAdapter({ exec = shellExec } = {}) {
 
     /* -------------------------------------------------------- delegation */
 
-    complete: ({ ticket, response }) => completeWrite({ ticket, response, parseResult: parseGitHubResult }),
+    complete: ({ ticket, response }) => completeWrite({
+      ticket, response, parseResult: parseGitHubResult,
+      verifyRead: (claim) => verifyIssueRead(claim, { exec }),
+    }),
   };
 }
 
@@ -245,6 +248,47 @@ export function createGitHubAdapter({ exec = shellExec } = {}) {
  */
 export function parseGitHubResult(raw) {
   return COMMENT_ANCHOR.test(String(raw?.stdout ?? '')) ? parseCommentResult(raw) : parseIssueResult(raw);
+}
+
+/**
+ * Independently confirm a delegated write actually happened, by reading the claimed issue
+ * back with `gh` -- run directly by this process, never through the agent's MCP tools that
+ * performed the write. This is deliberately NOT routed through `caps.resolve()` /
+ * `performRead`: if the agent already declared its MCP provider available, capability
+ * resolution would prefer it and hand the "verification" straight back to the same agent
+ * being verified, which proves nothing. Shelling out to `gh` here is the actual
+ * independence the write protocol promises.
+ *
+ * Only confirms the ISSUE exists and its number matches. A comment's `result_id` embeds
+ * the issue number as its leading segment (`#4242-comment-987654321`), so a fabricated
+ * comment against a real issue is not caught by this -- catching that would need
+ * `gh api repos/.../issues/comments/<id>`, out of scope for the fabrication this closes.
+ */
+export async function verifyIssueRead({ resultId, target } = {}, { exec = shellExec } = {}) {
+  const number = /^#?(\d+)/.exec(String(resultId ?? ''))?.[1];
+  if (!number) {
+    return { exists: false, reason: `Could not extract an issue number from "${resultId}"; nothing to verify.` };
+  }
+
+  const repoArgs = target && target !== 'the current repository' ? ['--repo', target] : [];
+  const raw = await exec(['gh', 'issue', 'view', number, ...repoArgs, '--json', 'number,url,state']);
+  if (raw.exit_code !== 0) {
+    return {
+      exists: false,
+      reason: `Independent read-back via \`gh issue view ${number}\` failed (exit ${raw.exit_code}). ` +
+        'Either the issue does not exist, or `gh` cannot reach it from here. A number the agent ' +
+        'reported that this process cannot independently confirm is not confirmed.',
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(raw.stdout);
+    return Number(parsed.number) === Number(number)
+      ? { exists: true, reason: `Confirmed by \`gh issue view\`: issue #${parsed.number} exists.`, data: parsed }
+      : { exists: false, reason: `\`gh issue view ${number}\` returned issue #${parsed.number}, which does not match.` };
+  } catch (err) {
+    return { exists: false, reason: `Read-back output could not be parsed: ${err.message}` };
+  }
 }
 
 /**
