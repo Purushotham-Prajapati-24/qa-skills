@@ -110,5 +110,5 @@ Then re-run the benchmark, which is what catches an edit that silently changed b
 somewhere else:
 
 ```bash
-node bin/ast.mjs eval run
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" eval run
 ```

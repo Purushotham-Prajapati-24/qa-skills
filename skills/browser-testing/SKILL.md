@@ -20,7 +20,7 @@ So: **decide, then act.**
 ## Decide first
 
 ```bash
-node bin/ast.mjs browser decide --input factors.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" browser decide --input factors.json
 ```
 
 Factors, each in [0,1]:
@@ -67,8 +67,8 @@ Full matrix and rationale: [browser-decision.md](browser-decision.md).
 ## Capabilities, not tool names
 
 ```bash
-node bin/ast.mjs caps declare mcp-playwright true --note "browser_navigate, browser_snapshot, browser_click present"
-node bin/ast.mjs caps resolve browser.explore
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" caps declare mcp-playwright true --note "browser_navigate, browser_snapshot, browser_click present"
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" caps resolve browser.explore
 ```
 
 Verbs: `browser.explore`, `browser.screenshot`, `browser.resize`, `browser.read_console`,
@@ -89,7 +89,7 @@ DISCOVER  →  VALIDATE  →  STABILIZE  →  AUTOMATE  →  REGRESS  →  EVOLV
 Exploration that leaves nothing behind was half a job. After exploring, ask:
 
 ```bash
-node bin/ast.mjs browser should-automate --json '{"factors":{"repeatability":0.8,"business_criticality":0.9,"environment_stability":0.8,"expected_runtime_minutes":3}}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" browser should-automate --json '{"factors":{"repeatability":0.8,"business_criticality":0.9,"environment_stability":0.8,"expected_runtime_minutes":3}}'
 ```
 
 Converts only when the scenario is repeatable, valuable, stable **and** fast. Thresholds

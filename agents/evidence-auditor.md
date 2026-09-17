@@ -28,10 +28,10 @@ executions missing commit, environment or command.
 Useful:
 
 ```bash
-node bin/ast.mjs exec list
-node bin/ast.mjs evidence list
-node bin/ast.mjs evidence verify --json '{"status":"PASSED","evidenceIds":["EV-…"]}'
-node bin/ast.mjs validate
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec list
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence list
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence verify --json '{"status":"PASSED","evidenceIds":["EV-…"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" validate
 ```
 
 Return only the problems, each with the record ID, what is claimed, what the evidence

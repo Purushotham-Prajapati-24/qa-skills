@@ -86,9 +86,9 @@ docker run --rm -v "$PWD:/app" -w /app node:18 npm test
 ## Running
 
 ```bash
-node bin/ast.mjs caps resolve browser.run_deterministic_test
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" caps resolve browser.run_deterministic_test
 npx playwright test --project=chromium --project=firefox --project=webkit
-node bin/ast.mjs caps resolve browser.resize
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" caps resolve browser.resize
 ```
 
 If only one engine is installed, that is a genuine limitation. Report cross-browser as

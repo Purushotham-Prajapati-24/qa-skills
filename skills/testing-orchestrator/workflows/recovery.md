@@ -15,7 +15,7 @@ that was started and never finalised is `INTERRUPTED`. It is not `PASSED`. It is
 ## Protocol
 
 ```bash
-node bin/ast.mjs session resume
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session resume
 ```
 
 This reads state, finalises orphaned executions as `INTERRUPTED`, appends an interruption
@@ -50,7 +50,7 @@ carry forward a `PASSED` from a commit that no longer exists.
 **2. Re-check the environment.** Capabilities are not durable across sessions.
 
 ```bash
-node bin/ast.mjs caps probe
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" caps probe
 ```
 
 Re-`declare` MCP and browser providers from your current tool list. A capability that
@@ -59,7 +59,7 @@ worked yesterday may be unauthorised today.
 **3. Check integrity.**
 
 ```bash
-node bin/ast.mjs validate
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" validate
 ```
 
 Dangling references or unfinished executions are repaired now, not reported later.
@@ -86,10 +86,10 @@ remaining work and the current commit. If they disagree, the code moved — re-p
 Context compaction loses conversation, not state. Everything that matters is on disk:
 
 ```bash
-node bin/ast.mjs session show
-node bin/ast.mjs exec list
-node bin/ast.mjs uncertainty list
-node bin/ast.mjs finding list
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session show
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec list
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" uncertainty list
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" finding list
 ```
 
 Rebuild your understanding from those, not from memory. If something important was only

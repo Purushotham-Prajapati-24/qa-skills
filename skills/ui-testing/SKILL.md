@@ -61,7 +61,7 @@ Otherwise the diff noise trains everyone to click "approve".
   confirmed.
 
 ```bash
-node bin/ast.mjs evidence add --json '{"kind":"screenshot-diff","summary":"Checkout summary panel shifted 4px","epistemicClass":"observed","artifactPath":"__diff__/checkout.png"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --json '{"kind":"screenshot-diff","summary":"Checkout summary panel shifted 4px","epistemicClass":"observed","artifactPath":"__diff__/checkout.png"}'
 ```
 
 Screenshot diffs are **corroborating** evidence: they show a change, not that a behaviour

@@ -110,8 +110,8 @@ next session.
 ## Save and derive signals
 
 ```bash
-node bin/ast.mjs profile save --input profile.json
-node bin/ast.mjs profile signals
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" profile save --input profile.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" profile signals
 ```
 
 Signals are the sole input to test applicability. If a signal looks wrong, fix the

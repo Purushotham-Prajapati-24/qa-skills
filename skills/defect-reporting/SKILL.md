@@ -16,7 +16,7 @@ an hour and costs you their trust in every future report.
 ## Before writing anything: is it a defect?
 
 ```bash
-node bin/ast.mjs failure classify --json '{"signals":["assertion-mismatch","http-500"],"evidenceIds":["EV-2026-00021"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --json '{"signals":["assertion-mismatch","http-500"],"evidenceIds":["EV-2026-00021"]}'
 ```
 
 The classifier deliberately ranks non-product causes above `product-defect` on a tie. Rule
@@ -36,7 +36,7 @@ An intermittent defect is still worth reporting. Pretending it is deterministic 
 ## Record it
 
 ```bash
-node bin/ast.mjs finding add --input finding.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" finding add --input finding.json
 ```
 
 ```jsonc
@@ -90,7 +90,7 @@ Not "it doesn't work". Say what you saw, where you saw it, and what you expected
 ## Should this be filed?
 
 ```bash
-node bin/ast.mjs finding promote FIND-00001 --authorised --quote "yes, open a GitHub issue"
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" finding promote FIND-00001 --authorised --quote "yes, open a GitHub issue"
 ```
 
 `may_file: false` — stop and read the blockers:
@@ -108,8 +108,8 @@ body with the uncertainty; unverified reproduction must be stated plainly.
 **Use the adapter. Do not run `gh issue create` yourself.**
 
 ```bash
-node bin/ast.mjs github file-issue FIND-00001 --repo owner/name --dry-run
-node bin/ast.mjs github file-issue FIND-00001 --repo owner/name --authorised --quote "yes, open a GitHub issue"
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" github file-issue FIND-00001 --repo owner/name --dry-run
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" github file-issue FIND-00001 --repo owner/name --authorised --quote "yes, open a GitHub issue"
 ```
 
 One command runs the whole protocol in order: capability → authorisation → duplicate
@@ -137,7 +137,7 @@ output for an issue number. No number, no confirmation — and the report prints
 **Before filing anywhere**, check the token can actually do it:
 
 ```bash
-node bin/ast.mjs github preflight
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" github preflight
 ```
 
 Authentication succeeding is not the same as having the `repo` scope. Reads can work while
@@ -147,7 +147,7 @@ writes fail.
 adapter refuses without a user-named account:
 
 ```bash
-node bin/ast.mjs github assign --repo owner/name --number 418 --assignee octocat --authorised
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" github assign --repo owner/name --number 418 --assignee octocat --authorised
 ```
 
 **When the capability resolves to an MCP server** rather than the CLI, the adapter cannot
@@ -156,7 +156,7 @@ ticket and the rendered content, and you finish it:
 
 ```bash
 # perform the call with your own GitHub MCP tools, then:
-node bin/ast.mjs adapter complete --ticket WT-… --json '<the provider response>'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" adapter complete --ticket WT-… --json '<the provider response>'
 ```
 
 Nothing is recorded until you do. `ast adapter pending` lists tickets left open.

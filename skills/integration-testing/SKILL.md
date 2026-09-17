@@ -30,7 +30,7 @@ CI/CD validation · deployment and rollback.
 | Payment / email / SMS | **Always** double, unless the user explicitly authorises a sandbox. |
 
 ```bash
-node bin/ast.mjs caps resolve container.run
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" caps resolve container.run
 docker compose -f docker-compose.test.yml up -d
 ```
 
@@ -95,7 +95,7 @@ Undertested nearly everywhere, and the reason incidents take hours.
 ## CI/CD validation
 
 ```bash
-node bin/ast.mjs caps resolve ci.read_runs
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" caps resolve ci.read_runs
 gh run list --limit 10
 gh run view <id> --log-failed
 ```

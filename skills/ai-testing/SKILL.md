@@ -115,7 +115,7 @@ change that quietly triples token usage is a real regression even when quality i
 ## Evidence
 
 ```bash
-node bin/ast.mjs evidence add --json '{
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --json '{
   "kind":"assertion-result",
   "summary":"Golden set: 27/30 passed over 3 runs each (90%); 2 grounding failures, 1 refusal failure",
   "epistemicClass":"observed","executionId":"EXEC-2026-00018",

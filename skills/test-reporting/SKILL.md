@@ -15,8 +15,8 @@ that stops prose outrunning evidence: if a claim is not in the data, no code pat
 in the document.
 
 ```bash
-node bin/ast.mjs report generate --input report-context.json
-node bin/ast.mjs validate
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" report generate --input report-context.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" validate
 ```
 
 ## Structure
@@ -109,7 +109,7 @@ produced it, so a behavioural change in the agent can be traced to the reports i
 ## Before you deliver
 
 ```bash
-node bin/ast.mjs validate
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" validate
 ```
 
 Fix everything it reports. Dangling evidence references and still-open executions are real

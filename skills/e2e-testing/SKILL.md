@@ -33,7 +33,7 @@ than a hundred that fail twice a week.
 Confirm the environment can actually run a journey:
 
 ```bash
-node bin/ast.mjs caps resolve browser.run_deterministic_test
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" caps resolve browser.run_deterministic_test
 docker compose -f docker-compose.test.yml up -d
 curl -sf http://localhost:3000/health || echo "app not up"
 ```
@@ -87,7 +87,7 @@ created**. That negative is where payment bugs live.
 ## Running and evidence
 
 ```bash
-node bin/ast.mjs exec start --json '{"goal":"Guest checkout, card payment","method":"playwright-script","testCategory":"e2e","decisionId":"DEC-00007","command":"npx playwright test checkout --trace=on --reporter=json","environment":"local-docker"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --json '{"goal":"Guest checkout, card payment","method":"playwright-script","testCategory":"e2e","decisionId":"DEC-00007","command":"npx playwright test checkout --trace=on --reporter=json","environment":"local-docker"}'
 npx playwright test checkout --trace=on --reporter=json
 ```
 
@@ -101,7 +101,7 @@ E2E failures are the least trustworthy signal in the stack — there are many wa
 that have nothing to do with the product. Classify before concluding:
 
 ```bash
-node bin/ast.mjs failure classify --json '{"signals":["timeout","element-not-found-after-wait"],"evidenceIds":["EV-2026-00021"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --json '{"signals":["timeout","element-not-found-after-wait"],"evidenceIds":["EV-2026-00021"]}'
 ```
 
 Then reproduce at a lower level. If an E2E failure can be reproduced by an API or

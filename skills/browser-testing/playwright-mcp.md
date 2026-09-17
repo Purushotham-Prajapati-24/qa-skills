@@ -21,8 +21,8 @@ For **discovery**, never for certification.
 ## Providers
 
 ```bash
-node bin/ast.mjs caps declare mcp-playwright true --note "browser_* tools present in tool list"
-node bin/ast.mjs caps resolve browser.explore
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" caps declare mcp-playwright true --note "browser_* tools present in tool list"
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" caps resolve browser.explore
 ```
 
 **`mcp-playwright`** — `@playwright/mcp`. Tool names verified against
@@ -53,7 +53,7 @@ against it.
 Open an execution record first — exploration is real work and belongs in the report:
 
 ```bash
-node bin/ast.mjs exec start --json '{"goal":"Explore the changed checkout flow","method":"playwright-mcp","testCategory":"exploratory","decisionId":"DEC-00007","environment":"local"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --json '{"goal":"Explore the changed checkout flow","method":"playwright-mcp","testCategory":"exploratory","decisionId":"DEC-00007","environment":"local"}'
 ```
 
 Then work in this order:
@@ -73,11 +73,11 @@ Then work in this order:
 ## Capture as you go
 
 ```bash
-node bin/ast.mjs evidence add --json '{
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --json '{
   "kind":"screenshot","summary":"Checkout step 2 with an empty postcode","epistemicClass":"observed",
   "executionId":"EXEC-2026-00004","artifactPath":".playwright-mcp/step2-empty-postcode.png","mediaType":"image/png"
 }'
-node bin/ast.mjs evidence add --json '{
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --json '{
   "kind":"console-log","summary":"TypeError on submit: cannot read \"total\" of undefined",
   "epistemicClass":"observed","executionId":"EXEC-2026-00004","excerpt":"<paste>"
 }'
@@ -103,7 +103,7 @@ support `PASSED`. Close an exploration as `COMPLETED` (the exploration happened)
 Exploration that leaves nothing behind was half a job:
 
 ```bash
-node bin/ast.mjs browser should-automate --json '{"factors":{"repeatability":0.8,"business_criticality":0.9,"environment_stability":0.8,"expected_runtime_minutes":4}}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" browser should-automate --json '{"factors":{"repeatability":0.8,"business_criticality":0.9,"environment_stability":0.8,"expected_runtime_minutes":4}}'
 ```
 
 If it says yes → [playwright-script.md](playwright-script.md). If no, record why, so the

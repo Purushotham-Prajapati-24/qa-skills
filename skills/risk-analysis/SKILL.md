@@ -14,8 +14,8 @@ Risk orders the work. It does not decide applicability — a high-risk backend s
 not need visual regression testing.
 
 ```bash
-node bin/ast.mjs risk profiles
-node bin/ast.mjs risk score --input factors.json --profile security-critical --explain
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" risk profiles
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" risk score --input factors.json --profile security-critical --explain
 ```
 
 ## Pick the profile deliberately
@@ -105,7 +105,7 @@ Paste this into the plan and the report. The number and the story must never dri
 Then let applicability and budget do the rest:
 
 ```bash
-node bin/ast.mjs applicability eval --input applicability.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" applicability eval --input applicability.json
 ```
 
 ## Tuning

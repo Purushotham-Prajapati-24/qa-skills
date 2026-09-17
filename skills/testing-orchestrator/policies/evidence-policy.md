@@ -40,7 +40,7 @@ A screenshot shows what a page looked like. It does not show that an assertion h
 `exec finish` runs this automatically; you can run it directly:
 
 ```bash
-node bin/ast.mjs evidence verify --json '{"status":"PASSED","evidenceIds":["EV-2026-00031"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence verify --json '{"status":"PASSED","evidenceIds":["EV-2026-00031"]}'
 ```
 
 `PASSED`, `FAILED`, `COMPLETED` and `PARTIAL` all claim something was executed, so all

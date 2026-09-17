@@ -28,8 +28,8 @@ looks authoritative.
 ## Getting tickets
 
 ```bash
-node bin/ast.mjs caps resolve jira.read_ticket
-node bin/ast.mjs caps resolve github.search_issues
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" caps resolve jira.read_ticket
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" caps resolve github.search_issues
 ```
 
 If Jira resolves, read the ticket, its acceptance criteria, its links and its comments —
@@ -81,7 +81,7 @@ gracefully". Either get a number and a condition, or record an ambiguity.
 When a requirement admits two readings and they imply different tests:
 
 ```bash
-node bin/ast.mjs uncertainty raise --json '{
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" uncertainty raise --json '{
   "question":"Does \"saved card\" include a card saved during a previous guest checkout, or only a logged-in user'"'"'s card?",
   "status":"ambiguous-requirement",
   "impact":"the two readings need different test data and different expected outcomes",
@@ -107,7 +107,7 @@ Every scenario declares which requirements it validates, and every test result c
 `validates_requirements`. That is what makes this work:
 
 ```bash
-node bin/ast.mjs trace query what-remains-untested
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" trace query what-remains-untested
 ```
 
 The answer always carries the caveat that it counts only requirements someone declared.

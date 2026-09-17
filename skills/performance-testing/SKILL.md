@@ -23,7 +23,7 @@ Load traffic is indistinguishable from an attack. Stress, spike and endurance te
 explicit authorisation **and** an isolated non-production target.
 
 ```bash
-node bin/ast.mjs auth check --json '{"action":"load_test.execute","target":"staging","userAuthorised":true,"authorisationQuote":"yes, load test staging"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" auth check --json '{"action":"load_test.execute","target":"staging","userAuthorised":true,"authorisationQuote":"yes, load test staging"}'
 ```
 
 Never point load at shared infrastructure without telling whoever owns it.
@@ -80,7 +80,7 @@ A slower number is not automatically a regression:
 4. Only then call it a regression, and state the delta with both numbers.
 
 ```bash
-node bin/ast.mjs failure classify --json '{"signals":["latency-above-baseline"],"evidenceIds":["EV-2026-00061"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --json '{"signals":["latency-above-baseline"],"evidenceIds":["EV-2026-00061"]}'
 ```
 
 The classifier caps confidence here deliberately: performance conclusions from one run are
@@ -91,7 +91,7 @@ unreliable.
 Performance metrics are execution evidence when they include the conditions:
 
 ```bash
-node bin/ast.mjs evidence add --json '{
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --json '{
   "kind":"performance-metric",
   "summary":"GET /api/orders p95 412ms at 50rps (baseline 180ms at abc1234)",
   "epistemicClass":"observed","executionId":"EXEC-2026-00012",
