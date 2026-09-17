@@ -11,7 +11,7 @@ a provider exists.
 ## Validation status
 
 ```
-node --test "tests/*.test.mjs"     100 passed, 0 failed
+node --test "tests/*.test.mjs"     125 passed, 0 failed
 node bin/ast.mjs eval run          41/41 checks across 15 benchmark cases
 node scripts/validate-repo.mjs     0 problems
 node scripts/demo-session.mjs      full pipeline exercised end to end
@@ -103,20 +103,30 @@ Nothing.
 
 ## Next recommended stage
 
-**Turn the adapter contracts into executable modules**, starting with GitHub.
+**Calibrate the policies against the benchmark application.**
 
-Today the agent follows `integrations/github/adapter.md` and runs `gh` itself. That works,
-but the contract — check authorisation, check the ledger, render, perform, record the
-provider's actual response — is enforced by the agent remembering to follow it. An executable
-`GitHubAdapter` would make the sequence structural rather than behavioural, the same way the
-evidence gate is.
+The previous entry here asked for executable adapter modules starting with GitHub. That
+shipped: `engine/adapters/github.mjs`, `performWrite` as the only path to a ledger entry,
+delegated-write tickets, and 29 tests asserting each gate refuses before the provider is
+called. It is in the IMPLEMENTED table above. Jira is the one piece of that plan still
+outstanding, and it is tracked under PARTIALLY IMPLEMENTED rather than here.
+
+What is now possible and was not before: `sample-ecommerce-app/` ships, its eight defects
+are no longer labelled in its own source, and the ground truth lives in
+`evaluation/benchmark-app/answer-key.json`. Detection can finally be measured rather than
+grepped.
 
 Concretely:
 
-1. `engine/adapters/github.mjs` implementing the contract, with the write protocol built in.
-2. The same for Jira, including ADF parsing.
-3. `ast github create-issue FIND-00001` as the only path to an external write.
-4. Tests asserting that an unauthorised write is impossible, not merely discouraged.
+1. A scored end-to-end run against the benchmark app, recorded the way any other session is
+   — so the detection rate is evidence rather than an anecdote about a previous run.
+2. A mutation generator, so eight hand-authored defects become a family of them. Eight
+   findable bugs written by the same person who built the detector is a weak sample, and
+   the answer key says so.
+3. Feed what that run gets wrong back into `evaluation/benchmark-cases/` as regression
+   cases. That is what calibrates the policies against reality rather than against my
+   expectations of it.
 
-After that: derive regression cases from real sessions, which is what will actually calibrate
-the policies against reality rather than against my expectations of it.
+The honest limitation: the benchmark app has no defect that needs load, timing, concurrency
+or long-running state to reproduce. Until it does, nothing here measures the categories that
+are hardest to test.

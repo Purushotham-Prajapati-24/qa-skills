@@ -37,7 +37,7 @@ description: …                  # what it does AND when to use it — this is 
 when_to_use: "mutation testing", "are these tests any good"
 allowed-tools: Read, Glob, Grep, Bash, Write, Edit
 metadata:
-  system_version: 0.5.0
+  system_version: 0.7.0
   role: specialist
 ---
 ```

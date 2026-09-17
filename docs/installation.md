@@ -56,13 +56,13 @@ and warns if any skill still points at the old path.
 Tracking the default branch means you get changes as they land. To pin:
 
 ```bash
-npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.6.0
+npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.7.0
 ```
 
 Or install from a release tarball, which needs no git:
 
 ```bash
-npx --yes https://github.com/Purushotham-Prajapati-24/qa-skills/releases/download/v0.6.0/autonomous-software-testing-0.6.0.tgz
+npx --yes https://github.com/Purushotham-Prajapati-24/qa-skills/releases/download/v0.7.0/autonomous-software-testing-0.7.0.tgz
 ```
 
 ### If npx picks the wrong command
@@ -82,6 +82,17 @@ Namespaced skills plus the subagents, hooks and MCP config in one go:
 /plugin marketplace add https://github.com/Purushotham-Prajapati-24/qa-skills
 /plugin install autonomous-software-testing
 ```
+
+Nothing is copied into your repository and nothing is rewritten. The skills live in Claude
+Code's plugin cache and your working directory stays the repository under test, so the
+skills address the CLI through `${CLAUDE_PLUGIN_ROOT}` — a placeholder Claude Code replaces
+with the plugin's absolute path before the agent reads the skill. You never type it
+yourself; the agent proves it resolves with `ast version` as its first command of every
+session.
+
+This is why the skills do **not** say `node bin/ast.mjs`: that path only exists inside this
+source repository, and under a plugin install it would resolve against your repository and
+fail.
 
 ### From a clone
 
@@ -166,7 +177,7 @@ quietly dropping the obligation.
 ## Verify the installation
 
 ```bash
-node --test "tests/*.test.mjs"     # 100 tests
+node --test "tests/*.test.mjs"     # 125 tests
 node bin/ast.mjs eval run          # 15 benchmark cases, 41 checks
 node scripts/validate-repo.mjs     # links, schemas, cross-references
 ```

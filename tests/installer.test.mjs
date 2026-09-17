@@ -60,12 +60,21 @@ test('a project install lands skills, agents and a runnable runtime', () => {
 test('no installed skill still points at the source layout', () => {
   const dir = freshRepo('rewrite');
   install(dir);
-  // `node bin/ast.mjs` is correct in the source repository and wrong everywhere else.
+  // Two source-only forms. `node bin/ast.mjs` is the historical one. The CLAUDE_PLUGIN_ROOT
+  // form is correct under a plugin install, where Claude Code substitutes it -- but nothing
+  // substitutes it here, so it would expand to nothing and run `node /bin/ast.mjs`.
   // A miss here fails the first time the agent runs a command, which is a confusing
   // place to discover an installer bug.
-  const stale = [...everyMarkdown(path.join(dir, '.claude/skills')), ...everyMarkdown(path.join(dir, '.claude/agents'))]
-    .filter((f) => fs.readFileSync(f, 'utf8').includes('node bin/ast.mjs'));
+  const files = [...everyMarkdown(path.join(dir, '.claude/skills')), ...everyMarkdown(path.join(dir, '.claude/agents'))];
+  const stale = files.filter((f) => {
+    const body = fs.readFileSync(f, 'utf8');
+    return body.includes('node bin/ast.mjs') || body.includes('CLAUDE_PLUGIN_ROOT');
+  }).map((f) => path.relative(dir, f));
   assert.deepEqual(stale, []);
+
+  // ...and the rewrite actually landed, rather than there being nothing to rewrite.
+  const rewritten = files.filter((f) => fs.readFileSync(f, 'utf8').includes('node .claude/ast/bin/ast.mjs'));
+  assert.ok(rewritten.length > 10, `expected the CLI path to be rewritten in many skills, got ${rewritten.length}`);
   fs.rmSync(dir, { recursive: true, force: true });
 });
 

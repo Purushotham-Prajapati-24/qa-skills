@@ -100,7 +100,7 @@ npx --yes github:Purushotham-Prajapati-24/qa-skills --only unit-testing,api-test
 npx --yes github:Purushotham-Prajapati-24/qa-skills --hooks
 
 # Pin to a release instead of tracking the default branch
-npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.6.0
+npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.7.0
 
 # Overwrite an existing install (it refuses by default)
 npx --yes github:Purushotham-Prajapati-24/qa-skills --force
@@ -277,7 +277,7 @@ Three metrics are alarms, not scores: `false_confidence_rate` (target 0),
 ## Verify the installation
 
 ```bash
-node --test "tests/*.test.mjs"     # 100 tests
+node --test "tests/*.test.mjs"     # 125 tests
 node bin/ast.mjs eval run          # 41 checks
 node scripts/validate-repo.mjs     # links, schemas, cross-references
 ```
@@ -300,7 +300,7 @@ node scripts/validate-repo.mjs     # links, schemas, cross-references
 
 ## Status
 
-**v0.5.0.** The core is implemented and tested; the integration adapters are specified and
+**v0.7.0.** The core is implemented and tested; the integration adapters are specified and
 partially bound. [PROGRESS.md](PROGRESS.md) is explicit about what is implemented, what is
 designed but not implemented, and what needs external configuration.
 

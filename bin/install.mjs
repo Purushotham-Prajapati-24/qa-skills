@@ -90,6 +90,11 @@ const cliPath = USER_SCOPE || flags.target
   ? `node "${path.join(runtimeDir, 'bin', 'ast.mjs').replace(/\\/g, '/')}"`
   : 'node .claude/ast/bin/ast.mjs';
 
+// How the skills invoke the CLI in source. Claude Code substitutes CLAUDE_PLUGIN_ROOT for a
+// plugin install, but nothing substitutes it here -- an installed skill that kept the
+// placeholder would expand it to nothing and run `node /bin/ast.mjs`.
+const SOURCE_CLI = `node "\${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs"`;
+
 /* -------------------------------------------------------------------- helpers */
 
 const log = (s = '') => console.log(s);
@@ -126,7 +131,7 @@ function copyTree(from, to, transform) {
  * visible and the mangling is not.
  */
 function rewritePaths(text) {
-  let out = text.replaceAll('node bin/ast.mjs', cliPath);
+  let out = text.replaceAll(SOURCE_CLI, cliPath).replaceAll('node bin/ast.mjs', cliPath);
 
   // Links that walk up out of skills/ into a repo-root directory now have to go through
   // ast/, because that is where the runtime landed.
@@ -271,7 +276,8 @@ for (const name of selectedSkills) {
       const p = path.join(d, e.name);
       if (e.isDirectory()) { walk(p); continue; }
       if (!e.name.endsWith('.md')) continue;
-      if (fs.readFileSync(p, 'utf8').includes('node bin/ast.mjs')) stale.push(path.relative(skillsDir, p));
+      const body = fs.readFileSync(p, 'utf8');
+      if (body.includes('node bin/ast.mjs') || body.includes(SOURCE_CLI)) stale.push(path.relative(skillsDir, p));
     }
   };
   walk(dir);
