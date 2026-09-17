@@ -251,6 +251,25 @@ export function parseGitHubResult(raw) {
 }
 
 /**
+ * Recover the `OWNER/REPO` slug from a ticket's stored target.
+ *
+ * Write tickets record the target in whatever shape reads best in a report: `owner/repo`
+ * for a created issue, but `owner/repo#42` -- and `current repo#42` when no repository was
+ * given -- for a comment, edit or assignment. `gh` takes `--repo [HOST/]OWNER/REPO` and
+ * nothing else, so forwarding the stored string verbatim made the read-back fail for the
+ * three verbs that carry an issue number, and a real write was then recorded INCONCLUSIVE.
+ *
+ * The slug is whatever precedes `#`. A value with no `/` is one of the "no repository
+ * given" sentinels rather than a slug, and means: let `gh` use the current repository.
+ *
+ * @returns {string|null} the slug, or null to pass no `--repo` at all.
+ */
+export function repoSlugFromTarget(target) {
+  const slug = String(target ?? '').split('#')[0].trim();
+  return slug.includes('/') ? slug : null;
+}
+
+/**
  * Independently confirm a delegated write actually happened, by reading the claimed issue
  * back with `gh` -- run directly by this process, never through the agent's MCP tools that
  * performed the write. This is deliberately NOT routed through `caps.resolve()` /
@@ -270,7 +289,8 @@ export async function verifyIssueRead({ resultId, target } = {}, { exec = shellE
     return { exists: false, reason: `Could not extract an issue number from "${resultId}"; nothing to verify.` };
   }
 
-  const repoArgs = target && target !== 'the current repository' ? ['--repo', target] : [];
+  const slug = repoSlugFromTarget(target);
+  const repoArgs = slug ? ['--repo', slug] : [];
   const raw = await exec(['gh', 'issue', 'view', number, ...repoArgs, '--json', 'number,url,state']);
   if (raw.exit_code !== 0) {
     return {

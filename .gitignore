@@ -142,10 +142,13 @@ out/
 # ==============================================================================
 # Benchmark Target Application (sample-ecommerce-app)
 # ==============================================================================
-# Benchmark target application. The SOURCE ships -- a calibration harness nobody else can
-# run is not a calibration harness. What does not ship is anything regenerable or anything
-# produced by a run, because committing a previous run's evidence would let the next one
-# read the answers instead of finding them.
+# Benchmark target application. It is currently held OUT of the repository in full -- see the
+# bare `sample-ecommerce-app` rule at the end of this block, which is deliberate and which
+# PROGRESS.md records as an open gap: a calibration harness nobody else can run is not yet a
+# calibration harness. The narrower rules above it stay regardless of that decision, because
+# they cover what must never ship even once the source does -- anything regenerable, and
+# anything produced by a run, since committing a previous run's evidence would let the next
+# one read the answers instead of finding them.
 sample-ecommerce-app/node_modules/
 sample-ecommerce-app/backend/data.sqlite
 sample-ecommerce-app/state/

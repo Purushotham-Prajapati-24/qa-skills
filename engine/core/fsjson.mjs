@@ -49,46 +49,99 @@ function sleepSync(ms) {
 const LOCK_DEFAULTS = { retries: 200, minDelayMs: 4, maxDelayMs: 40, staleMs: 15000 };
 
 /**
+ * Error codes that mean "someone else has the lock", not "the filesystem is broken".
+ *
+ * POSIX reports a losing `wx` open as EEXIST. Windows reports it that way too, except when
+ * the loser arrives while the winner's file is *pending delete* -- a handle is closed but
+ * the directory entry is still live -- and then it surfaces as EPERM or EACCES. Treating
+ * those two as fatal turns an ordinary race into a crashed update, which is exactly the
+ * failure `tests/concurrency.test.mjs` reproduces on Windows at a few percent per run.
+ */
+const LOCK_CONTENDED = new Set(['EEXIST', 'EPERM', 'EACCES']);
+
+/** The PID recorded in a lock file, or null if it cannot be read or parsed. */
+function lockOwnerPid(lockFile) {
+  try {
+    const pid = Number.parseInt(String(fs.readFileSync(lockFile, 'utf8')).trim().split(':')[0], 10);
+    return Number.isInteger(pid) && pid > 0 ? pid : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Is `pid` still running? EPERM means it exists and belongs to another user. */
+function processAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return err.code === 'EPERM';
+  }
+}
+
+/**
  * Run `fn` while holding an exclusive, cross-process lock on `file`.
  *
  * The lock is a sibling file created with the `wx` flag, which fails atomically
  * if the lock already exists -- this is the mechanism, not `rename()`, because
  * two processes racing to rename onto the same destination is exactly what
- * produces an EPERM crash on Windows. A lock older than `staleMs` is assumed to
- * belong to a process that died while holding it (this codebase never holds a
- * lock across anything but one read + one write) and is broken rather than
- * honoured forever, so a crashed process cannot wedge every future run.
+ * produces an EPERM crash on Windows.
+ *
+ * The lock carries an ownership token (`<pid>:<uuid>`) and that token decides both halves
+ * of the lifecycle, because age on its own cannot:
+ *
+ *   - *Breaking* a lock. An old lock is not proof of a dead owner, only of a slow one. A
+ *     holder whose callback outran `staleMs` would have its lock stolen and then write its
+ *     now-stale value over the thief's update. So a lock is broken only when its owner PID
+ *     is confirmed gone -- which is the case this is actually for, a process that crashed
+ *     mid-update and left the file behind for the *next* run to clean up.
+ *   - *Releasing* a lock. An unconditional unlink at the end deletes whatever lock is
+ *     present, including a successor's, handing two processes the lock at once. Releasing
+ *     only a lock whose token is still ours closes that.
+ *
+ * If the owner is alive but wedged, this times out with an actionable error rather than
+ * silently double-entering the critical section. Failing loud beats losing a write.
  */
 function withLock(file, fn, opts = {}) {
   const { retries, minDelayMs, maxDelayMs, staleMs } = { ...LOCK_DEFAULTS, ...opts };
   const lockFile = `${file}.lock`;
   ensureDir(path.dirname(file));
 
+  const token = `${process.pid}:${crypto.randomUUID()}`;
+
   let attempt = 0;
   for (;;) {
     try {
-      fs.writeFileSync(lockFile, `${process.pid}\n`, { flag: 'wx' });
+      fs.writeFileSync(lockFile, `${token}\n`, { flag: 'wx' });
       break;
     } catch (err) {
-      if (err.code !== 'EEXIST') throw err;
+      if (!LOCK_CONTENDED.has(err.code)) throw err;
+
+      let broke = false;
       try {
-        if (Date.now() - fs.statSync(lockFile).mtimeMs > staleMs) {
+        const ownerPid = lockOwnerPid(lockFile);
+        if (Date.now() - fs.statSync(lockFile).mtimeMs > staleMs && (ownerPid === null || !processAlive(ownerPid))) {
           fs.rmSync(lockFile, { force: true });
-          continue; // retry immediately against the now-cleared lock, no backoff needed
+          broke = true;
         }
       } catch { /* lock vanished between the failed write and this stat -- fine, loop retries */ }
+
       if (attempt >= retries) {
         throw new Error(`Timed out waiting for the lock on "${path.basename(file)}" after ${retries} attempts. If another process is confirmed dead, delete "${lockFile}" manually.`);
       }
+      // Counted even when the lock was broken, so a lock that cannot be cleared terminates
+      // with the message above instead of spinning forever.
       attempt += 1;
-      sleepSync(minDelayMs + Math.random() * (maxDelayMs - minDelayMs));
+      if (!broke) sleepSync(minDelayMs + Math.random() * (maxDelayMs - minDelayMs));
     }
   }
 
   try {
     return fn();
   } finally {
-    try { fs.rmSync(lockFile, { force: true }); } catch { /* already gone */ }
+    try {
+      if (String(fs.readFileSync(lockFile, 'utf8')).trim() === token) fs.rmSync(lockFile, { force: true });
+    } catch { /* already gone, or unreadable -- either way not ours to remove */ }
   }
 }
 
@@ -100,13 +153,13 @@ function withLock(file, fn, opts = {}) {
  * clobber each other's half of the update -- the failure mode a bare
  * `readJson()` followed by `writeJson()` cannot avoid.
  */
-export function updateJson(file, updateFn, fallback = undefined) {
+export function updateJson(file, updateFn, fallback = undefined, lockOpts = {}) {
   return withLock(file, () => {
     const current = readJson(file, fallback);
     const next = updateFn(current);
     writeJson(file, next);
     return next;
-  });
+  }, lockOpts);
 }
 
 export function writeText(file, text) {

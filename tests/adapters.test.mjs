@@ -9,7 +9,7 @@ import * as state from '../engine/state-engine/index.mjs';
 import * as defects from '../engine/defect-engine/index.mjs';
 import * as auth from '../engine/authorization/index.mjs';
 import { performWrite, completeWrite, classifyProviderError, readTicket, TICKET_TTL_MS } from '../engine/adapters/base.mjs';
-import { createGitHubAdapter, parseIssueResult, parseCommentResult, preflight } from '../engine/adapters/github.mjs';
+import { createGitHubAdapter, parseIssueResult, parseCommentResult, preflight, verifyIssueRead } from '../engine/adapters/github.mjs';
 import * as adapters from '../engine/adapters/index.mjs';
 
 const tmp = useTempState('adapters');
@@ -440,4 +440,53 @@ test('preflight distinguishes authentication from scope', async () => {
 test('the registry is honest about which adapters exist', () => {
   assert.deepEqual(adapters.SYSTEMS, ['github']);
   assert.throws(() => adapters.getAdapter('jira'), /no executable module yet/);
+});
+
+/**
+ * The read-back is the whole point of the write protocol: a claim this process cannot
+ * independently confirm is not confirmed. It therefore has to survive every shape a ticket
+ * target actually takes -- `create` stores `owner/repo`, but `comment`, `updateIssue` and
+ * `assign` store `owner/repo#42`, and `current repo#42` when no repository was given.
+ */
+test('the read-back extracts a repo slug from every shape a ticket target takes', async () => {
+  const seen = [];
+  const exec = async (argv) => {
+    seen.push(argv);
+    return { exit_code: 0, stdout: JSON.stringify({ number: 42, url: ISSUE_URL, state: 'open' }), stderr: '' };
+  };
+
+  const repoOf = async (target) => {
+    seen.length = 0;
+    const result = await verifyIssueRead({ resultId: '#42', target }, { exec });
+    assert.equal(result.exists, true, `read-back should confirm for target ${JSON.stringify(target)}`);
+    const i = seen[0].indexOf('--repo');
+    return i === -1 ? null : seen[0][i + 1];
+  };
+
+  assert.equal(await repoOf('acme/shop'), 'acme/shop', 'a bare slug passes through');
+  assert.equal(await repoOf('acme/shop#42'), 'acme/shop', 'the issue suffix must be stripped');
+  assert.equal(await repoOf('gh.acme.com/acme/shop#42'), 'gh.acme.com/acme/shop', 'a HOST/OWNER/REPO slug survives');
+  assert.equal(await repoOf('the current repository'), null, 'the create-verb sentinel means no --repo');
+  assert.equal(await repoOf('current repo#42'), null, 'the numbered sentinel means no --repo either');
+  assert.equal(await repoOf(undefined), null, 'a missing target means no --repo');
+});
+
+test('a delegated comment verifies against the repository, not against "owner/repo#number"', async () => {
+  const seen = [];
+  const exec = async (argv) => {
+    seen.push(argv);
+    return { exit_code: 0, stdout: JSON.stringify({ number: 418, url: ISSUE_URL, state: 'open' }), stderr: '' };
+  };
+
+  const check = await verifyIssueRead(
+    { resultId: '#418-comment-987654321', target: 'acme/shop#418' },
+    { exec },
+  );
+
+  assert.equal(check.exists, true, 'a real write must not be recorded INCONCLUSIVE by its own verification');
+  assert.deepEqual(
+    seen[0],
+    ['gh', 'issue', 'view', '418', '--repo', 'acme/shop', '--json', 'number,url,state'],
+    'the argv handed to gh must be one gh actually accepts',
+  );
 });
