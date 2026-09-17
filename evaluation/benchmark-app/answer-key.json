@@ -1,0 +1,144 @@
+{
+  "$comment": [
+    "Ground truth for the ShopFlow benchmark application (sample-ecommerce-app/).",
+    "",
+    "DO NOT READ THIS FILE WHILE TESTING THE APPLICATION. It exists to score a run after",
+    "the fact, not to inform one. Every defect below used to be labelled in the application's",
+    "own source with an `INJECTED ...` comment, which meant `grep -rn INJECTED` found all",
+    "eight without testing anything -- an 8/8 detection rate that measured grep, not the agent.",
+    "",
+    "Line numbers are a convenience and will drift. `anchor` is the stable identifier: match",
+    "on it, not on the line.",
+    "",
+    "Scoring: a defect counts as DETECTED only when the agent reports the observable symptom",
+    "with execution evidence. Naming the line without demonstrating the behaviour is not a",
+    "detection -- it is a code review, which this benchmark does not measure."
+  ],
+  "version": "1.0.0",
+  "application": "sample-ecommerce-app",
+  "application_commit_note": "Regenerate the database with `npm run seed` before a run; data.sqlite is not committed.",
+  "defect_count": 8,
+  "defects": [
+    {
+      "id": "BUG-01",
+      "title": "Broken object-level authorization (IDOR) on order detail",
+      "category": "security",
+      "severity": "critical",
+      "file": "backend/src/routes/orders.js",
+      "line": 36,
+      "anchor": "GET /:id handler -- `const items = db.prepare(` immediately after the 404 check",
+      "defect": "The handler authenticates the caller but never checks that the order belongs to them. A check of the form `order.user_id !== req.user.id && req.user.role !== 'admin'` is missing entirely.",
+      "observable_symptom": "Authenticate as user 2 (Bob) and request an order belonging to user 1 (Alice). The API returns 200 with Alice's order, shipping address and line items.",
+      "detect_by": ["api-testing", "security-testing"],
+      "requires_running_app": true
+    },
+    {
+      "id": "BUG-02",
+      "title": "Cart accepts negative and fractional quantities",
+      "category": "input-validation",
+      "severity": "high",
+      "file": "backend/src/routes/cart.js",
+      "line": 43,
+      "anchor": "POST /items -- `if (!productId || typeof quantity !== 'number')`",
+      "defect": "Validation checks the type of `quantity` but not its value. `Number.isInteger(quantity) && quantity > 0` is missing.",
+      "observable_symptom": "POST an item with `quantity: -2`. It is accepted, and the cart subtotal decreases -- a negative line total that can be used to drive the order total down.",
+      "detect_by": ["api-testing", "security-testing"],
+      "requires_running_app": true
+    },
+    {
+      "id": "BUG-03",
+      "title": "Coupon minimum-spend boundary is exclusive, not inclusive",
+      "category": "business-logic",
+      "severity": "medium",
+      "file": "backend/src/services/pricing.js",
+      "line": 26,
+      "anchor": "calculateDiscount -- `if (coupon.min_spend && subtotal > coupon.min_spend)`",
+      "defect": "The coupon contract is \"valid for purchases of $X or more\", so the comparison must be `>=`. It is `>`, an off-by-one on the boundary value.",
+      "observable_symptom": "A subtotal exactly equal to `min_spend` (e.g. $50.00 against a $50 minimum) receives no discount, while $50.01 does.",
+      "detect_by": ["unit-testing"],
+      "requires_running_app": false,
+      "note": "The only defect reachable by pure unit testing. The shipped suite in backend/test/pricing.test.js passes without catching it -- it never tests the boundary."
+    },
+    {
+      "id": "BUG-04",
+      "title": "Checkout deducts one unit of stock regardless of quantity ordered",
+      "category": "business-logic",
+      "severity": "high",
+      "file": "backend/src/routes/orders.js",
+      "line": 107,
+      "anchor": "checkout loop -- `UPDATE products SET stock = stock - 1 WHERE id = ?`",
+      "defect": "The decrement is hardcoded to 1 instead of binding `item.quantity`.",
+      "observable_symptom": "Order 5 units of a product with stock 10. The order succeeds and stock becomes 9, not 5. Repeated orders oversell the inventory.",
+      "detect_by": ["integration-testing", "api-testing"],
+      "requires_running_app": true
+    },
+    {
+      "id": "BUG-05",
+      "title": "Pagination offset skips the first page of products",
+      "category": "business-logic",
+      "severity": "high",
+      "file": "backend/src/routes/products.js",
+      "line": 17,
+      "anchor": "GET / -- `const offset = page * limit`",
+      "defect": "Page numbers are 1-based, so the offset must be `(page - 1) * limit`.",
+      "observable_symptom": "GET /api/products with no query string (page defaults to 1) starts at offset 10. The first ten products are unreachable through the API.",
+      "detect_by": ["api-testing"],
+      "requires_running_app": true
+    },
+    {
+      "id": "BUG-06",
+      "title": "Missing product returns 200 OK instead of 404",
+      "category": "api-contract",
+      "severity": "medium",
+      "file": "backend/src/routes/products.js",
+      "line": 66,
+      "anchor": "GET /:id -- `if (!product)` branch returning `res.status(200)`",
+      "defect": "A missing entity is answered with 200 and a null payload, violating the REST contract the rest of the API follows (orders.js returns 404 correctly).",
+      "observable_symptom": "GET /api/products/99999 returns 200 with `{ success: false, product: null }`. A client checking only the status code treats the product as found.",
+      "detect_by": ["api-testing"],
+      "requires_running_app": true
+    },
+    {
+      "id": "BUG-07",
+      "title": "Cart badge counts distinct lines, and checkout can be double-submitted",
+      "category": "ui-logic",
+      "severity": "medium",
+      "file": "frontend/app.js",
+      "line": 222,
+      "anchor": "updateCartBadge -- `const distinctCount = state.cart.items.length`",
+      "defect": "Two related front-end defects. The badge shows the number of distinct cart lines rather than the summed quantity. Separately, `handleCheckoutSubmit` (app.js:347) never disables the submit button, so rapid clicks fire duplicate orders.",
+      "observable_symptom": "Add 3 units of one product: the badge reads 1, not 3. Click 'Place Order Now' twice quickly: two orders are created.",
+      "detect_by": ["ui-testing", "e2e-testing"],
+      "requires_running_app": true,
+      "additional_sites": [
+        { "file": "frontend/app.js", "line": 347, "anchor": "handleCheckoutSubmit -- submit button never disabled" },
+        { "file": "frontend/index.html", "line": 43, "anchor": "span#cart-badge" },
+        { "file": "frontend/index.html", "line": 160, "anchor": "button#place-order-btn" }
+      ]
+    },
+    {
+      "id": "BUG-08",
+      "title": "Unlabelled controls and insufficient colour contrast",
+      "category": "accessibility",
+      "severity": "medium",
+      "file": "frontend/index.html",
+      "line": 145,
+      "anchor": "checkout form -- card inputs with placeholder only",
+      "defect": "Three WCAG failures. The card number, expiry and CVV inputs have no label and no aria-label (WCAG 3.3.2 / 4.1.2). The cart remove button is a bare glyph with no accessible name (4.1.2). `.low-contrast-text` renders #4ade80 on white at roughly 2.1:1, below the 4.5:1 required for normal text (1.4.3).",
+      "observable_symptom": "An accessibility scan or screen-reader pass reports unnamed form controls and a contrast violation on the order-confirmation text.",
+      "detect_by": ["accessibility-testing"],
+      "requires_running_app": true,
+      "additional_sites": [
+        { "file": "frontend/app.js", "line": 242, "anchor": "cart remove button -- glyph with no accessible name" },
+        { "file": "frontend/style.css", "line": 676, "anchor": ".low-contrast-text" },
+        { "file": "frontend/index.html", "line": 168, "anchor": "p#confirmed-order-info.low-contrast-text" }
+      ]
+    }
+  ],
+  "known_blind_spots": [
+    "Eight defects is a small, hand-authored sample. A high score here is evidence the machinery works on these eight, not a detection rate that generalises.",
+    "Every defect was written to be findable. There are no defects that require load, timing, concurrency or long-running state to reproduce.",
+    "The sample is biased toward the backend: five of eight are API-reachable, which favours api-testing over the UI categories.",
+    "Because the application ships with a passing unit suite that misses all eight, a run that only executes the existing suite scores zero. That is the intended lesson, but it means the benchmark rewards exploration specifically."
+  ]
+}

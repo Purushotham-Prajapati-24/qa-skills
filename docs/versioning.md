@@ -5,8 +5,10 @@ different reasons.
 
 ## A. The skill system
 
-Semantic versioning, in `package.json` and `.claude-plugin/plugin.json`. Currently
-**0.5.0**.
+Semantic versioning, in `package.json` and `.claude-plugin/plugin.json`. Those two files are
+the source of truth — read the current number there rather than from prose, which is how
+the published version drifted three ways across this documentation once already. `ast
+version` prints it.
 
 | Bump | When |
 | --- | --- |

@@ -21,7 +21,11 @@ const problems = [];
 const warnings = [];
 const stats = {};
 
-const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8').replace(/^﻿/, '');
+// CRLF is normalised, not tolerated case by case. On Windows with core.autocrlf the whole
+// tree is CRLF, and every check below that anchors on "\n" -- frontmatter, line counts,
+// fenced blocks -- reported a false problem on every file. 80 spurious problems is the same
+// as no check at all, because nobody reads the 81st.
+const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8').replace(/^﻿/, '').replace(/\r\n/g, '\n');
 const readJson = (p) => JSON.parse(read(p));
 const exists = (p) => fs.existsSync(path.join(ROOT, p));
 
@@ -199,9 +203,69 @@ for (const [verb, def] of Object.entries(caps.capabilities)) {
   }
 }
 
+/* ---------------------------------------- 10. version and count drift in the docs */
+
+// Every number below was wrong at least once, in more than one file, because nothing
+// checked it. A claim a reader can verify in ten seconds is worse than no claim when it is
+// stale -- it makes the honest documents look unmaintained.
+
+const VERSION = readJson('package.json').version;
+stats.version = VERSION;
+
+for (const f of ['.claude-plugin/plugin.json', '.claude-plugin/marketplace.json']) {
+  const body = read(f);
+  if (!body.includes(`"version": "${VERSION}"`)) {
+    problems.push(`${f}: version disagrees with package.json (${VERSION})`);
+  }
+}
+
+// A hard-coded x.y.z in our own prose is the drift source. Exempt the places a version
+// number is deliberately not the current one: the changelog is historical, templates and
+// examples carry placeholder provenance, and the benchmark app is the thing under test
+// rather than our documentation.
+const OURS = (f) => !['CHANGELOG.md', 'docs/versioning.md', 'templates/', 'examples/', 'integrations/', 'evaluation/', 'sample-ecommerce-app/', 'state/']
+  .some((e) => f === e || f.startsWith(e));
+
+for (const f of mdFiles.filter(OURS)) {
+  for (const m of read(f).matchAll(/\bv?(0\.\d+\.\d+)\b/g)) {
+    if (m[1] !== VERSION) problems.push(`${f}: mentions version ${m[1]}, but package.json says ${VERSION}`);
+  }
+}
+
+// Test count, counted statically so this check never has to run the suite.
+//
+// Anchored to the documented command, not to the words "N tests". This repository talks
+// about other projects' suites constantly -- a walkthrough cites the target app's 211
+// tests, PROGRESS cites the 29 covering the GitHub adapter -- and a looser pattern flags
+// every one of them.
+const testCount = walk('tests', (n) => n.endsWith('.test.mjs'))
+  .reduce((a, f) => a + (read(f).match(/^test\(/gm) ?? []).length, 0);
+stats.tests = testCount;
+for (const f of mdFiles.filter(OURS)) {
+  for (const line of read(f).split('\n')) {
+    if (!line.includes('tests/*.test.mjs')) continue;
+    const m = /(\d+)\s*(?:tests|passed)/.exec(line);
+    if (m && Number(m[1]) !== testCount) {
+      problems.push(`${f}: claims ${m[1]} tests next to the suite command, but tests/ defines ${testCount}`);
+    }
+  }
+}
+
+// Category count, claimed in engine docstrings as well as prose.
+const categoryCount = Object.keys(catalog.categories).length;
+for (const f of [...mdFiles, 'engine/applicability-engine/index.mjs']) {
+  for (const m of read(f).matchAll(/(\d+)\s+test categories/g)) {
+    if (Number(m[1]) !== categoryCount) {
+      problems.push(`${f}: claims ${m[1]} test categories, but the catalog defines ${categoryCount}`);
+    }
+  }
+}
+
 /* ------------------------------------------------------------------- report */
 
 console.log(`autonomous-software-testing — repository self-check\n`);
+console.log(`  version           ${stats.version}`);
+console.log(`  tests defined     ${stats.tests}`);
 console.log(`  skills            ${stats.skills}`);
 console.log(`  markdown files    ${stats.markdown}`);
 console.log(`  links checked     ${stats.links_checked}`);
