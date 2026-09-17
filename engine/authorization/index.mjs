@@ -12,7 +12,7 @@
  * because wording changes between runs and identity must not.
  */
 import path from 'node:path';
-import { readJson, writeJson } from '../core/fsjson.mjs';
+import { readJson, updateJson } from '../core/fsjson.mjs';
 import { PACKAGE_ROOT, dir } from '../core/paths.mjs';
 import { sha256String } from '../core/fsjson.mjs';
 import { redact } from '../core/redact.mjs';
@@ -89,16 +89,21 @@ export function check({
       }
       return { ...base, allowed: true, assignee, reason: `User named the assignee explicitly: ${assignee}.`, authorised_by: 'user-explicit' };
 
-    case 'non-production-only':
+    case 'non-production-only': {
       if (environmentClass === 'non-production') {
         return { ...base, allowed: true, reason: 'Target environment is explicitly classified non-production in the repository profile.' };
       }
+      const hint = classifyEnvironment(target);
       return {
         ...base,
         allowed: false,
         reason: `Environment class is "${environmentClass}". ${POLICY.environment_rules.why} An unclassified environment is treated as production.`,
-        required_of_user: 'Confirm which environment to use, or classify it in the repository profile.',
+        required_of_user: hint.looks_non_production
+          ? `"${target}" looks non-production, but looking is not declaring. Classify it as "non-production" in the repository profile, or confirm which environment to use.`
+          : 'Confirm which environment to use, or classify it in the repository profile.',
+        environment_signals: hint,
       };
+    }
 
     case 'prohibited-by-default':
       return {
@@ -153,24 +158,30 @@ export function alreadyWritten({ system, action, idempotencyKey }) {
  */
 export function recordWrite({ system, action, idempotencyKey, target, confirmed, resultId = null, url = null, decisionId = null, authorisedBy = 'not-authorised', error = null, now = new Date() }) {
   const key = writeKey({ system, action, idempotencyKey });
-  const db = loadLedger(system);
-  const prior = db.entries[key];
-  db.entries[key] = redact({
-    key,
-    system,
-    action,
-    idempotency_key: idempotencyKey,
-    target,
-    confirmed: Boolean(confirmed),
-    result_id: resultId,
-    url,
-    decision_id: decisionId,
-    authorised_by: authorisedBy,
-    error: error ? String(error).slice(0, 500) : null,
-    at: now.toISOString(),
-    attempts: (prior?.attempts ?? 0) + 1,
-  });
-  writeJson(ledgerFile(system), db);
+  // Locked read-modify-write: this ledger is the ONLY thing standing between a
+  // real external write and a duplicate one (the same finding filed twice).
+  // Two processes racing an unlocked read here could each see zero prior
+  // attempts and both proceed to write -- exactly the duplicate this ledger
+  // exists to prevent.
+  const db = updateJson(ledgerFile(system), (current) => {
+    const prior = current.entries[key];
+    current.entries[key] = redact({
+      key,
+      system,
+      action,
+      idempotency_key: idempotencyKey,
+      target,
+      confirmed: Boolean(confirmed),
+      result_id: resultId,
+      url,
+      decision_id: decisionId,
+      authorised_by: authorisedBy,
+      error: error ? String(error).slice(0, 500) : null,
+      at: now.toISOString(),
+      attempts: (prior?.attempts ?? 0) + 1,
+    });
+    return current;
+  }, { system, entries: {} });
   return db.entries[key];
 }
 
@@ -184,12 +195,47 @@ export function listWrites(system = null) {
   return out.sort((a, b) => a.at.localeCompare(b.at));
 }
 
-/** Environment classification helper. Unknown is treated as production. */
+const NON_PRODUCTION_HINTS = /localhost|127\.0\.0\.1|\.local\b|staging|stage\b|dev\b|test\b|sandbox|preview/;
+
+/**
+ * Classify a host for the `non-production-only` gate.
+ *
+ * Returns `environment_class` in exactly the vocabulary `check()` compares against --
+ * 'production' | 'non-production' | 'unknown' -- because a value the gate cannot recognise
+ * is the same as no classification at all, only harder to debug.
+ *
+ * Only an explicit declaration from the repository profile yields 'non-production'. A URL
+ * that merely looks like staging yields 'unknown', which the gate denies. That is
+ * policy.json's own rule: these markers are heuristics for warning, not for permission.
+ * `looks_non_production` carries the hint so a denial can tell the user which declaration
+ * would unblock them.
+ */
 export function classifyEnvironment(nameOrUrl, declared = null) {
-  if (declared === 'non-production' || declared === 'production') return declared;
-  const s = String(nameOrUrl ?? '').toLowerCase();
-  if (/localhost|127\.0\.0\.1|\.local\b|staging|stage\b|dev\b|test\b|sandbox|preview/.test(s)) {
-    return 'likely-non-production';
+  const target = String(nameOrUrl ?? '');
+  const s = target.toLowerCase();
+  const looksNonProduction = NON_PRODUCTION_HINTS.test(s);
+  const productionMarkers = POLICY.environment_rules.production_markers.filter((m) => s.includes(m));
+
+  if (declared === 'non-production' || declared === 'production') {
+    return {
+      environment_class: declared,
+      target,
+      basis: 'declared',
+      looks_non_production: looksNonProduction,
+      production_markers: productionMarkers,
+      reason: `Declared "${declared}" in the repository profile. A declaration always beats a heuristic.`,
+    };
   }
-  return POLICY.environment_rules.unknown_is_treated_as;
+
+  return {
+    environment_class: POLICY.environment_rules.default_environment_classification,
+    target,
+    basis: 'undeclared',
+    looks_non_production: looksNonProduction,
+    production_markers: productionMarkers,
+    reason: looksNonProduction
+      ? `Looks non-production, but nothing declared it. ${POLICY.environment_rules.why} Declare it as "non-production" in the repository profile to unblock non-production-only actions.`
+      : `Nothing declared this environment${productionMarkers.length ? ` and it carries production marker(s): ${productionMarkers.join(', ')}` : ''}. ${POLICY.environment_rules.why}`,
+    treated_as: POLICY.environment_rules.unknown_is_treated_as,
+  };
 }

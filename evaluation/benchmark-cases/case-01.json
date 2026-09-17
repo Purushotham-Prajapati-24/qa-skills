@@ -41,7 +41,8 @@
     },
     "capabilities": {
       "browser.explore": true,
-      "browser.run_deterministic_test": true
+      "browser.run_deterministic_test": true,
+      "shell.run": true
     },
     "browser_factors": {
       "ui_known": 0.9,

@@ -15,7 +15,7 @@
  */
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { readJson, writeJson } from '../core/fsjson.mjs';
+import { readJson, updateJson } from '../core/fsjson.mjs';
 import { PACKAGE_ROOT, p, LAYOUT } from '../core/paths.mjs';
 
 const REG = readJson(path.join(PACKAGE_ROOT, 'engine', 'capability-registry', 'capabilities.json'));
@@ -31,14 +31,30 @@ function loadProbe() {
   return readJson(probeFile(), { version: REG.version, checked_at: null, providers: {}, declared: {} });
 }
 
-/** Record an agent-declared provider availability. */
+const PROBE_FALLBACK = () => ({ version: REG.version, checked_at: null, providers: {}, declared: {} });
+
+/**
+ * Record an agent-declared provider availability.
+ *
+ * Folds the same value straight into `providers` -- the thing `resolve()`
+ * actually reads -- instead of only recording it in `declared` and waiting for
+ * the next `probe()` to copy it across. Without this, a declaration reports
+ * success and changes nothing until a second, undocumented command runs.
+ */
 export function declare(provider, available, note = '') {
   if (!REG.providers[provider]) {
     throw new Error(`Unknown provider "${provider}". Known: ${PROVIDERS.join(', ')}`);
   }
-  const db = loadProbe();
-  db.declared[provider] = { available: Boolean(available), note, declared_at: new Date().toISOString() };
-  writeJson(probeFile(), db);
+  const db = updateJson(probeFile(), (current) => {
+    const declared_at = new Date().toISOString();
+    current.declared[provider] = { available: Boolean(available), note, declared_at };
+    current.providers[provider] = {
+      available: Boolean(available),
+      method: 'agent-declared',
+      detail: note || `declared at ${declared_at}`,
+    };
+    return current;
+  }, PROBE_FALLBACK());
   return db.declared[provider];
 }
 
@@ -62,43 +78,45 @@ function runProbe(command) {
  * whatever the agent last declared, or come back as `unknown`.
  */
 export function probe({ now = new Date() } = {}) {
-  const db = loadProbe();
-  const results = {};
+  const db = updateJson(probeFile(), (current) => {
+    const results = {};
 
-  for (const [name, def] of Object.entries(REG.providers)) {
-    const declared = db.declared[name];
-    switch (def.probe.type) {
-      case 'always':
-        results[name] = { available: true, method: 'always', detail: def.notes ?? '' };
-        break;
-      case 'command': {
-        const r = runProbe(def.probe.command);
-        results[name] = { available: r.available, method: `command: ${def.probe.command}`, detail: r.detail };
-        break;
+    for (const [name, def] of Object.entries(REG.providers)) {
+      const declared = current.declared[name];
+      switch (def.probe.type) {
+        case 'always':
+          results[name] = { available: true, method: 'always', detail: def.notes ?? '' };
+          break;
+        case 'command': {
+          const r = runProbe(def.probe.command);
+          results[name] = { available: r.available, method: `command: ${def.probe.command}`, detail: r.detail };
+          break;
+        }
+        case 'env': {
+          const missing = def.probe.vars.filter((v) => !process.env[v]);
+          results[name] = {
+            available: missing.length === 0,
+            method: `env: ${def.probe.vars.join(', ')}`,
+            detail: missing.length ? `missing: ${missing.join(', ')}` : 'all variables present',
+          };
+          break;
+        }
+        case 'agent-declared':
+          results[name] = declared
+            ? { available: declared.available, method: 'agent-declared', detail: declared.note || `declared at ${declared.declared_at}` }
+            : { available: null, method: 'agent-declared', detail: 'NOT DECLARED -- treat as unavailable until the agent confirms the tools are in its tool list.' };
+          break;
+        default:
+          results[name] = { available: null, method: 'unknown', detail: `unsupported probe type ${def.probe.type}` };
       }
-      case 'env': {
-        const missing = def.probe.vars.filter((v) => !process.env[v]);
-        results[name] = {
-          available: missing.length === 0,
-          method: `env: ${def.probe.vars.join(', ')}`,
-          detail: missing.length ? `missing: ${missing.join(', ')}` : 'all variables present',
-        };
-        break;
-      }
-      case 'agent-declared':
-        results[name] = declared
-          ? { available: declared.available, method: 'agent-declared', detail: declared.note || `declared at ${declared.declared_at}` }
-          : { available: null, method: 'agent-declared', detail: 'NOT DECLARED -- treat as unavailable until the agent confirms the tools are in its tool list.' };
-        break;
-      default:
-        results[name] = { available: null, method: 'unknown', detail: `unsupported probe type ${def.probe.type}` };
     }
-  }
 
-  db.providers = results;
-  db.checked_at = now.toISOString();
-  db.version = REG.version;
-  writeJson(probeFile(), db);
+    current.providers = results;
+    current.checked_at = now.toISOString();
+    current.version = REG.version;
+    return current;
+  }, PROBE_FALLBACK());
+
   return resolveAll(db);
 }
 

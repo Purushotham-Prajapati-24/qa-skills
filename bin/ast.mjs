@@ -85,6 +85,19 @@ function payload(flags, shouldAlias = true) {
   return {};
 }
 
+/**
+ * Merge the last capability probe into a command's `capabilities` map so that
+ * `browser decide` / `applicability eval` see the environment's real, resolved
+ * state instead of an agent-supplied guess. Nothing tells an agent to run
+ * `caps probe` before these commands, so the binary does it for them; an
+ * explicit value in the input still wins, since that's how a skill overrides
+ * a specific verb (e.g. to test a blocked path) without re-probing everything.
+ */
+function withResolvedCapabilities(explicit = {}) {
+  const resolved = caps.resolveAll().available;
+  return { ...resolved, ...explicit };
+}
+
 function out(value, flags = {}) {
   if (flags.format === 'text' && typeof value === 'string') process.stdout.write(`${value}\n`);
   else process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
@@ -178,14 +191,20 @@ const COMMANDS = {
   /* ---- applicability ---- */
   'applicability eval': {
     help: 'Compute the test applicability matrix: applicability eval --input input.json',
-    run: ({ flags }) => applicability.evaluate(payload(flags)),
+    run: ({ flags }) => {
+      const body = payload(flags);
+      return applicability.evaluate({ ...body, capabilities: withResolvedCapabilities(body.capabilities) });
+    },
   },
   'applicability catalog': { help: 'Show the category catalog and known signals.', run: () => applicability.catalog() },
 
   /* ---- browser method ---- */
   'browser decide': {
     help: 'Choose a browser testing method: browser decide --input factors.json',
-    run: ({ flags }) => browser.decide(payload(flags)),
+    run: ({ flags }) => {
+      const body = payload(flags);
+      return browser.decide({ ...body, capabilities: withResolvedCapabilities(body.capabilities) });
+    },
   },
   'browser should-automate': {
     help: 'Decide whether an explored scenario should become a committed test.',
@@ -267,6 +286,10 @@ const COMMANDS = {
     run: ({ flags }) => auth.check(payload(flags)),
   },
   'auth policy': { help: 'Print the authorization policy.', run: () => auth.policy() },
+  'auth classify-env': {
+    help: 'Classify a host for the non-production-only gate: auth classify-env https://staging.example.com [--declared non-production]',
+    run: ({ positional, flags }) => auth.classifyEnvironment(positional[2] ?? '', flags.declared ?? null),
+  },
   'write check': {
     help: 'Duplicate-suppression check before an external write.',
     run: ({ flags }) => auth.alreadyWritten(payload(flags)),

@@ -77,7 +77,7 @@ export function finish(executionId, {
   const rec = state.get('executions', executionId);
   if (!rec) throw new Error(`No such execution: ${executionId}`);
 
-  const verdict = verifyClaim({ status, evidenceIds: evidence, statement: statusReason });
+  const verdict = verifyClaim({ status, evidenceIds: evidence, statement: statusReason, executionId });
   let finalStatus = status;
   let reason = statusReason;
   if (!verdict.permitted) {
