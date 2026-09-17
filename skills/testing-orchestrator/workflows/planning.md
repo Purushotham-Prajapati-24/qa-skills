@@ -23,7 +23,7 @@ Score only the factors you can evidence. The risk engine excludes the rest and l
 stated confidence rather than guessing:
 
 ```bash
-node bin/ast.mjs risk score --input factors.json --profile security-critical --explain
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" risk score --input factors.json --profile security-critical --explain
 ```
 
 Pick the profile deliberately: `balanced`, `security-critical`, `internal-tooling`,
@@ -32,7 +32,7 @@ Pick the profile deliberately: `balanced`, `security-critical`, `internal-toolin
 ## 3. Compute applicability
 
 ```bash
-node bin/ast.mjs applicability eval --input applicability.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" applicability eval --input applicability.json
 ```
 
 Input takes the signals from the profile, the risk assessment, known coverage per
@@ -47,7 +47,7 @@ signal is wrong, fix the profile rather than overriding the verdict.
 Do not reach for the browser MCP by reflex. Run the decision:
 
 ```bash
-node bin/ast.mjs browser decide --input browser-factors.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" browser decide --input browser-factors.json
 ```
 
 Full reasoning in the `browser-testing` skill. Record the outcome as a decision.
@@ -82,7 +82,7 @@ did not think about scope.
 ## 7. Partition around blockers
 
 ```bash
-node bin/ast.mjs uncertainty partition --input scenarios.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" uncertainty partition --input scenarios.json
 ```
 
 Run everything in `runnable` now. Blocked items get an execution record with status
@@ -94,7 +94,7 @@ At minimum: scope, depth, browser method, and anything you chose not to test tha
 reader might expect. Then:
 
 ```bash
-node bin/ast.mjs session phase plan --note "plan PLAN-00001 written"
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session phase plan --note "plan PLAN-00001 written"
 ```
 
 → Next: [execution.md](execution.md)

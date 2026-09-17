@@ -110,9 +110,9 @@ a database under test, an external write, a report version bump.
 ## Validate and record
 
 ```bash
-node bin/ast.mjs applicability eval --input applicability.json   # every category, applicable or not
-node bin/ast.mjs uncertainty partition --input scenarios.json    # what can start now
-node bin/ast.mjs decide --input scope-decision.json              # record the scope call
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" applicability eval --input applicability.json   # every category, applicable or not
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" uncertainty partition --input scenarios.json    # what can start now
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" decide --input scope-decision.json              # record the scope call
 ```
 
 ## Smells

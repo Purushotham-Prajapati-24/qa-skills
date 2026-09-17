@@ -21,7 +21,7 @@ was still available.
 Then ask — once, at the end, with the context of everything you already did.
 
 ```bash
-node bin/ast.mjs uncertainty partition --input scenarios.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" uncertainty partition --input scenarios.json
 ```
 
 If `runnable` is non-empty, you are not blocked. You have one blocked branch.

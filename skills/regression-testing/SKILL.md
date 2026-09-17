@@ -58,7 +58,7 @@ Both should be minutes, not tens of minutes.
 signal, which is the most expensive habit a test suite can create.
 
 ```bash
-node bin/ast.mjs flaky analyse
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" flaky analyse
 ```
 
 Requires ≥3 recorded runs. Verdicts:
@@ -112,7 +112,7 @@ resolved:
 ## Evidence
 
 ```bash
-node bin/ast.mjs exec start --json '{"goal":"Regression: suites touching checkout and auth","method":"existing-suite","testCategory":"regression","command":"npm test -- checkout auth","environment":"local"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --json '{"goal":"Regression: suites touching checkout and auth","method":"existing-suite","testCategory":"regression","command":"npm test -- checkout auth","environment":"local"}'
 ```
 
 Attach the run report and per-test results. Recording results over time is what makes

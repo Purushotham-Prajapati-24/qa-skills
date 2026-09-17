@@ -22,7 +22,7 @@ them in the plan's `assumptions` array instead.
 ## The record
 
 ```bash
-node bin/ast.mjs decide --input decision.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" decide --input decision.json
 ```
 
 The CLI refuses anything missing:
@@ -85,7 +85,7 @@ does not matter, pick one and say you did.
 Once the consequence is observable:
 
 ```bash
-node bin/ast.mjs decision assess DEC-00042 --verdict suboptimal --note "MCP exploration found the flow in 3 minutes, but the script was rewritten twice because the selectors changed"
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" decision assess DEC-00042 --verdict suboptimal --note "MCP exploration found the flow in 3 minutes, but the script was rewritten twice because the selectors changed"
 ```
 
 Verdicts: `correct`, `acceptable`, `suboptimal`, `wrong`, `unknown`. This feeds
@@ -97,7 +97,7 @@ Verdicts: `correct`, `acceptable`, `suboptimal`, `wrong`, `unknown`. This feeds
 Do not edit a decision. Record a new one and supersede the old:
 
 ```bash
-node bin/ast.mjs decide --input new-decision.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" decide --input new-decision.json
 ```
 
 The history of what you believed and when is part of the audit trail.

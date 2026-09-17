@@ -27,11 +27,31 @@ Three rules override everything else in this skill:
 
 Judgement is yours. Bookkeeping is not — IDs, schema validation, evidence gating,
 duplicate suppression and metrics all live in a zero-dependency Node CLI so they cannot
-drift. Run it from the system root:
+drift.
+
+**Locate it before you use it.** Your working directory is the repository under test, not
+this skill's directory. Every command in this skill and its sub-skills already points at
+this installation's copy of the CLI, so run them exactly as written rather than shortening
+the path. Prove it resolves, once, as your very first command:
 
 ```bash
-node bin/ast.mjs help
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" version
 ```
+
+If that printed a version, use exactly that form for every command in this skill and read
+on.
+
+If it failed with `Cannot find module`, the path did not resolve in your environment. Find
+the CLI once, then substitute what works into every command below:
+
+```bash
+node .claude/ast/bin/ast.mjs version    # npx installer, project scope
+ls ~/.claude/ast/bin/ast.mjs            # npx installer, user scope (--user)
+ls ./bin/ast.mjs                        # you are inside the source repository itself
+```
+
+Do not give up on the CLI and hand-write state files. A wrong path is a two-second fix; an
+unvalidated state directory is a corrupt session.
 
 Everything it prints is JSON. Feed it straight back into your reasoning. If a command
 fails, that is a real signal — do not work around it by writing state files by hand.
@@ -52,7 +72,7 @@ and re-enter the loop wherever the evidence says you should.
 **Before anything else**, check whether work is already in progress:
 
 ```bash
-node bin/ast.mjs session resume
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session resume
 ```
 
 - `recoverable: false` → this is a new session. Read [workflows/discovery.md](workflows/discovery.md).
@@ -63,7 +83,7 @@ node bin/ast.mjs session resume
 Then open a session and declare the goals:
 
 ```bash
-node bin/ast.mjs session start --request "<the user's actual words>" --input goals.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session start --request "<the user's actual words>" --input goals.json
 ```
 
 ## Phases and where each is specified
@@ -119,16 +139,16 @@ security-testing" and treat the category as covered.
 Never hard-code an MCP tool name. Ask for a capability:
 
 ```bash
-node bin/ast.mjs caps probe
-node bin/ast.mjs caps resolve github.create_issue
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" caps probe
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" caps resolve github.create_issue
 ```
 
 Providers this CLI cannot see for itself — MCP servers, the in-app browser — must be
 declared by you, based on what is actually in your tool list right now:
 
 ```bash
-node bin/ast.mjs caps declare mcp-playwright true --note "browser_navigate/browser_snapshot present"
-node bin/ast.mjs caps declare mcp-atlassian false --note "connector requires OAuth; not authorised in this session"
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" caps declare mcp-playwright true --note "browser_navigate/browser_snapshot present"
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" caps declare mcp-atlassian false --note "connector requires OAuth; not authorised in this session"
 ```
 
 Undeclared means **unknown**, which the system treats as unavailable. That is deliberate.
@@ -155,7 +175,7 @@ Any choice a reviewer might question gets a decision record — which tests to r
 tool, how deep, whether to file an issue, whether to stop and ask:
 
 ```bash
-node bin/ast.mjs decide --input decision.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" decide --input decision.json
 ```
 
 The CLI rejects a decision with fewer than two options, no reasons, or no confidence
@@ -165,14 +185,14 @@ deciding, you were defaulting.
 ## After every result
 
 ```bash
-node bin/ast.mjs decision next --json '{"status":"FAILED","failureClass":"...","remainingWork":["..."]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" decision next --json '{"status":"FAILED","failureClass":"...","remainingWork":["..."]}'
 ```
 
 Never continue blindly after a failure. Classify first — a red result caused by a missing
 environment variable and one caused by a real defect demand opposite responses:
 
 ```bash
-node bin/ast.mjs failure classify --json '{"signals":["http-500","stale-test-data"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --json '{"signals":["http-500","stale-test-data"]}'
 ```
 
 ## Finishing
@@ -181,8 +201,8 @@ You are done when every planned item has a terminal status *and* you can state w
 not tested. Generate the report from data:
 
 ```bash
-node bin/ast.mjs report generate --input context.json
-node bin/ast.mjs validate
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" report generate --input context.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" validate
 ```
 
 `ast validate` checks every record against its schema and flags dangling references and

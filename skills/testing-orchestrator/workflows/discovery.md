@@ -6,8 +6,8 @@ more looking would not change a decision.
 ## 1. Orient
 
 ```bash
-node bin/ast.mjs session resume        # always first — is work already in progress?
-node bin/ast.mjs caps probe            # what can this environment actually do?
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session resume        # always first — is work already in progress?
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" caps probe            # what can this environment actually do?
 ```
 
 Then declare the capabilities only you can see (`caps declare`) — MCP servers, the
@@ -51,7 +51,7 @@ Before claiming a suite is usable, **run it once**. A test command in the README
 does not execute is not coverage. Set `verified_runnable` accordingly.
 
 ```bash
-node bin/ast.mjs exec start --json '{"goal":"Verify the existing suite runs at all","method":"existing-suite","testCategory":"smoke"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --json '{"goal":"Verify the existing suite runs at all","method":"existing-suite","testCategory":"smoke"}'
 ```
 
 ## 4. Record what you could not determine
@@ -67,9 +67,9 @@ unknown", which is almost never true. Typical honest entries:
 ## 5. Save it
 
 ```bash
-node bin/ast.mjs profile save --input profile.json
-node bin/ast.mjs profile signals          # derives applicability signals from the profile
-node bin/ast.mjs session phase profile --note "repository profiled"
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" profile save --input profile.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" profile signals          # derives applicability signals from the profile
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session phase profile --note "repository profiled"
 ```
 
 ## Empty or unfamiliar repositories

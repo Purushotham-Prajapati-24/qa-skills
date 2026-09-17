@@ -11,7 +11,7 @@ there is no code path that puts it in the document.
 Only things a human should act on. Delegate wording to the `defect-reporting` skill, or:
 
 ```bash
-node bin/ast.mjs finding add --input finding.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" finding add --input finding.json
 ```
 
 Findings are fingerprinted on `(component, normalised title, expected, actual)`, so the
@@ -23,7 +23,7 @@ A finding is not automatically an issue. Kind `observation` never becomes one.
 ## 2. Decide what gets filed externally
 
 ```bash
-node bin/ast.mjs finding promote FIND-00001 --authorised --quote "yes, open a GitHub issue for that"
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" finding promote FIND-00001 --authorised --quote "yes, open a GitHub issue for that"
 ```
 
 `may_file: false` means stop and read the blockers. Common ones:
@@ -43,9 +43,9 @@ authorisation, duplicate ledger, render, perform, parse, record, evidence — an
 path to a ledger entry that skips a gate.
 
 ```bash
-node bin/ast.mjs github preflight                                   # scope, not just auth
-node bin/ast.mjs github file-issue FIND-00001 --repo owner/name --dry-run
-node bin/ast.mjs github file-issue FIND-00001 --repo owner/name --authorised --quote "yes, open it" --decision DEC-00011
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" github preflight                                   # scope, not just auth
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" github file-issue FIND-00001 --repo owner/name --dry-run
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" github file-issue FIND-00001 --repo owner/name --authorised --quote "yes, open it" --decision DEC-00011
 ```
 
 `confirmed: true` is derived by parsing GitHub's own response for an issue number — never
@@ -67,7 +67,7 @@ record the outcome with `ast write record`.
 ## 4. Generate the report
 
 ```bash
-node bin/ast.mjs report generate --input report-context.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" report generate --input report-context.json
 ```
 
 Context may carry the plan, the risk assessment, the applicability matrix and your
@@ -87,7 +87,7 @@ The report always contains:
 ## 5. Validate before you speak
 
 ```bash
-node bin/ast.mjs validate
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" validate
 ```
 
 Fix everything it reports. Dangling evidence references and still-open executions are

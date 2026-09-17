@@ -9,7 +9,7 @@ what makes an interrupted session recoverable.
 
 ```bash
 # 1. Open the record first
-node bin/ast.mjs exec start --json '{
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --json '{
   "goal":"Guest checkout with a test card creates an order",
   "method":"playwright-script",
   "testCategory":"e2e",
@@ -20,10 +20,10 @@ node bin/ast.mjs exec start --json '{
 }'
 
 # 2. Do the work, then register what it produced
-node bin/ast.mjs evidence add --input evidence.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input evidence.json
 
 # 3. Close the record with the claimed status
-node bin/ast.mjs exec finish EXEC-2026-00003 --input result.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec finish EXEC-2026-00003 --input result.json
 ```
 
 `exec finish` re-checks your claim against the evidence. Claim `PASSED` without execution
@@ -45,7 +45,7 @@ Capture output as evidence rather than pasting it into prose — it gets hashed,
 and indexed:
 
 ```bash
-node bin/ast.mjs evidence add --json '{
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --json '{
   "kind":"test-report","summary":"playwright: 11 passed, 1 failed",
   "epistemicClass":"observed","executionId":"EXEC-2026-00003",
   "artifactPath":"test-results/results.json","mediaType":"application/json"
@@ -76,8 +76,8 @@ write, a report version bump.
 Stop. Classify before concluding:
 
 ```bash
-node bin/ast.mjs failure classify --json '{"signals":["assertion-mismatch","stale-test-data"],"evidenceIds":["EV-2026-00007"]}'
-node bin/ast.mjs decision next --json '{"status":"FAILED","failureClass":"data-failure","remainingWork":["a11y scan"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --json '{"signals":["assertion-mismatch","stale-test-data"],"evidenceIds":["EV-2026-00007"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" decision next --json '{"status":"FAILED","failureClass":"data-failure","remainingWork":["a11y scan"]}'
 ```
 
 Signal tokens come from real output — `http-500`, `econnrefused`, `timeout`,
@@ -101,7 +101,7 @@ Then act on the classification:
 ## When something blocks
 
 ```bash
-node bin/ast.mjs uncertainty raise --json '{
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" uncertainty raise --json '{
   "question":"Should payment tests use real provider credentials?",
   "status":"user-input-required",
   "impact":"cannot safely execute a real transaction",
@@ -110,14 +110,14 @@ node bin/ast.mjs uncertainty raise --json '{
   "nextAction":"ask the user which environment and credentials to use",
   "owner":"user"
 }'
-node bin/ast.mjs exec not-run --json '{"goal":"Payment E2E","status":"BLOCKED","reason":"...","testCategory":"e2e"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec not-run --json '{"goal":"Payment E2E","status":"BLOCKED","reason":"...","testCategory":"e2e"}'
 ```
 
 Then **keep going**. Run the unit suite, mock the provider at the API boundary, inspect
 the implementation, prepare the deterministic test for later. Record what you did anyway:
 
 ```bash
-node bin/ast.mjs uncertainty partition --input scenarios.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" uncertainty partition --input scenarios.json
 ```
 
 ## Writing tests
@@ -138,7 +138,7 @@ and match them. Specifics in the relevant specialist skill; the universal rules:
 If the user interrupts, or a tool dies mid-run:
 
 ```bash
-node bin/ast.mjs session interrupt --kind user --note "user asked to stop and look at the API instead"
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session interrupt --kind user --note "user asked to stop and look at the API instead"
 ```
 
 The open execution stays open. On resume, recovery marks it `INTERRUPTED` — never

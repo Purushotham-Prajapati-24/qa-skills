@@ -20,7 +20,7 @@ Security testing without authorisation is an attack, regardless of intent.
 - **Never:** testing a target the user does not control, or has not told you to test.
 
 ```bash
-node bin/ast.mjs auth check --json '{"action":"security_scan.active","target":"staging.example.com","userAuthorised":true,"authorisationQuote":"yes, scan staging"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" auth check --json '{"action":"security_scan.active","target":"staging.example.com","userAuthorised":true,"authorisationQuote":"yes, scan staging"}'
 ```
 
 Work against a local or explicitly authorised non-production instance. Unknown environment
