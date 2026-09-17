@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { dir, p, LAYOUT, stateRoot } from '../core/paths.mjs';
-import { readJson, writeJson, ensureDir, readCollection, exists, appendJsonl } from '../core/fsjson.mjs';
+import { readJson, writeJson, updateJson, ensureDir, readCollection, exists, appendJsonl } from '../core/fsjson.mjs';
 import { nextId } from '../core/ids.mjs';
 import { provenance, DOC_VERSIONS } from '../core/version.mjs';
 import { assertValid } from '../schema/validate.mjs';
@@ -87,8 +87,9 @@ function normaliseGoal(g, i) {
 export function save(state, now = new Date()) {
   state.updated_at = now.toISOString();
   assertValid(state, 'session-state');
-  writeJson(sessionFile(), state);
-  return state;
+  const safe = redact(state);
+  writeJson(sessionFile(), safe);
+  return safe;
 }
 
 export function requireSession() {
@@ -97,11 +98,23 @@ export function requireSession() {
   return s;
 }
 
-/** Mutate the session through a callback, validating and persisting once. */
+/**
+ * Mutate the session through a callback, validating and persisting once.
+ *
+ * The read (current session), the callback's mutation, and the write all
+ * happen under one lock via `updateJson` -- several subagents each opening
+ * their own execution (which pushes onto `open_executions`) is the normal,
+ * designed-for case, not a rare race, so the read-modify-write cannot be
+ * split across an unlocked `loadSession()` + `save()` pair.
+ */
 export function update(fn, now = new Date()) {
-  const state = requireSession();
-  const next = fn(state) ?? state;
-  return save(next, now);
+  return updateJson(sessionFile(), (current) => {
+    if (!current) throw new Error('No active session. Run `ast session start --request "..."` first.');
+    const next = fn(current) ?? current;
+    next.updated_at = now.toISOString();
+    assertValid(next, 'session-state');
+    return redact(next);
+  }, null);
 }
 
 export function setPhase(phase, note, now = new Date()) {
@@ -161,8 +174,9 @@ export function ids(collection) {
 
 export function saveProfile(profile) {
   assertValid(profile, 'repository-profile');
-  writeJson(p(LAYOUT.profile), profile);
-  return profile;
+  const safe = redact(profile);
+  writeJson(p(LAYOUT.profile), safe);
+  return safe;
 }
 
 export function loadProfile() {

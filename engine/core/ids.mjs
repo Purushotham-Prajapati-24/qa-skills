@@ -16,7 +16,7 @@
  *   TC-00123            generated test case
  *   PLAN-00007          test plan
  */
-import { readJson, writeJson } from './fsjson.mjs';
+import { readJson, updateJson } from './fsjson.mjs';
 import { p, LAYOUT } from './paths.mjs';
 
 const SPECS = {
@@ -44,6 +44,11 @@ function load() {
 /**
  * Allocate the next ID for `kind`. Year-scoped counters restart each calendar
  * year, which keeps IDs short without ever repeating a full identifier.
+ *
+ * The read-modify-write against the shared counters file happens under
+ * `updateJson`'s lock, so concurrent callers (e.g. several subagents each
+ * opening their own execution) can never read the same "current" value and
+ * allocate the same ID -- see docs on the concurrency incident this fixes.
  */
 export function nextId(kind, now = new Date()) {
   const spec = SPECS[kind];
@@ -51,13 +56,14 @@ export function nextId(kind, now = new Date()) {
   const year = String(now.getUTCFullYear());
   const bucket = spec.yearScoped ? `${kind}:${year}` : kind;
 
-  const db = load();
-  const next = (db.counters[bucket] ?? 0) + 1;
-  db.counters[bucket] = next;
-  db.updated_at = now.toISOString();
-  writeJson(countersFile(), db);
+  const db = updateJson(countersFile(), (current) => {
+    const next = (current.counters[bucket] ?? 0) + 1;
+    current.counters[bucket] = next;
+    current.updated_at = now.toISOString();
+    return current;
+  }, { version: 1, counters: {} });
 
-  const num = String(next).padStart(spec.pad, '0');
+  const num = String(db.counters[bucket]).padStart(spec.pad, '0');
   return spec.yearScoped ? `${spec.prefix}-${year}-${num}` : `${spec.prefix}-${num}`;
 }
 
