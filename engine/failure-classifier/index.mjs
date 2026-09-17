@@ -133,11 +133,18 @@ export function classify({ signals = [], evidenceIds = [], history = [], status 
 
   // Non-product causes win ties: attributing an environment failure to the
   // product produces a false defect report, which is the expensive error.
+  // "Ties" means scores within TIE_MARGIN of each other -- it must not fire
+  // whenever *any* non-product rule matched, or one incidental "timeout"
+  // signal would displace three strong product-defect signals every time.
+  const TIE_MARGIN = 0.1;
+  matches.forEach((m) => { m.score = m.hits.length * m.rule.weight; });
   matches.sort((a, b) => {
+    const diff = b.score - a.score;
+    if (Math.abs(diff) > TIE_MARGIN) return diff;
     const aProduct = a.rule.class === 'product-defect' ? 1 : 0;
     const bProduct = b.rule.class === 'product-defect' ? 1 : 0;
     if (aProduct !== bProduct) return aProduct - bProduct;
-    return b.hits.length * b.rule.weight - a.hits.length * a.rule.weight;
+    return diff;
   });
 
   const top = matches[0];

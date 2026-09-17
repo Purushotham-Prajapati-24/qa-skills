@@ -152,8 +152,21 @@
       "properties": {
         "risk_score": { "type": "number", "minimum": 0, "maximum": 1 },
         "risk_level": { "$ref": "common.schema.json#/definitions/riskLevel" },
+        "risk_level_qualified": {
+          "type": "string",
+          "description": "risk_level with its confidence band attached when the band is not high, e.g. \"critical (low confidence)\". Quote this, not risk_level, anywhere a human reads the verdict."
+        },
         "weights_profile": { "type": "string" },
         "confidence": { "$ref": "common.schema.json#/definitions/confidence" },
+        "confidence_band": {
+          "type": "string",
+          "enum": ["high", "moderate", "low"],
+          "description": "Banding of `confidence`, from engine/risk-engine/weights.json. A level is only as trustworthy as the evidence under it."
+        },
+        "confidence_warning": {
+          "type": "string",
+          "description": "Present only when the band is below high. States how much of the profile went unevidenced and forbids using the level alone to exclude a test category."
+        },
         "factors": {
           "type": "array",
           "minItems": 1,

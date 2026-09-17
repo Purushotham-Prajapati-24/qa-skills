@@ -29,7 +29,12 @@ const DENY = [
 /** Patterns that are allowed but worth flagging in the transcript. */
 const WARN = [
   [/\bnpm\s+audit\s+fix\b[^\n]*--force/i, 'This can install breaking major versions. Confirm the user wants it.'],
-  [/\b(k6|artillery|ab|wrk|siege|locust)\b/i, 'Load-generating tool detected. Load traffic needs explicit authorisation and a non-production target.'],
+  // `ab` is Apache Bench, but it is also two letters that occur inside ordinary paths
+  // (`lab/ab-testing`, `src/ab.js`). Matched only as a command in its own right, with a
+  // flag -- which is how ab is always invoked. The longer names stay on a plain word
+  // boundary because none of them collide with anything.
+  [/(?:^|[;&|(]|\|\||&&)\s*ab\s+-/i, 'Load-generating tool detected (ab / Apache Bench). Load traffic needs explicit authorisation and a non-production target.'],
+  [/\b(k6|artillery|wrk|siege|locust)\b/i, 'Load-generating tool detected. Load traffic needs explicit authorisation and a non-production target.'],
   [/\b(nmap|nikto|sqlmap|zap-cli|wpscan)\b/i, 'Active security scanning needs authorisation from whoever owns the target host.'],
   [/\bgit\s+reset\s+--hard\b/i, 'This discards uncommitted work in the working tree.'],
 ];

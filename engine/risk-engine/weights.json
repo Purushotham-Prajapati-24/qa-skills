@@ -9,6 +9,12 @@
     "high": 0.65,
     "critical": 0.85
   },
+  "confidence_bands": {
+    "$comment": "Inclusive lower bound on confidence -- the share of profile weight actually backed by evidence. A level is only as trustworthy as the evidence under it: 'critical' off one factor out of fourteen renders identically to 'critical' off thirteen unless the band is carried alongside it. Below `moderate`, the engine qualifies the level in risk_level_qualified and sets confidence_warning.",
+    "high": 0.66,
+    "moderate": 0.33,
+    "low": 0.0
+  },
   "factors": {
     "business_criticality": {
       "label": "Business criticality of the affected capability",

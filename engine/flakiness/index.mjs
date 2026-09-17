@@ -75,25 +75,31 @@ export function analyse() {
       continue;
     }
 
-    // Mixed outcomes. Did the code change between them?
+    // Mixed outcomes. Did the code change between them? Zero recorded commits
+    // is not evidence the code held constant -- it is the absence of evidence,
+    // and must not be conflated with the one-commit case that actually proves it.
     const commits = new Set(sorted.map((r) => r.commit).filter(Boolean));
     const environments = new Set(sorted.map((r) => r.environment).filter(Boolean));
-    const sameCode = commits.size <= 1;
+    const sameCode = commits.size === 1;
     const retried = sorted.some((r) => r.retry_count > 0);
     const durations = sorted.map((r) => r.duration_ms).filter((d) => typeof d === 'number');
     const variance = durations.length >= 2 ? stdev(durations) / (durations.reduce((a, v) => a + v, 0) / durations.length) : 0;
 
     let verdict = 'unstable-cause-unknown';
     let confidence = 0.4;
+    let evidenceNeeded;
 
     if (sameCode) {
       verdict = 'flaky';
       confidence = 0.7;
-      reasons.push(`Mixed outcomes (${passed} passed / ${failed} failed) at a single commit (${[...commits][0] ?? 'unrecorded'}): the code did not change between runs.`);
-    } else {
+      reasons.push(`Mixed outcomes (${passed} passed / ${failed} failed) at a single commit (${[...commits][0]}): the code did not change between runs.`);
+    } else if (commits.size > 1) {
       verdict = 'outcome-changed-with-code';
       confidence = 0.75;
       reasons.push(`Outcomes differ across ${commits.size} commits. This looks like a real behavioural change, not flakiness. Bisect before blaming the test.`);
+    } else {
+      reasons.push(`Mixed outcomes (${passed} passed / ${failed} failed) but no run recorded a commit, so whether the code changed between them is unknown -- this is not evidence of flakiness.`);
+      evidenceNeeded = 'Record git.commit on exec start for these runs so the same-commit check can actually verify the code held constant.';
     }
 
     if (environments.size > 1) {
@@ -110,6 +116,7 @@ export function analyse() {
       confidence: Number(confidence.toFixed(2)),
       pass_rate: Number((passed / sorted.length).toFixed(2)),
       reasons,
+      ...(evidenceNeeded ? { evidence_needed: evidenceNeeded } : {}),
       history: sorted,
     });
   }

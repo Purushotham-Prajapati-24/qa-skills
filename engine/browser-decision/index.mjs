@@ -96,7 +96,10 @@ export function decide({
 
     const base = weightTotal === 0 ? 0 : weighted / weightTotal;
     const capability = def.capability;
-    const capAvailable = capability ? capabilities[capability] !== false : true;
+    // Three states: true, false, and undeclared. Only an explicit `true` counts as
+    // available -- an undeclared capability is exactly as unusable as a declared-false
+    // one, per ARCHITECTURE §3, so this must not be a loose `!== false` check.
+    const capAvailable = capability ? capabilities[capability] === true : true;
     const blocks = forbidden.get(id) ?? [];
     if (!capAvailable) blocks.push(`capability "${capability}" is not available in this environment`);
 

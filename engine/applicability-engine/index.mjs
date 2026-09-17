@@ -1,7 +1,7 @@
 /**
  * Test Applicability Engine.
  *
- * Answers "which of the 46 test categories are actually relevant here?" and,
+ * Answers "which of the 47 test categories are actually relevant here?" and,
  * just as importantly, records why each of the others is not. A category the
  * engine never considered is indistinguishable from one it silently dropped,
  * so the output always contains every category.
@@ -87,7 +87,10 @@ export function evaluate({
     const riskAlignment = Math.min(1, Math.max(0.05, alignment));
 
     const capability = def.capability ?? null;
-    const toolAvailable = capability ? capabilities[capability] !== false : true;
+    // Three states: true, false, and undeclared. Only an explicit `true` counts as
+    // available -- an undeclared capability is exactly as unusable as a declared-false
+    // one, per ARCHITECTURE §3, so this must not be a loose `!== false` check.
+    const toolAvailable = capability ? capabilities[capability] === true : true;
 
     const cost = def.cost ?? 30;
     const normalisedCost = Math.min(1, cost / 120); // 2 hours == full cost

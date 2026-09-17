@@ -29,6 +29,14 @@ function levelFor(score) {
   return 'negligible';
 }
 
+function bandFor(confidence) {
+  const entries = Object.entries(CONFIG.confidence_bands)
+    .filter(([k]) => !k.startsWith('$'))
+    .sort((a, b) => b[1] - a[1]);
+  for (const [band, threshold] of entries) if (confidence >= threshold) return band;
+  return 'low';
+}
+
 /**
  * @param {object} input
  * @param {string} [input.profile='balanced']
@@ -84,11 +92,26 @@ export function score({ profile = 'balanced', factors = {}, overrides = {} } = {
   const totalWeight = Object.values(weights).reduce((a, w) => a + w, 0);
   const confidence = totalWeight === 0 ? 0 : Number((weightSum / totalWeight).toFixed(4));
 
+  // A level without its band is a false precision: `critical` off one evidenced factor
+  // renders identically to `critical` off thirteen. Carry the band next to the level so a
+  // reader cannot see one without the other -- in both directions, because a thinly
+  // evidenced `negligible` is what silently excludes whole test categories.
+  const level = levelFor(riskScore);
+  const band = bandFor(confidence);
+  const thin = band !== 'high';
+
   return {
     risk_score: riskScore,
-    risk_level: levelFor(riskScore),
+    risk_level: level,
+    risk_level_qualified: thin ? `${level} (${band} confidence)` : level,
     weights_profile: profile,
     confidence,
+    confidence_band: band,
+    ...(thin
+      ? {
+          confidence_warning: `Only ${scored.length} of ${scored.length + unscored.length} weighted factors could be evidenced (${Math.round(confidence * 100)}% of profile weight). Quote this level as "${level} (${band} confidence)" and do not use it on its own to exclude a test category.`,
+        }
+      : {}),
     factors: scored.sort((a, b) => b.contribution - a.contribution),
     unscored_factors: unscored,
   };
@@ -101,9 +124,10 @@ export function score({ profile = 'balanced', factors = {}, overrides = {} } = {
 export function explain(assessment) {
   const lines = [
     `risk_score: ${assessment.risk_score}`,
-    `risk_level: ${assessment.risk_level}`,
+    `risk_level: ${assessment.risk_level_qualified ?? assessment.risk_level}`,
     `profile: ${assessment.weights_profile}`,
-    `confidence: ${assessment.confidence} (share of profile weight backed by evidence)`,
+    `confidence: ${assessment.confidence} (${assessment.confidence_band ?? 'unbanded'} — share of profile weight backed by evidence)`,
+    ...(assessment.confidence_warning ? [`WARNING: ${assessment.confidence_warning}`] : []),
     'factors (by contribution):',
   ];
   for (const f of assessment.factors) {
