@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
+import { updateJson } from '../engine/core/fsjson.mjs';
 import { useTempState } from './helpers.mjs';
 import { PACKAGE_ROOT } from '../engine/core/paths.mjs';
 
@@ -51,4 +53,69 @@ test('nextId allocates unique IDs when called from several concurrent processes 
   const all = results.flat();
   assert.equal(all.length, PROCS * PER_PROC, 'every process must get all the IDs it asked for');
   assert.equal(new Set(all).size, all.length, 'no two processes may be handed the same ID');
+});
+
+/**
+ * A lock left behind by a process that no longer exists must not wedge every future run --
+ * that is the whole reason stale locks are breakable.
+ */
+test('a lock orphaned by a dead process is broken rather than honoured forever', () => {
+  const file = path.join(tmp.dir, 'orphaned.json');
+  const lockFile = `${file}.lock`;
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+
+  // PID 0 is never a real process, so the liveness check resolves it as dead. Backdating
+  // the lock past the staleness deadline is what makes it a candidate for breaking.
+  fs.writeFileSync(lockFile, '0:orphan\n', 'utf8');
+  const old = Date.now() - 60_000;
+  fs.utimesSync(lockFile, new Date(old), new Date(old));
+
+  const result = updateJson(file, (current) => ({ n: (current?.n ?? 0) + 1 }), null);
+  assert.equal(result.n, 1, 'the orphaned lock must not block the update');
+  assert.equal(fs.existsSync(lockFile), false, 'the lock must be released afterwards');
+});
+
+/**
+ * The mirror image: a lock held by a LIVE process is not stolen just because it is old.
+ * Stealing it would let the slow owner write its stale value over the thief's update, so
+ * the correct outcome is a loud timeout, not a silent second entry into the section.
+ */
+test('a lock held by a live process is never stolen, however old it is', () => {
+  const file = path.join(tmp.dir, 'held.json');
+  const lockFile = `${file}.lock`;
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+
+  // This test's own PID is definitionally alive.
+  fs.writeFileSync(lockFile, `${process.pid}:someone-else\n`, 'utf8');
+  const old = Date.now() - 60_000;
+  fs.utimesSync(lockFile, new Date(old), new Date(old));
+
+  assert.throws(
+    () => updateJson(file, () => ({ n: 1 }), null, { retries: 3 }),
+    /Timed out waiting for the lock/,
+    'an old lock whose owner is still running must time out, not be broken',
+  );
+  assert.equal(fs.readFileSync(lockFile, 'utf8').trim(), `${process.pid}:someone-else`, 'the live owner keeps its lock');
+  fs.rmSync(lockFile, { force: true });
+});
+
+/**
+ * Releasing used to unlink whatever lock was present. If the lock had already been broken
+ * and re-taken, that deleted the SUCCESSOR's lock and put two processes in the critical
+ * section at once. Release is now conditional on the token still being ours.
+ */
+test('releasing a lock does not delete a successor lock that replaced ours', () => {
+  const file = path.join(tmp.dir, 'successor.json');
+  const lockFile = `${file}.lock`;
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+
+  updateJson(file, (current) => {
+    // Simulate another process having taken over mid-callback.
+    fs.writeFileSync(lockFile, '0:successor\n', 'utf8');
+    return { n: (current?.n ?? 0) + 1 };
+  }, null);
+
+  assert.equal(fs.existsSync(lockFile), true, 'the successor lock must survive our release');
+  assert.equal(fs.readFileSync(lockFile, 'utf8').trim(), '0:successor');
+  fs.rmSync(lockFile, { force: true });
 });

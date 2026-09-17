@@ -76,39 +76,56 @@ function runProbe(command) {
 /**
  * Probe every provider this module can check. Agent-declared providers keep
  * whatever the agent last declared, or come back as `unknown`.
+ *
+ * The shell-outs happen BEFORE the lock, not inside it. Five command probes with a 15s
+ * timeout each can outlast any sane staleness deadline, and a probe that holds the
+ * registry lock that long blocks -- or, before the lock grew ownership tokens, silently
+ * lost -- a concurrent `caps declare`. Only the merge needs to be serialised, and the
+ * agent-declared entries are re-read from `current.declared` inside the lock so a
+ * declaration that lands mid-probe survives instead of being overwritten by a snapshot
+ * taken before it.
  */
 export function probe({ now = new Date() } = {}) {
+  const probed = {};
+  for (const [name, def] of Object.entries(REG.providers)) {
+    switch (def.probe.type) {
+      case 'always':
+        probed[name] = { available: true, method: 'always', detail: def.notes ?? '' };
+        break;
+      case 'command': {
+        const r = runProbe(def.probe.command);
+        probed[name] = { available: r.available, method: `command: ${def.probe.command}`, detail: r.detail };
+        break;
+      }
+      case 'env': {
+        const missing = def.probe.vars.filter((v) => !process.env[v]);
+        probed[name] = {
+          available: missing.length === 0,
+          method: `env: ${def.probe.vars.join(', ')}`,
+          detail: missing.length ? `missing: ${missing.join(', ')}` : 'all variables present',
+        };
+        break;
+      }
+      case 'agent-declared':
+        probed[name] = null; // resolved under the lock, from the freshest `declared`
+        break;
+      default:
+        probed[name] = { available: null, method: 'unknown', detail: `unsupported probe type ${def.probe.type}` };
+    }
+  }
+
   const db = updateJson(probeFile(), (current) => {
     const results = {};
 
-    for (const [name, def] of Object.entries(REG.providers)) {
-      const declared = current.declared[name];
-      switch (def.probe.type) {
-        case 'always':
-          results[name] = { available: true, method: 'always', detail: def.notes ?? '' };
-          break;
-        case 'command': {
-          const r = runProbe(def.probe.command);
-          results[name] = { available: r.available, method: `command: ${def.probe.command}`, detail: r.detail };
-          break;
-        }
-        case 'env': {
-          const missing = def.probe.vars.filter((v) => !process.env[v]);
-          results[name] = {
-            available: missing.length === 0,
-            method: `env: ${def.probe.vars.join(', ')}`,
-            detail: missing.length ? `missing: ${missing.join(', ')}` : 'all variables present',
-          };
-          break;
-        }
-        case 'agent-declared':
-          results[name] = declared
-            ? { available: declared.available, method: 'agent-declared', detail: declared.note || `declared at ${declared.declared_at}` }
-            : { available: null, method: 'agent-declared', detail: 'NOT DECLARED -- treat as unavailable until the agent confirms the tools are in its tool list.' };
-          break;
-        default:
-          results[name] = { available: null, method: 'unknown', detail: `unsupported probe type ${def.probe.type}` };
+    for (const name of Object.keys(REG.providers)) {
+      if (probed[name]) {
+        results[name] = probed[name];
+        continue;
       }
+      const declared = current.declared[name];
+      results[name] = declared
+        ? { available: declared.available, method: 'agent-declared', detail: declared.note || `declared at ${declared.declared_at}` }
+        : { available: null, method: 'agent-declared', detail: 'NOT DECLARED -- treat as unavailable until the agent confirms the tools are in its tool list.' };
     }
 
     current.providers = results;

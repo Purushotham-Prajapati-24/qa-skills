@@ -11,7 +11,7 @@ a provider exists.
 ## Validation status
 
 ```
-node --test "tests/*.test.mjs"     125 passed, 0 failed
+node --test "tests/*.test.mjs"     131 passed, 0 failed
 node bin/ast.mjs eval run          41/41 checks across 15 benchmark cases
 node scripts/validate-repo.mjs     0 problems
 node scripts/demo-session.mjs      full pipeline exercised end to end
@@ -111,10 +111,12 @@ delegated-write tickets, and 29 tests asserting each gate refuses before the pro
 called. It is in the IMPLEMENTED table above. Jira is the one piece of that plan still
 outstanding, and it is tracked under PARTIALLY IMPLEMENTED rather than here.
 
-What is now possible and was not before: `sample-ecommerce-app/` ships, its eight defects
-are no longer labelled in its own source, and the ground truth lives in
-`evaluation/benchmark-app/answer-key.json`. Detection can finally be measured rather than
-grepped.
+The ground truth for that application now lives in `evaluation/benchmark-app/answer-key.json`,
+with its eight defects described by file, line and reproduction rather than labelled in the
+source. `sample-ecommerce-app/` itself is **not in this repository** -- it is held locally and
+ignored, so the end-to-end benchmark cannot be reproduced from a clone yet. Until it is
+committed, treat any detection rate quoted from it as an anecdote about one machine, not as
+a measurement anyone can check.
 
 Concretely:
 

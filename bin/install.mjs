@@ -31,6 +31,19 @@ const pkg = JSON.parse(fs.readFileSync(path.join(SOURCE, 'package.json'), 'utf8'
 /** Copied into <claude>/ast. Everything the CLI or a skill link needs at runtime. */
 const RUNTIME = ['bin', 'engine', 'schemas', 'evaluation', 'integrations', 'templates', 'docs', 'examples', 'scripts', 'package.json', 'LICENSE'];
 
+
+/**
+ * Paths under RUNTIME that must NOT reach an installed agent, as posix-style paths relative
+ * to the source root.
+ *
+ * The benchmark answer key names every seeded defect by file, line and reproduction. Copying
+ * it into .claude/ast puts it inside the working tree of the very agent whose detection rate
+ * it is used to measure -- an agent that reads it can score a perfect run by replaying the
+ * answers instead of finding anything. It stays in the source repository, where the evaluator
+ * runs, and travels no further.
+ */
+const RUNTIME_EXCLUDE = new Set(['evaluation/benchmark-app']);
+
 /** Repo-root directories a skill may link to. These move under ast/ and must be rewritten. */
 const MOVED = ['integrations', 'templates', 'docs', 'examples', 'schemas', 'engine', 'evaluation', 'scripts'];
 
@@ -102,6 +115,7 @@ let copied = 0;
 let rewritten = 0;
 
 function copyTree(from, to, transform) {
+  if (RUNTIME_EXCLUDE.has(path.relative(SOURCE, from).split(path.sep).join('/'))) return;
   const stat = fs.statSync(from);
   if (stat.isDirectory()) {
     if (!DRY) fs.mkdirSync(to, { recursive: true });

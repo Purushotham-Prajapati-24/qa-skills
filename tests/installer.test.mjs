@@ -34,6 +34,20 @@ function everyMarkdown(dir) {
   return out;
 }
 
+function everyFile(dir) {
+  const out = [];
+  const walk = (d) => {
+    if (!fs.existsSync(d)) return;
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      const q = path.join(d, e.name);
+      if (e.isDirectory()) walk(q);
+      else out.push(q);
+    }
+  };
+  walk(dir);
+  return out;
+}
+
 test('a dry run writes nothing', () => {
   const dir = freshRepo('dry');
   const out = install(dir, ['--dry-run']);
@@ -131,5 +145,29 @@ test('the runtime carries everything the CLI needs to run offline', () => {
   // The benchmark exercises the decision engines and needs evaluation/ plus every schema.
   const evalOut = JSON.parse(execFileSync(process.execPath, ['.claude/ast/bin/ast.mjs', 'eval', 'run'], { cwd: dir, encoding: 'utf8' }));
   assert.equal(evalOut.score, 1, 'the benchmark must pass from an installed copy');
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+/**
+ * The benchmark answer key names every seeded defect by file, line and reproduction. An
+ * agent that can read it does not have to detect anything, so an installed runtime -- which
+ * sits inside the working tree of the agent being measured -- must not contain it.
+ */
+test('the benchmark answer key is not copied into an installed runtime', () => {
+  const dir = freshRepo('answer-key');
+  install(dir);
+
+  const evaluation = path.join(dir, '.claude', 'ast', 'evaluation');
+  assert.ok(fs.existsSync(evaluation), 'the rest of evaluation/ still installs, so doc links keep resolving');
+  assert.ok(fs.existsSync(path.join(evaluation, 'README.md')), 'docs/installation.md links to evaluation/README.md');
+  assert.equal(
+    fs.existsSync(path.join(evaluation, 'benchmark-app')),
+    false,
+    'benchmark-app/ (the answer key) must not reach the agent being scored',
+  );
+
+  const leaked = everyFile(path.join(dir, '.claude')).filter((f) => path.basename(f) === 'answer-key.json');
+  assert.deepEqual(leaked, [], 'no answer key anywhere under .claude, by any route');
+
   fs.rmSync(dir, { recursive: true, force: true });
 });
