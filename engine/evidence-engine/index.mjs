@@ -130,15 +130,29 @@ export function captureOutput({ argv, cwd, exitCode, durationMs, stdout = '', st
   });
 }
 
+/** A test-report describing zero executed cases, however it phrases it. */
+const ZERO_CASES_PATTERN = /\b(?:0\s+(?:passing|tests?\s+(?:ran|found|collected|executed))|no\s+tests?\s+found|found\s+0\s+tests?|0\s+total)\b/i;
+
 /**
  * The false-confidence gate.
+ *
+ * Checks evidence CONTENT, not just its kind and epistemic class -- kind and
+ * class only prove the right shape of evidence was attached, never that it
+ * actually says the claim is true or that it is even about this claim. All
+ * three checks below are mechanically verifiable from data already recorded
+ * on the evidence item; none of them require judging correctness.
  *
  * @param {object} claim
  * @param {string} claim.status       The status being claimed.
  * @param {string[]} claim.evidenceIds
+ * @param {string} [claim.executionId]  The execution (or other subject, e.g. a
+ *   test case ID) this claim is about. When supplied, at least one execution
+ *   evidence item must actually be linked to it via `execution_id` or
+ *   `supports` -- otherwise any evidence from any unrelated run would satisfy
+ *   any claim.
  * @returns {{permitted: boolean, downgrade_to?: string, reasons: string[]}}
  */
-export function verifyClaim({ status, evidenceIds = [], statement = '' } = {}) {
+export function verifyClaim({ status, evidenceIds = [], statement = '', executionId = null } = {}) {
   const reasons = [];
   const needsExecution = ['PASSED', 'FAILED', 'COMPLETED', 'PARTIAL'];
 
@@ -185,6 +199,46 @@ export function verifyClaim({ status, evidenceIds = [], statement = '' } = {}) {
         'A screenshot shows what a page looked like; it does not show that an assertion held.',
       ],
     };
+  }
+
+  const claimsSuccess = ['PASSED', 'COMPLETED'].includes(status);
+
+  if (claimsSuccess) {
+    const failedCommand = items.find((i) => Number.isInteger(i.rec.command?.exit_code) && i.rec.command.exit_code !== 0);
+    if (failedCommand) {
+      return {
+        permitted: false,
+        downgrade_to: 'INCONCLUSIVE',
+        reasons: [`Evidence ${failedCommand.id} recorded a non-zero exit code (${failedCommand.rec.command.exit_code}), which directly contradicts a "${status}" claim. A command that failed cannot be used as evidence that it passed.`],
+      };
+    }
+  }
+
+  if (executionId) {
+    const executionEvidence = items.filter((i) => EXECUTION_EVIDENCE.has(i.rec.kind));
+    const linked = executionEvidence.filter(
+      (i) => i.rec.execution_id === executionId || (i.rec.supports ?? []).includes(executionId),
+    );
+    if (executionEvidence.length && linked.length === 0) {
+      return {
+        permitted: false,
+        downgrade_to: 'INCONCLUSIVE',
+        reasons: [`None of the attached execution evidence is linked to ${executionId}: each item's "execution_id" points elsewhere (or is unset) and none lists ${executionId} in "supports". Evidence from an unrelated run cannot back this claim.`],
+      };
+    }
+  }
+
+  if (claimsSuccess) {
+    const emptyReport = items.find(
+      (i) => i.rec.kind === 'test-report' && ZERO_CASES_PATTERN.test(`${i.rec.summary ?? ''} ${i.rec.excerpt ?? ''}`),
+    );
+    if (emptyReport) {
+      return {
+        permitted: false,
+        downgrade_to: 'INCONCLUSIVE',
+        reasons: [`Evidence ${emptyReport.id} is a test-report describing zero executed cases ("${emptyReport.rec.summary}"). A report that nothing ran cannot support a "${status}" claim.`],
+      };
+    }
   }
 
   const inferred = items.filter((i) => ['inferred', 'assumed', 'expected'].includes(i.rec.epistemic_class));

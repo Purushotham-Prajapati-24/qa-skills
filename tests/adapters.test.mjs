@@ -323,13 +323,17 @@ test('an MCP provider issues a ticket instead of pretending it can call the tool
   // The gates ran, but nothing is recorded until the agent comes back.
   assert.equal(auth.listWrites('github').filter((w) => w.idempotency_key === finding.fingerprint).length, 0);
 
-  // Completing it records the write from the provider's own response.
-  const done = adapters.getAdapter('github').complete({
+  // Completing it is NOT enough on its own: the response is a self-attestation, and an
+  // independent read-back (here, a stubbed `gh issue view`) must confirm the same issue
+  // actually exists before the write counts as done.
+  const verifyExec = fakeExec({ stdout: JSON.stringify({ number: 418, url: ISSUE_URL, state: 'OPEN' }) });
+  const done = await adapters.getAdapter('github', { exec: verifyExec }).complete({
     ticket: r.ticket,
     response: JSON.stringify({ number: 418, html_url: ISSUE_URL }),
   });
   assert.equal(done.ok, true);
   assert.equal(done.confirmed, true);
+  assert.equal(done.verified, true);
   assert.equal(auth.listWrites('github').find((w) => w.idempotency_key === finding.fingerprint).confirmed, true);
 
   // The ticket is single-use.
@@ -337,8 +341,31 @@ test('an MCP provider issues a ticket instead of pretending it can call the tool
   setProviders({ 'gh-cli': true, shell: true });
 });
 
-test('a ledger entry cannot be created without a ticket', () => {
-  const r = completeWrite({ ticket: 'WT-deadbeefdeadbeef', response: ISSUE_URL, parseResult: parseIssueResult });
+test('a self-reported identifier that does not independently read back is NOT confirmed', async () => {
+  setProviders({ 'mcp-github': true, 'gh-cli': false, shell: true });
+  const finding = newFinding();
+
+  const r = await createGitHubAdapter({ exec: fakeExec() }).createIssueFromFinding({
+    findingId: finding.finding_id, repo: 'acme/shop', authorisation: AUTHORISED,
+  });
+
+  // The agent claims issue #4242 exists, but the independent read-back (stubbed to behave
+  // like a real `gh issue view` on a nonexistent issue) says otherwise.
+  const failingReadBack = fakeExec({ stdout: '', stderr: 'HTTP 404: Not Found', exit_code: 1 });
+  const done = await adapters.getAdapter('github', { exec: failingReadBack }).complete({
+    ticket: r.ticket,
+    response: JSON.stringify({ number: 4242, html_url: 'https://github.com/acme/shop/issues/4242' }),
+  });
+
+  assert.equal(done.confirmed, false, 'a self-attestation must never be trusted without an independent read-back');
+  assert.equal(done.verified, false);
+  assert.match(done.verify_reason, /Independent read-back/);
+  assert.equal(auth.listWrites('github').find((w) => w.idempotency_key === finding.fingerprint).confirmed, false);
+  setProviders({ 'gh-cli': true, shell: true });
+});
+
+test('a ledger entry cannot be created without a ticket', async () => {
+  const r = await completeWrite({ ticket: 'WT-deadbeefdeadbeef', response: ISSUE_URL, parseResult: parseIssueResult });
   assert.equal(r.ok, false);
   assert.match(r.reason, /No such pending write ticket/);
   assert.match(r.reason, /evidence that the capability, authorisation and duplicate gates ran/);
@@ -352,7 +379,7 @@ test('an expired ticket is refused, because authorisation does not keep', async 
   });
 
   const later = new Date(Date.now() + TICKET_TTL_MS + 1000);
-  const done = completeWrite({ ticket: r.ticket, response: ISSUE_URL, parseResult: parseIssueResult, now: later });
+  const done = await completeWrite({ ticket: r.ticket, response: ISSUE_URL, parseResult: parseIssueResult, now: later });
   assert.equal(done.ok, false);
   assert.match(done.reason, /expired/);
   assert.match(done.reason, /per-session and does not keep/);
