@@ -16,6 +16,15 @@ import { query } from '../traceability/index.mjs';
 
 const ratio = (num, den) => (den === 0 ? null : Number((num / den).toFixed(4)));
 
+// A reader who sees `decision_assessment_rate: 0.5` has no way to tell a denominator of 2
+// from a denominator of 200 without going and looking. `ast metrics` already printed
+// `sample_sizes` next to `metrics`, but as two objects a reader has to cross-reference by
+// hand -- and neither one was keyed the way each metric actually needs. Fixed rather than
+// scaled to the collection size: "well below the smallest sample anyone should draw a
+// conclusion from" is a judgement call this project is willing to write down and defend,
+// not a claim that 5 is somehow the statistically correct cutoff.
+const NOISE_FLOOR = 5;
+
 export const DEFINITIONS = {
   false_confidence_rate: {
     formula: 'unverified PASSED/COMPLETED claims / total PASSED/COMPLETED claims',
@@ -52,6 +61,13 @@ export const DEFINITIONS = {
   evidence_completeness: {
     formula: 'executions with at least one execution-grade evidence item / executions that claim a status',
     direction: 'higher-is-better',
+  },
+  audit_coverage: {
+    formula: "1 if any evidence-audit record exists this session, 0 if there are claims and none does, null if there are no PASSED/FAILED/COMPLETED/PARTIAL claims to review",
+    direction: 'higher-is-better',
+    target: 1,
+    why: 'The evidence-auditor subagent catches what the mechanical evidence gate cannot -- a vague status reason, a screenshot standing in for an assertion. It only helps if it ran.',
+    blind_spot: 'Confirms the audit happened, not that it was thorough. A rubber-stamp record still reads 1.',
   },
   automation_conversion: {
     formula: 'exploratory scenarios converted into committed tests / scenarios that met the conversion threshold',
@@ -94,6 +110,7 @@ export function compute({ declaredRequirements = [], highRiskBehaviours = [], au
   const executions = state.list('executions');
   const decisions = state.list('decisions');
   const findings = state.list('findings');
+  const evidenceItems = state.list('evidence');
   const session = state.loadSession();
   const writes = state.list('ledger').flatMap((db) => Object.values(db.entries ?? {}));
 
@@ -126,6 +143,10 @@ export function compute({ declaredRequirements = [], highRiskBehaviours = [], au
   const statusClaiming = executions.filter((e) => ['PASSED', 'FAILED', 'COMPLETED', 'PARTIAL'].includes(e.status) && e.method !== 'not-executed');
   const withEvidence = statusClaiming.filter((e) => (e.evidence ?? []).length > 0);
 
+  /* audit coverage */
+  const claimsToAudit = executions.filter((e) => ['PASSED', 'FAILED', 'COMPLETED', 'PARTIAL'].includes(e.status)).length;
+  const evidenceAuditorRan = evidenceItems.some((e) => e.kind === 'evidence-audit');
+
   /* unnecessary tests */
   const barren = executions.filter(
     (e) => e.method !== 'not-executed' && (e.findings ?? []).length === 0 && !e.decision_id && (e.test_results ?? []).length === 0,
@@ -151,6 +172,53 @@ export function compute({ declaredRequirements = [], highRiskBehaviours = [], au
   const interruptions = session?.interruptions ?? [];
   const recovered = interruptions.filter((i) => i.recovered_at);
 
+  const metrics = {
+    false_confidence_rate: audit.false_confidence_rate,
+    requirement_coverage: ratio(covered.length, declared.length),
+    high_risk_coverage: ratio(riskCovered.length, highRiskBehaviours.length),
+    decision_accuracy: ratio(correct.length, assessed.length),
+    decision_assessment_rate: ratio(assessed.length, decisions.length),
+    actionable_finding_rate: ratio(actionable.length, nonDuplicate.length),
+    evidence_completeness: ratio(withEvidence.length, statusClaiming.length),
+    audit_coverage: claimsToAudit === 0 ? null : (evidenceAuditorRan ? 1 : 0),
+    automation_conversion: ratio(
+      executions.filter((e) => e.method === 'playwright-script' || e.method === 'generated-script').length,
+      automationCandidates.length,
+    ),
+    unnecessary_test_rate: ratio(barren.length, real.length),
+    runtime_efficiency_ms_per_case: ratio(totalDuration, totalCases),
+    flaky_identification_quality: flakyLabels.length === 0 ? null : Number((1 - prematureFlaky.length / flakyLabels.length).toFixed(4)),
+    interruption_recovery_rate: ratio(recovered.length, interruptions.length),
+    authorization_compliance: performed.length === 0 ? null : Number((1 - unauthorised.length / performed.length).toFixed(4)),
+    reproducibility: ratio(reproducible.length, real.length),
+  };
+
+  // The actual denominator behind each ratio above, in the same order -- not the generic
+  // collection counts in `sample_sizes`, which mostly answer a different question (e.g.
+  // `decision_accuracy`'s denominator is decisions ASSESSED, not decisions total).
+  const denominators = {
+    false_confidence_rate: audit.pass_claims,
+    requirement_coverage: declared.length,
+    high_risk_coverage: highRiskBehaviours.length,
+    decision_accuracy: assessed.length,
+    decision_assessment_rate: decisions.length,
+    actionable_finding_rate: nonDuplicate.length,
+    evidence_completeness: statusClaiming.length,
+    audit_coverage: claimsToAudit,
+    automation_conversion: automationCandidates.length,
+    unnecessary_test_rate: real.length,
+    runtime_efficiency_ms_per_case: totalCases,
+    flaky_identification_quality: flakyLabels.length,
+    interruption_recovery_rate: interruptions.length,
+    authorization_compliance: performed.length,
+    reproducibility: real.length,
+  };
+
+  // A null metric already says "no denominator" as loudly as this system can say anything.
+  // Only a NON-null metric with a thin denominator is the silent case this exists for: a
+  // real-looking number a reader has no reason to distrust on sight.
+  const noisyMetrics = Object.keys(metrics).filter((k) => metrics[k] !== null && denominators[k] < NOISE_FLOOR);
+
   return {
     computed_at: new Date().toISOString(),
     sample_sizes: {
@@ -160,25 +228,10 @@ export function compute({ declaredRequirements = [], highRiskBehaviours = [], au
       external_writes: performed.length,
       declared_requirements: declared.length,
     },
-    metrics: {
-      false_confidence_rate: audit.false_confidence_rate,
-      requirement_coverage: ratio(covered.length, declared.length),
-      high_risk_coverage: ratio(riskCovered.length, highRiskBehaviours.length),
-      decision_accuracy: ratio(correct.length, assessed.length),
-      decision_assessment_rate: ratio(assessed.length, decisions.length),
-      actionable_finding_rate: ratio(actionable.length, nonDuplicate.length),
-      evidence_completeness: ratio(withEvidence.length, statusClaiming.length),
-      automation_conversion: ratio(
-        executions.filter((e) => e.method === 'playwright-script' || e.method === 'generated-script').length,
-        automationCandidates.length,
-      ),
-      unnecessary_test_rate: ratio(barren.length, real.length),
-      runtime_efficiency_ms_per_case: ratio(totalDuration, totalCases),
-      flaky_identification_quality: flakyLabels.length === 0 ? null : Number((1 - prematureFlaky.length / flakyLabels.length).toFixed(4)),
-      interruption_recovery_rate: ratio(recovered.length, interruptions.length),
-      authorization_compliance: performed.length === 0 ? null : Number((1 - unauthorised.length / performed.length).toFixed(4)),
-      reproducibility: ratio(reproducible.length, real.length),
-    },
+    metrics,
+    denominators,
+    noise_floor: NOISE_FLOOR,
+    noisy_metrics: noisyMetrics,
     violations: [
       ...audit.violations,
       ...unauthorised.map((w) => `Unauthorised external write: ${w.system}.${w.action} -> ${w.target}`),
@@ -186,7 +239,9 @@ export function compute({ declaredRequirements = [], highRiskBehaviours = [], au
     ],
     notes: [
       'A null metric means the denominator was zero. Nulls are honest; do not substitute 0 or 1.',
-      'Metrics with a small sample_size are noise. Report the denominator alongside the ratio.',
+      `Metrics with a denominator under ${NOISE_FLOOR} are noise, not signal -- read them qualitatively: ${
+        noisyMetrics.length ? noisyMetrics.map((k) => `${k} (n=${denominators[k]})`).join(', ') : 'none this session'
+      }.`,
       ...(executedCategories.size ? [`Categories executed: ${[...executedCategories].join(', ')}.`] : []),
     ],
     definitions: DEFINITIONS,

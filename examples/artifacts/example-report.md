@@ -12,7 +12,7 @@ hand-written approximation of it.
 
 | Session | Repository | Commit | PR | Generated | Skill |
 | --- | --- | --- | --- | --- | --- |
-| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-09-16 11:19:16Z | v0.6.0 |
+| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-09-18 10:50:38Z | v0.9.0 |
 
 ## Verdict
 
@@ -100,12 +100,12 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 
 | ID | Status | Goal | Method | Failure class | Duration |
 | --- | --- | --- | --- | --- | --- |
-| EXEC-2026-00003 | FAILED | User A cannot select user B's saved card | api-client | authentication-failure (0.5) | 8 ms |
+| EXEC-2026-00003 | FAILED | User A cannot select user B's saved card | api-client | authentication-failure (0.5) | 7 ms |
 | EXEC-2026-00004 | BLOCKED | Payment E2E against the real provider | not-executed | — | 0 ms |
-| EXEC-2026-00001 | INCONCLUSIVE | Quick smoke of the checkout page | existing-suite | insufficient-evidence (0.9) | 5 ms |
+| EXEC-2026-00001 | INCONCLUSIVE | Quick smoke of the checkout page | existing-suite | insufficient-evidence (0.9) | 6 ms |
 | EXEC-2026-00006 | INTERRUPTED | Accessibility scan of the checkout pages | static-analysis | — | — |
 | EXEC-2026-00005 | NOT_APPLICABLE | Localisation testing | not-executed | — | 0 ms |
-| EXEC-2026-00002 | PASSED | Baseline: full unit suite at head | existing-suite | — | 11 ms |
+| EXEC-2026-00002 | PASSED | Baseline: full unit suite at head | existing-suite | — | 10 ms |
 
 | Status | Count |
 | --- | --- |
@@ -120,8 +120,8 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 
 | ID | Kind | Summary | Artifact |
 | --- | --- | --- | --- |
-| EV-2026-00001 | command-output | vitest: 211/211 passed | C:\Users\purus\AppData\Local\Temp\ast-demo-cRnOgw\evidence\blobs\output-2026-09-16T11-19-16-425Z-18112.txt |
-| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | C:\Users\purus\AppData\Local\Temp\ast-demo-cRnOgw\evidence\blobs\output-2026-09-16T11-19-16-438Z-18112.txt |
+| EV-2026-00001 | command-output | vitest: 211/211 passed | C:\Users\purus\AppData\Local\Temp\ast-demo-yYpj7b\evidence\blobs\output-2026-09-18T10-50-38-720Z-49732.txt |
+| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | C:\Users\purus\AppData\Local\Temp\ast-demo-yYpj7b\evidence\blobs\output-2026-09-18T10-50-38-731Z-49732.txt |
 
 ### External writes
 
@@ -170,53 +170,53 @@ _Excluded for lack of evidence — not scored, not guessed: user_impact, depende
 
 | Category | Applicable | Priority | Coverage | Score | Reason |
 | --- | --- | --- | --- | --- | --- |
-| dependency-scan | yes | P0 | unknown | 0.84 | Signals present: third-party-deps. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): security_sensitivity. |
-| security | yes | P0 | none | 0.6 | Signals present: user-input, auth, pii. Existing coverage "none" leaves a deficit of 1; addresses risk factor(s): security_sensitivity, data_sensitivity. |
-| input-validation | yes | P0 | unknown | 0.56 | Signals present: user-input. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): security_sensitivity. |
-| session-management | yes | P0 | unknown | 0.56 | Signals present: sessions. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): security_sensitivity. |
-| database | yes | P0 | unknown | 0.5169 | Signals present: database. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): data_sensitivity. Deferred: would exceed the 150-minute budget (already committed 120 minutes on higher- or equal-priority work). |
-| authn-authz | yes | P0 | unknown | 0.48 | Signals present: auth, authz. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): security_sensitivity. Deferred: would exceed the 150-minute budget (already committed 120 minutes on higher- or equal-priority work). |
-| data-integrity | yes | P0 | unknown | 0.4523 | Signals present: database. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): data_sensitivity, irreversibility. Deferred: would exceed the 150-minute budget (already committed 120 minutes on higher- or equal-priority work). |
-| migration | yes | P0 | none | 0.45 | Signals present: migrations. Existing coverage "none" leaves a deficit of 1; addresses risk factor(s): irreversibility. Deferred: would exceed the 150-minute budget (already committed 120 minutes on higher- or equal-priority work). |
-| acceptance | yes | P2 | unknown | 0.2872 | Signals present: any repository. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): business_criticality. Deferred: would exceed the 150-minute budget (already committed 120 minutes on higher- or equal-priority work). |
-| regression | yes | P2 | unknown | 0.2184 | Signals present: existing-tests. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): coverage_deficit, change_frequency. |
-| api | yes | P2 | minimal | 0.1862 | Signals present: http-api. Existing coverage "minimal" leaves a deficit of 0.8; addresses risk factor(s): integration_complexity, coverage_deficit. Deferred: would exceed the 150-minute budget (already committed 140 minutes on higher- or equal-priority work). |
-| accessibility | yes | P2 | unknown | 0.1697 | Signals present: web-ui. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): user_impact, business_criticality. Deferred: would exceed the 150-minute budget (already committed 140 minutes on higher- or equal-priority work). |
-| sanity | yes | P2 | unknown | 0.168 | Signals present: any repository. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): change_magnitude. |
-| component | yes | P2 | unknown | 0.1629 | Signals present: component-framework. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): coverage_deficit, user_impact. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work). |
-| exploratory | yes | P3 | unknown | 0.1494 | Signals present: ui, http-api. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): coverage_deficit, historical_failures. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work). |
-| unit | yes | P3 | substantial | 0.0782 | Signals present: any repository. Existing coverage "substantial" leaves a deficit of 0.2; addresses risk factor(s): change_magnitude, coverage_deficit. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work). |
-| e2e | yes | P3 | partial | 0.0741 | Signals present: web-ui. Existing coverage "partial" leaves a deficit of 0.5; addresses risk factor(s): business_criticality, user_impact. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work). |
-| smoke | yes | P3 | unknown | 0.042 | Signals present: any repository. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): deployment_exposure. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work). |
-| ci-cd | yes | P3 | unknown | 0.0336 | Signals present: ci. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): deployment_exposure. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work). |
-| functional | yes | P3 | unknown | 0.028 | Signals present: any repository. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): user_impact. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work). |
-| ui | yes | P3 | unknown | 0.028 | Signals present: ui. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): user_impact. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work). |
-| integration | yes | P3 | unknown | 0.0258 | Signals present: database, http-api, external-integration. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): dependency_complexity, integration_complexity. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work). |
-| visual | yes | P3 | unknown | 0.0258 | Signals present: web-ui. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): user_impact. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work). |
-| browser-automation | yes | P3 | unknown | 0.024 | Signals present: web-ui. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): user_impact. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work). |
-| resilience | yes | P3 | unknown | 0.0187 | Signals present: external-integration. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): external_system_dependency. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work). |
-| agent-tool-eval | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: agent-tools; missing: agent-tools). |
-| ai-llm | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: llm; missing: llm). |
-| caching | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: cache; missing: cache). |
-| compatibility | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: multi-browser, container; missing: multi-browser, container). |
-| concurrency | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: concurrency; missing: concurrency). |
-| contract | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: public-contract; missing: public-contract). |
-| cross-browser | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: multi-browser; missing: multi-browser). |
-| deployment | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: deploy-config; missing: deploy-config). |
-| endurance | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive). |
-| infrastructure | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: container, deploy-config; missing: container, deploy-config). |
-| load | no | P3 | unknown | 0 | Repository shows no signal for this category (needs all of: perf-sensitive, http-api; missing: perf-sensitive). |
-| localization | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: i18n; missing: i18n). |
-| logging-monitoring | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: observability; missing: observability). |
-| mobile-viewport | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: responsive; missing: responsive). |
-| non-functional | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: perf-sensitive, observability; missing: perf-sensitive, observability). |
-| observability | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: observability; missing: observability). |
-| performance | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive). |
-| rag-evaluation | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: rag; missing: rag). |
-| responsive | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: responsive; missing: responsive). |
-| rollback | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: rollback-path; missing: rollback-path). |
-| spike | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive). |
-| stress | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive). |
+| security | yes | P1 | none | 0.4853 | Signals present: user-input, auth, pii. Existing coverage "none" leaves a deficit of 1; addresses risk factor(s): security_sensitivity, data_sensitivity. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| input-validation | yes | P1 | unknown | 0.453 | Signals present: user-input. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): security_sensitivity. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| session-management | yes | P1 | unknown | 0.453 | Signals present: sessions. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): security_sensitivity. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| database | yes | P1 | unknown | 0.4181 | Signals present: database. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): data_sensitivity. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| migration | yes | P1 | none | 0.3926 | Signals present: migrations. Existing coverage "none" leaves a deficit of 1; addresses risk factor(s): irreversibility. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| authn-authz | yes | P1 | unknown | 0.3883 | Signals present: auth, authz. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): security_sensitivity. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| data-integrity | yes | P1 | unknown | 0.3782 | Signals present: database. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): data_sensitivity, irreversibility. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| acceptance | yes | P2 | unknown | 0.2762 | Signals present: any repository. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): business_criticality. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| dependency-scan | yes | P2 | unknown | 0.2718 | Relevant (signals: third-party-deps) but the required capability "shell.run" is unavailable. Treat as BLOCKED, not as done. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| sanity | yes | P2 | unknown | 0.2644 | Signals present: any repository. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): change_magnitude. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| regression | yes | P2 | unknown | 0.2633 | Signals present: existing-tests. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): coverage_deficit, change_frequency. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| accessibility | yes | P2 | unknown | 0.2217 | Signals present: web-ui. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): user_impact, business_criticality. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| component | yes | P2 | unknown | 0.2174 | Signals present: component-framework. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): coverage_deficit, user_impact. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| exploratory | yes | P2 | unknown | 0.1993 | Signals present: ui, http-api. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): coverage_deficit, historical_failures. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| smoke | yes | P2 | unknown | 0.1866 | Signals present: any repository. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): deployment_exposure. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| functional | yes | P3 | unknown | 0.1244 | Signals present: any repository. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): user_impact. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| ui | yes | P3 | unknown | 0.1244 | Signals present: ui. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): user_impact. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| integration | yes | P3 | unknown | 0.1148 | Signals present: database, http-api, external-integration. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): dependency_complexity, integration_complexity. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| browser-automation | yes | P3 | unknown | 0.1066 | Signals present: web-ui. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): user_impact. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| api | yes | P3 | minimal | 0.0994 | Relevant (signals: http-api) but the required capability "http.request" is unavailable. Treat as BLOCKED, not as done. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| e2e | yes | P3 | partial | 0.0967 | Signals present: web-ui. Existing coverage "partial" leaves a deficit of 0.5; addresses risk factor(s): business_criticality, user_impact. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| unit | yes | P3 | substantial | 0.0891 | Signals present: any repository. Existing coverage "substantial" leaves a deficit of 0.2; addresses risk factor(s): change_magnitude, coverage_deficit. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| resilience | yes | P3 | unknown | 0.0829 | Signals present: external-integration. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): external_system_dependency. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| ci-cd | yes | P3 | unknown | 0.0597 | Relevant (signals: ci) but the required capability "ci.read_runs" is unavailable. Treat as BLOCKED, not as done. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| visual | yes | P3 | unknown | 0.0459 | Relevant (signals: web-ui) but the required capability "browser.screenshot" is unavailable. Treat as BLOCKED, not as done. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| agent-tool-eval | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: agent-tools; missing: agent-tools). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| ai-llm | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: llm; missing: llm). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| caching | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: cache; missing: cache). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| compatibility | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: multi-browser, container; missing: multi-browser, container). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| concurrency | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: concurrency; missing: concurrency). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| contract | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: public-contract; missing: public-contract). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| cross-browser | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: multi-browser; missing: multi-browser). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| deployment | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: deploy-config; missing: deploy-config). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| endurance | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| infrastructure | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: container, deploy-config; missing: container, deploy-config). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| load | no | P3 | unknown | 0 | Repository shows no signal for this category (needs all of: perf-sensitive, http-api; missing: perf-sensitive). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| localization | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: i18n; missing: i18n). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| logging-monitoring | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: observability; missing: observability). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| mobile-viewport | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: responsive; missing: responsive). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| non-functional | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: perf-sensitive, observability; missing: perf-sensitive, observability). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| observability | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: observability; missing: observability). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| performance | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| rag-evaluation | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: rag; missing: rag). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| responsive | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: responsive; missing: responsive). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| rollback | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: rollback-path; missing: rollback-path). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| spike | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
+| stress | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
 
 ### Goals
 
@@ -228,32 +228,35 @@ _Excluded for lack of evidence — not scored, not guessed: user_impact, depende
 
 ### Evaluation metrics
 
-| Metric | Value | Direction |
-| --- | --- | --- |
-| false_confidence_rate | 0 | lower-is-better |
-| requirement_coverage | 0.6667 | higher-is-better |
-| high_risk_coverage | 0 | higher-is-better |
-| decision_accuracy | _n/a (zero denominator)_ | higher-is-better |
-| decision_assessment_rate | 0 | higher-is-better |
-| actionable_finding_rate | 0 | higher-is-better |
-| evidence_completeness | 1 | higher-is-better |
-| automation_conversion | _n/a (zero denominator)_ | higher-is-better |
-| unnecessary_test_rate | 0.5 | lower-is-better |
-| runtime_efficiency_ms_per_case | 8 | lower-is-better |
-| flaky_identification_quality | _n/a (zero denominator)_ | higher-is-better |
-| interruption_recovery_rate | 0.5 | higher-is-better |
-| authorization_compliance | 1 | higher-is-better |
-| reproducibility | 0.5 | higher-is-better |
+| Metric | Value | n | Noise | Direction |
+| --- | --- | --- | --- | --- |
+| false_confidence_rate | 0 | 1 | ⚠️ below noise floor (5) | lower-is-better |
+| requirement_coverage | 0.6667 | 3 | ⚠️ below noise floor (5) | higher-is-better |
+| high_risk_coverage | 0 | 6 |  | higher-is-better |
+| decision_accuracy | _n/a (zero denominator)_ | 0 |  | higher-is-better |
+| decision_assessment_rate | 0 | 1 | ⚠️ below noise floor (5) | higher-is-better |
+| actionable_finding_rate | 0 | 1 | ⚠️ below noise floor (5) | higher-is-better |
+| evidence_completeness | 1 | 2 | ⚠️ below noise floor (5) | higher-is-better |
+| audit_coverage | 0 | 2 | ⚠️ below noise floor (5) | higher-is-better |
+| automation_conversion | _n/a (zero denominator)_ | 0 |  | higher-is-better |
+| unnecessary_test_rate | 0.5 | 4 | ⚠️ below noise floor (5) | lower-is-better |
+| runtime_efficiency_ms_per_case | 7.6667 | 3 | ⚠️ below noise floor (5) | lower-is-better |
+| flaky_identification_quality | _n/a (zero denominator)_ | 0 |  | higher-is-better |
+| interruption_recovery_rate | 0.5 | 2 | ⚠️ below noise floor (5) | higher-is-better |
+| authorization_compliance | 1 | 1 | ⚠️ below noise floor (5) | higher-is-better |
+| reproducibility | 0.5 | 4 | ⚠️ below noise floor (5) | higher-is-better |
 
-_Sample sizes: {"executions":6,"decisions":1,"findings":2,"external_writes":1,"declared_requirements":3}. A null means the denominator was zero — honest, and not to be read as 0._
+_A null means the denominator was zero — honest, and not to be read as 0. A ⚠️ means the denominator is real but thin (n < 5); read that value qualitatively, not as a ratio._
 
 ### Integrity self-audit
 
-| Unevidenced PASSED claims | False confidence rate |
-| --- | --- |
-| 0 | 0 |
+| Unevidenced PASSED claims | False confidence rate | evidence-auditor ran |
+| --- | --- | --- |
+| 0 | 0 | no |
 
-_No integrity violations detected in this report._
+**Violations detected:**
+
+- No evidence-auditor record for this session (kind: evidence-audit). Claims here have only passed the mechanical evidence gate, not independent adversarial review.
 
 **Checks run:**
 
@@ -264,4 +267,4 @@ _No integrity violations detected in this report._
 
 ---
 
-Produced by the Autonomous Software Testing skill system v0.6.0. Every status above is traceable to a record under `state/`.
+Produced by the Autonomous Software Testing skill system v0.9.0. Every status above is traceable to a record under `state/`.

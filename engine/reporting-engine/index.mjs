@@ -37,6 +37,18 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
     .map((e) => ({ id: e.execution_id, status: e.status, evidenceIds: e.evidence ?? [], statement: e.status_reason }));
   const audit = auditClaims(claims);
 
+  // The mechanical evidence gate (auditClaims, above) cannot catch everything: a vague
+  // status reason, a screenshot standing in for an assertion, evidence that does not
+  // actually show what it claims. The evidence-auditor subagent is the check for that, but
+  // nothing forced it to run -- an agent under time pressure could finish a session without
+  // it, and a report from that session looked identical to one where it ran and found
+  // nothing. This does not force the subagent to run (no code path can -- launching it is
+  // the orchestrating agent's own action), but it makes the omission visible rather than
+  // silent: the record it leaves behind is `kind: 'evidence-audit'` evidence, filed the same
+  // way any other observation is.
+  const evidenceAuditorRun = evidence.some((e) => e.kind === 'evidence-audit');
+  const claimsToAudit = executions.filter((e) => ['PASSED', 'FAILED', 'COMPLETED', 'PARTIAL'].includes(e.status)).length > 0;
+
   const id = nextId('report', now);
   const previous = session.last_report ?? null;
 
@@ -196,7 +208,12 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
         'unfinished executions surfaced as INTERRUPTED',
         'not-applicable categories listed with reasons',
       ],
-      violations: audit.violations.concat(metrics.violations),
+      violations: audit.violations.concat(metrics.violations).concat(
+        claimsToAudit && !evidenceAuditorRun
+          ? ['No evidence-auditor record for this session (kind: evidence-audit). Claims here have only passed the mechanical evidence gate, not independent adversarial review.']
+          : [],
+      ),
+      evidence_auditor_run: evidenceAuditorRun,
     },
     provenance: provenance({ sessionId: session.session_id, skillName: 'test-reporting', now }),
   };
@@ -525,17 +542,21 @@ export function render(r) {
     section('Evaluation metrics', [
       table(
         Object.entries(r.metrics?.metrics ?? {}).map(([k, v]) => [
-          k, v === null ? '_n/a (zero denominator)_' : v, r.metrics.definitions?.[k]?.direction ?? '',
+          k,
+          v === null ? '_n/a (zero denominator)_' : v,
+          r.metrics?.denominators?.[k] ?? '—',
+          r.metrics?.noisy_metrics?.includes(k) ? `⚠️ below noise floor (${r.metrics.noise_floor})` : '',
+          r.metrics.definitions?.[k]?.direction ?? '',
         ]),
-        ['Metric', 'Value', 'Direction'],
+        ['Metric', 'Value', 'n', 'Noise', 'Direction'],
       ),
-      `_Sample sizes: ${JSON.stringify(r.metrics?.sample_sizes ?? {})}. A null means the denominator was zero — honest, and not to be read as 0._`,
+      `_A null means the denominator was zero — honest, and not to be read as 0. A ⚠️ means the denominator is real but thin (n < ${r.metrics?.noise_floor ?? 5}); read that value qualitatively, not as a ratio._`,
     ], { level: 3 }),
 
     section('Integrity self-audit', [
       table(
-        [[r.integrity.unevidenced_pass_claims, r.integrity.false_confidence_rate]],
-        ['Unevidenced PASSED claims', 'False confidence rate'],
+        [[r.integrity.unevidenced_pass_claims, r.integrity.false_confidence_rate, r.integrity.evidence_auditor_run ? 'yes' : 'no']],
+        ['Unevidenced PASSED claims', 'False confidence rate', 'evidence-auditor ran'],
       ),
       r.integrity.violations.length
         ? ['**Violations detected:**', '', bullets(r.integrity.violations)].join('\n')

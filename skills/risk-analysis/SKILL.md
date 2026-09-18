@@ -4,7 +4,7 @@ description: Score the risk of a change or component from evidence — business 
 when_to_use: "how risky is this change", "what should we test first", "is this worth deep testing", "prioritise the testing"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell
 metadata:
-  system_version: 0.8.0
+  system_version: 0.9.0
   role: specialist
 ---
 
@@ -76,6 +76,12 @@ critical". Report it that way.
 
 When confidence is below about 0.4, gathering two more factors is usually a better next
 action than starting to test.
+
+`applicability-engine` now tempers its own use of the score toward a neutral midpoint as
+confidence drops, so a thinly-evidenced `critical` no longer forces the same P0 override a
+thoroughly-evidenced one does — but it tempers toward *neutral*, not toward *low*. Do not
+read a low-confidence `critical` as license to drop a category yourself; the honest response
+to "I don't know" is to gather more evidence, not to treat the category as safe.
 
 ## Output
 

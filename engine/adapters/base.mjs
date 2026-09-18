@@ -453,7 +453,10 @@ function finalise({ verb, action, system, idempotencyKey, target, decisionId, pr
  * Without a `verifyRead`, the parsed identifier is downgraded to unconfirmed rather than
  * trusted, because a self-attestation alone is exactly the fabrication this exists to stop.
  *
- * @param {function} [o.verifyRead]  async ({ resultId, url, target }) => { exists, reason }
+ * @param {function} [o.verifyRead]  async ({ resultId, url, target, contentSha256 }) => { exists, reason }.
+ *                                   `contentSha256` is the hash of what `render()` produced when the gates
+ *                                   ran, passed through so a verifier can check the read-back object's
+ *                                   actual content, not just that some object with a matching ID exists.
  */
 export async function completeWrite({ ticket, response, parseResult, verifyRead, now = new Date() } = {}) {
   const rec = readTicket(ticket);
@@ -497,7 +500,9 @@ export async function completeWrite({ ticket, response, parseResult, verifyRead,
   let retrySafe = false;
   if (claimed.confirmed && claimed.result_id) {
     if (verifyRead) {
-      const check = await verifyRead({ resultId: claimed.result_id, url: claimed.url, target: rec.target });
+      const check = await verifyRead({
+        resultId: claimed.result_id, url: claimed.url, target: rec.target, contentSha256: rec.content_sha256,
+      });
       verified = check.exists === true;
       verifyReason = check.reason;
       verification = check.verification ?? (verified ? 'confirmed' : 'unavailable');

@@ -6,12 +6,12 @@ completeness.
 
 **Current phase:** core complete and exercised end to end; integrations specified, bound where
 a provider exists.
-**Version:** 0.8.0 · **Last validated:** 2026-09-18
+**Version:** 0.9.0 · **Last validated:** 2026-09-18
 
 ## Validation status
 
 ```
-node --test "tests/*.test.mjs"     138 passed, 0 failed
+node --test "tests/*.test.mjs"     153 passed, 0 failed
 node bin/ast.mjs eval run          41/41 checks across 15 benchmark cases
 node scripts/validate-repo.mjs     0 problems
 node scripts/demo-session.mjs      full pipeline exercised end to end
@@ -57,7 +57,7 @@ Working, tested, exercised by the demo session.
 
 | Component | State | What is missing |
 | --- | --- | --- |
-| Jira integration | Contract specified; REST fallback probes for env vars | No executable adapter module yet — the agent follows `integrations/jira/adapter.md` by hand. ADF parsing also unimplemented. This is the next obvious piece, now that `performWrite` exists to build on. |
+| Jira integration | Contract specified; REST fallback probes for env vars; `caps resolve jira.*` now carries `executable: false` and says so in `reason`, so a resolved-available Jira verb cannot be mistaken for one with code behind it | No executable adapter module yet — the agent follows `integrations/jira/adapter.md` by hand. ADF parsing also unimplemented. This is the next obvious piece, now that `performWrite` exists to build on. |
 | Change intelligence | Skill written with concrete commands | No `ast change analyse` subcommand; the agent runs `git`/`gh` itself |
 | Requirement analysis | Skill written | No structured requirement store beyond what a plan carries |
 | Test generation | Guidance in every specialist skill | No scaffolding command; the agent writes tests directly, which is probably correct |

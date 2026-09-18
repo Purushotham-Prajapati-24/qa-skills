@@ -1,6 +1,6 @@
 {
   "$comment": "Scoring thresholds for the benchmark suite and for judging a live testing session. These are opinions, written down so they can be argued with. Edit them deliberately.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "thresholds": {
     "benchmark_pass": {
       "$comment": "Fraction of benchmark checks that must pass before a policy change is considered safe to ship.",
@@ -21,6 +21,11 @@
       "note": "Below 1 means something was labelled flaky on fewer than three runs."
     },
     "evidence_completeness": { "target_at_least": 0.95, "warn_below": 0.8 },
+    "audit_coverage": {
+      "target_at_least": 1.0,
+      "warn_below": 1.0,
+      "note": "1 if the evidence-auditor subagent recorded an independent review this session, 0 if not, null if there were no PASSED/FAILED/COMPLETED/PARTIAL claims to review. Below 1 with claims present means the session's confidence rests on the mechanical evidence gate alone."
+    },
     "reproducibility": { "target_at_least": 0.9, "warn_below": 0.7 },
     "decision_assessment_rate": {
       "target_at_least": 0.5,

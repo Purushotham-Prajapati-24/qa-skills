@@ -3,13 +3,16 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { useTempState } from './helpers.mjs';
-import { writeJson } from '../engine/core/fsjson.mjs';
+import { writeJson, sha256String } from '../engine/core/fsjson.mjs';
 import { p, LAYOUT } from '../engine/core/paths.mjs';
 import * as state from '../engine/state-engine/index.mjs';
 import * as defects from '../engine/defect-engine/index.mjs';
 import * as auth from '../engine/authorization/index.mjs';
 import { performWrite, completeWrite, classifyProviderError, readTicket, TICKET_TTL_MS } from '../engine/adapters/base.mjs';
-import { createGitHubAdapter, parseIssueResult, parseCommentResult, preflight, verifyIssueRead } from '../engine/adapters/github.mjs';
+import {
+  createGitHubAdapter, parseIssueResult, parseCommentResult, preflight,
+  verifyIssueRead, verifyCommentWrite, verifyGitHubWrite,
+} from '../engine/adapters/github.mjs';
 import * as adapters from '../engine/adapters/index.mjs';
 
 const tmp = useTempState('adapters');
@@ -471,7 +474,10 @@ test('the read-back extracts a repo slug from every shape a ticket target takes'
   assert.equal(await repoOf(undefined), null, 'a missing target means no --repo');
 });
 
-test('a delegated comment verifies against the repository, not against "owner/repo#number"', async () => {
+test('verifyIssueRead alone only confirms the parent issue, not the comment itself', async () => {
+  // This documents verifyIssueRead's own, narrower scope -- it is what verifyGitHubWrite
+  // falls back to for a plain issue write. For a comment, verifyGitHubWrite below routes to
+  // verifyCommentWrite instead, which is what actually closes the self-attestation gap.
   const seen = [];
   const exec = async (argv) => {
     seen.push(argv);
@@ -483,12 +489,74 @@ test('a delegated comment verifies against the repository, not against "owner/re
     { exec },
   );
 
-  assert.equal(check.exists, true, 'a real write must not be recorded INCONCLUSIVE by its own verification');
+  assert.equal(check.exists, true, 'the parent issue is real, so this narrower check confirms');
   assert.deepEqual(
     seen[0],
     ['gh', 'issue', 'view', '418', '--repo', 'acme/shop', '--json', 'number,url,state'],
     'the argv handed to gh must be one gh actually accepts',
   );
+});
+
+/**
+ * The gap CHANGELOG 0.8.0 named: a fabricated comment identifier against a real issue used
+ * to confirm, because the only read-back available checked the issue, not the comment.
+ * `verifyCommentWrite` reads the comment itself back via `gh api .../issues/comments/<id>`
+ * and, when given the hash of what was sent, checks its actual body.
+ */
+test('verifyCommentWrite confirms only when the comment itself exists with matching content', async () => {
+  const body = 'Filed by the QA agent: see FIND-00042.';
+  const hash = sha256String(body);
+  const seen = [];
+
+  const confirmed = await verifyCommentWrite(
+    { resultId: '#418-comment-987654321', target: 'acme/shop#418', contentSha256: hash },
+    { exec: async (argv) => { seen.push(argv); return { exit_code: 0, stdout: JSON.stringify({ id: 987654321, body }), stderr: '' }; } },
+  );
+  assert.equal(confirmed.exists, true);
+  assert.equal(confirmed.verification, 'confirmed');
+  assert.deepEqual(seen[0], ['gh', 'api', 'repos/acme/shop/issues/comments/987654321']);
+
+  const mismatched = await verifyCommentWrite(
+    { resultId: '#418-comment-987654321', target: 'acme/shop#418', contentSha256: hash },
+    { exec: async () => ({ exit_code: 0, stdout: JSON.stringify({ id: 987654321, body: 'a different comment entirely' }), stderr: '' }) },
+  );
+  assert.equal(mismatched.exists, true, 'the identifier resolves to a real object');
+  assert.equal(mismatched.verification, 'refuted', 'but its body is not what was sent, so it cannot confirm');
+  assert.equal(mismatched.failure_kind, 'body-mismatch');
+  assert.equal(mismatched.retry_safe, false, 'the comment exists, just not this one -- retrying would duplicate it');
+
+  const fabricated = await verifyCommentWrite(
+    { resultId: '#418-comment-000000000', target: 'acme/shop#418', contentSha256: hash },
+    { exec: async () => ({ exit_code: 1, stdout: '', stderr: 'HTTP 404: Not Found' }) },
+  );
+  assert.equal(fabricated.exists, false);
+  assert.equal(fabricated.verification, 'refuted', 'a genuinely fabricated comment ID reads back as 404');
+  assert.equal(fabricated.retry_safe, true);
+
+  const unreachable = await verifyCommentWrite(
+    { resultId: '#418-comment-987654321', target: 'acme/shop#418', contentSha256: hash },
+    { exec: async () => ({ exit_code: 1, stdout: '', stderr: 'dial tcp: lookup api.github.com: ENOTFOUND' }) },
+  );
+  assert.equal(unreachable.verification, 'unavailable');
+  assert.equal(unreachable.retry_safe, false, 'a network failure does not refute a write that may have landed');
+});
+
+test('verifyGitHubWrite dispatches by the shape of the result ID, not by the caller knowing which it is', async () => {
+  const issueCalls = [];
+  const commentCalls = [];
+  const exec = async (argv) => {
+    (argv[1] === 'api' ? commentCalls : issueCalls).push(argv);
+    return argv[1] === 'api'
+      ? { exit_code: 0, stdout: JSON.stringify({ id: 987654321, body: 'x' }), stderr: '' }
+      : { exit_code: 0, stdout: JSON.stringify({ number: 418, url: ISSUE_URL, state: 'open' }), stderr: '' };
+  };
+
+  await verifyGitHubWrite({ resultId: '#418', target: 'acme/shop' }, { exec });
+  assert.equal(issueCalls.length, 1, 'a plain issue result ID routes to the issue read-back');
+  assert.equal(commentCalls.length, 0);
+
+  await verifyGitHubWrite({ resultId: '#418-comment-987654321', target: 'acme/shop#418' }, { exec });
+  assert.equal(commentCalls.length, 1, 'a comment result ID routes to the comment read-back');
 });
 
 /**

@@ -30,7 +30,7 @@ export const EXECUTION_EVIDENCE = new Set([
 export const CORROBORATING_EVIDENCE = new Set([
   'screenshot', 'video', 'console-log', 'server-log', 'network-request',
   'screenshot-diff', 'diff', 'file-content', 'github-object', 'jira-object',
-  'document-revision', 'external-api-response', 'other',
+  'document-revision', 'external-api-response', 'evidence-audit', 'other',
 ]);
 
 /** Kinds that are explicitly NOT execution evidence. */

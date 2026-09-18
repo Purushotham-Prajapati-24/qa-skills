@@ -26,6 +26,8 @@ export const SYSTEM = 'github';
 // URL to work from -- which does not identify the comment at all.
 const ISSUE_URL = /(https:\/\/[^\s]*github[^\s]*\/[^/\s]+\/[^/\s]+\/(?:issues|pull)\/(\d+)(?:#issuecomment-\d+)?)/;
 const COMMENT_ANCHOR = /#issuecomment-(\d+)/;
+// Shape of the `result_id` a comment write produces: `#<issue>-comment-<commentId>`.
+const COMMENT_RESULT = /^#?(\d+)-comment-(\d+)$/;
 
 /**
  * Pull an identifier out of whatever the provider said.
@@ -233,7 +235,7 @@ export function createGitHubAdapter({ exec = shellExec } = {}) {
 
     complete: ({ ticket, response }) => completeWrite({
       ticket, response, parseResult: parseGitHubResult,
-      verifyRead: (claim) => verifyIssueRead(claim, { exec }),
+      verifyRead: (claim) => verifyGitHubWrite(claim, { exec }),
     }),
   };
 }
@@ -279,9 +281,9 @@ export function repoSlugFromTarget(target) {
  * independence the write protocol promises.
  *
  * Only confirms the ISSUE exists and its number matches. A comment's `result_id` embeds
- * the issue number as its leading segment (`#4242-comment-987654321`), so a fabricated
- * comment against a real issue is not caught by this -- catching that would need
- * `gh api repos/.../issues/comments/<id>`, out of scope for the fabrication this closes.
+ * the issue number as its leading segment (`#4242-comment-987654321`), so this alone would
+ * let a fabricated comment identifier against a real issue confirm -- `verifyGitHubWrite`
+ * below routes comments to `verifyCommentWrite` instead, which closes that gap.
  */
 export async function verifyIssueRead({ resultId, target } = {}, { exec = shellExec } = {}) {
   const number = /^#?(\d+)/.exec(String(resultId ?? ''))?.[1];
@@ -351,6 +353,106 @@ export async function verifyIssueRead({ resultId, target } = {}, { exec = shellE
       reason: `Read-back output could not be parsed: ${err.message}. This does not refute the write.`,
     };
   }
+}
+
+/**
+ * Independently confirm a delegated COMMENT write, closing the gap `verifyIssueRead` leaves
+ * open: it reads the comment itself back with `gh api repos/.../issues/comments/<id>`
+ * (rather than the parent issue) and, when the caller supplies the hash of what was sent,
+ * checks the comment's actual body against it. A comment ID that resolves to a real object
+ * whose body does not match is not a self-attestation this can trust either -- it means the
+ * identifier pointed at someone else's comment, and reporting that as confirmed would
+ * attribute the wrong words to the agent.
+ */
+export async function verifyCommentWrite({ resultId, target, contentSha256 } = {}, { exec = shellExec } = {}) {
+  const m = COMMENT_RESULT.exec(String(resultId ?? ''));
+  if (!m) {
+    return {
+      exists: false,
+      verification: 'unavailable',
+      failure_kind: 'no-identifier',
+      retry_safe: false,
+      reason: `Could not extract a comment identifier from "${resultId}"; there is nothing to verify. `
+        + 'This does not refute the write, so confirm by hand before retrying.',
+    };
+  }
+  const commentId = m[2];
+
+  const slug = repoSlugFromTarget(target);
+  if (!slug) {
+    return {
+      exists: false,
+      verification: 'unavailable',
+      failure_kind: 'no-repo',
+      retry_safe: false,
+      reason: `No repository could be recovered from target "${target}" to look comment ${commentId} up against. `
+        + 'This does not refute the write.',
+    };
+  }
+
+  const raw = await exec(['gh', 'api', `repos/${slug}/issues/comments/${commentId}`]);
+  if (raw.exit_code !== 0) {
+    const failure = classifyProviderError(raw) ?? { kind: 'unknown' };
+    const refuted = failure.kind === 'not-found';
+    return {
+      exists: false,
+      verification: refuted ? 'refuted' : 'unavailable',
+      failure_kind: failure.kind,
+      retry_safe: refuted,
+      reason: refuted
+        ? `Independent read-back refuted the claim: \`gh api repos/${slug}/issues/comments/${commentId}\` reports ` +
+          'no such comment. The write did not happen, so it is safe to retry.'
+        : `Independent read-back could not run: \`gh api repos/${slug}/issues/comments/${commentId}\` failed with ` +
+          `"${failure.kind}" (exit ${raw.exit_code}). This does not refute the write -- the agent may well have ` +
+          'created the comment with its own tools. Confirm by hand before retrying, or a retry will duplicate it.',
+    };
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw.stdout);
+  } catch (err) {
+    return {
+      exists: false,
+      verification: 'unavailable',
+      failure_kind: 'unparseable-read-back',
+      retry_safe: false,
+      reason: `Read-back output could not be parsed: ${err.message}. This does not refute the write.`,
+    };
+  }
+
+  if (contentSha256 && sha256String(String(parsed.body ?? '')) !== contentSha256) {
+    return {
+      exists: true,
+      verification: 'refuted',
+      failure_kind: 'body-mismatch',
+      retry_safe: false,
+      reason: `Comment ${commentId} exists, but its body does not match what was sent. The identifier resolves to ` +
+        'a real comment -- just not the one this write produced -- so reporting it confirmed would attribute the ' +
+        'wrong text to the agent.',
+      data: parsed,
+    };
+  }
+
+  return {
+    exists: true,
+    verification: 'confirmed',
+    retry_safe: false,
+    reason: `Confirmed by \`gh api repos/${slug}/issues/comments/${commentId}\`: the comment exists`
+      + (contentSha256 ? ' and its body matches what was sent.' : ', but no content hash was supplied to check its body.'),
+    data: parsed,
+  };
+}
+
+/**
+ * Dispatch a delegated GitHub write to the right verifier by the shape of its own result ID
+ * -- a comment's embeds `-comment-<id>`, an issue's does not -- so `completeWrite` never has
+ * to know which GitHub object kind it is confirming.
+ */
+export async function verifyGitHubWrite(claim, opts) {
+  return COMMENT_RESULT.test(String(claim?.resultId ?? ''))
+    ? verifyCommentWrite(claim, opts)
+    : verifyIssueRead(claim, opts);
 }
 
 /**

@@ -71,6 +71,18 @@ export function evaluate({
   );
   const maxContribution = Math.max(0.0001, ...[...riskFactorWeight.values()], 0.0001);
 
+  // A risk level is only as trustworthy as the evidence under it (risk-engine/index.mjs),
+  // but nothing consumed that before this: `critical` off one evidenced factor out of
+  // fourteen drove category selection exactly like `critical` off thirteen. Temper both the
+  // per-category alignment and the global P0 override toward a NEUTRAL midpoint -- not
+  // toward zero -- as confidence drops. Thin evidence means "we do not know", not "it is
+  // safe"; collapsing every low-confidence risk to a low score would systematically
+  // under-test the areas the profile knows least about, which is the opposite failure.
+  const riskConfidence = riskAssessment ? Math.max(0, Math.min(1, riskAssessment.confidence ?? 1)) : 1;
+  const NEUTRAL = 0.5;
+  const temper = (x) => Number((x * riskConfidence + NEUTRAL * (1 - riskConfidence)).toFixed(4));
+  const riskScoreForPriority = temper(riskScore);
+
   const rows = [];
 
   for (const [category, def] of Object.entries(CATALOG.categories)) {
@@ -84,7 +96,7 @@ export function evaluate({
     const alignment = addressed.length === 0
       ? riskScore
       : addressed.reduce((a, f) => a + (riskFactorWeight.get(f) ?? 0), 0) / (addressed.length * maxContribution);
-    const riskAlignment = Math.min(1, Math.max(0.05, alignment));
+    const riskAlignment = temper(Math.min(1, Math.max(0.05, alignment)));
 
     const capability = def.capability ?? null;
     // Three states: true, false, and undeclared. Only an explicit `true` counts as
@@ -124,13 +136,18 @@ export function evaluate({
       reason = `Signals present: ${matched.join(', ')}. Existing coverage "${deficitKey}" leaves a deficit of ${deficit}; addresses risk factor(s): ${addressed.join(', ') || 'general'}.`;
     }
 
+    if (riskAssessment && riskAssessment.confidence_band && riskAssessment.confidence_band !== 'high' && addressed.length) {
+      reason += ` Risk alignment is tempered toward neutral: the risk assessment is ${riskAssessment.confidence_band} confidence (${riskAssessment.confidence}), so this priority should not be read as fully evidenced.`;
+    }
+
     rows.push({
       category,
       applicable,
       reason,
-      priority: applicable ? priorityFor(score, riskScore) : 'P3',
+      priority: applicable ? priorityFor(score, riskScoreForPriority) : 'P3',
       expected_value: expectedValue,
       risk_addressed: addressed,
+      risk_confidence: riskConfidence,
       estimated_cost_minutes: cost,
       existing_coverage: deficitKey,
       tool_available: toolAvailable,

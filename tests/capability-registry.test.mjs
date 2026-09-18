@@ -32,3 +32,35 @@ test('declaring a provider false makes the dependent capability resolve as unava
   const after = resolve('browser.explore');
   assert.equal(after.available, false);
 });
+
+/**
+ * PROGRESS.md names this as the worst state a capability can be in: verbs exist, a
+ * credential is present, and `available: true` -- with no adapter module behind it. An
+ * agent that stops at `available` may hand-roll the call, or worse, infer the answer from
+ * somewhere else and report it as if this system produced it. `resolve()` has to say so
+ * every time, not just in a table this specific call site might not read.
+ */
+test('a capability resolving true for a system with no executable adapter still says so', () => {
+  process.env.JIRA_BASE_URL = 'https://example.atlassian.net';
+  process.env.JIRA_EMAIL = 'agent@example.com';
+  process.env.JIRA_API_TOKEN = 'not-a-real-token';
+  try {
+    probe();
+    const r = resolve('jira.read_ticket');
+    assert.equal(r.available, true, 'the env-var fallback probe genuinely resolves');
+    assert.equal(r.executable, false, 'available and executable are different claims');
+    assert.match(r.reason, /No executable adapter exists for "jira"/);
+    assert.match(r.reason, /Perform this call by hand/);
+  } finally {
+    delete process.env.JIRA_BASE_URL;
+    delete process.env.JIRA_EMAIL;
+    delete process.env.JIRA_API_TOKEN;
+  }
+});
+
+test('a capability for a system with a real adapter carries no manual-only warning', () => {
+  declare('gh-cli', true, 'authenticated');
+  const r = resolve('github.read_repo');
+  assert.equal(r.executable, null, 'github has an executable adapter, so this field does not apply');
+  assert.doesNotMatch(r.reason, /No executable adapter/);
+});

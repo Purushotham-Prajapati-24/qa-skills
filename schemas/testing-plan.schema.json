@@ -203,6 +203,7 @@
         "priority": { "$ref": "common.schema.json#/definitions/priority" },
         "expected_value": { "type": "number", "minimum": 0, "maximum": 1 },
         "risk_addressed": { "type": "array", "items": { "type": "string" } },
+        "risk_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
         "estimated_cost_minutes": { "type": "number", "minimum": 0 },
         "existing_coverage": { "type": "string", "enum": ["none", "minimal", "partial", "substantial", "unknown"] },
         "tool_available": { "type": "boolean" },

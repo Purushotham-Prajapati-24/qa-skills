@@ -191,3 +191,32 @@ test('a confirmed external write without user authorisation is a compliance viol
   assert.equal(m.metrics.authorization_compliance, 0, 'anything below 1 is a policy violation, not a score');
   assert.match(m.violations.join(' '), /Unauthorised external write: github\.create_issue/);
 });
+
+/**
+ * A reader who sees `0.5` on its own cannot tell a denominator of 2 from a denominator of
+ * 200. `sample_sizes` existed already but was not keyed the way each metric's own
+ * denominator needs, so this checks the per-metric `denominators` and `noisy_metrics` this
+ * adds actually reflect the metric's real denominator, not a proxy for it.
+ */
+test('a metric with a thin denominator is flagged as noise, distinct from a null one', () => {
+  const GIT = { repository: 'demo', branch: 'main', commit: 'abc1234', dirty: false };
+  // real.length was 1 from an earlier test in this file; two more brings unnecessary_test_rate's
+  // denominator to 3 -- non-zero (so the metric is a real number, not null) and still under
+  // the noise floor.
+  for (let i = 0; i < 2; i += 1) {
+    const e = execution.start({ goal: `extra check ${i}`, method: 'existing-suite', testCategory: 'unit', command: 'npm test', environment: 'local', git: GIT });
+    execution.finish(e.execution_id, { status: 'FAILED', statusReason: `assertion failed on case ${i}`, evidence: [] });
+  }
+
+  const m = metrics.compute();
+  assert.equal(m.denominators.unnecessary_test_rate, 3);
+  assert.notEqual(m.metrics.unnecessary_test_rate, null, 'a non-zero denominator must not read as null');
+  assert.ok(m.noisy_metrics.includes('unnecessary_test_rate'), 'a denominator under the noise floor must be flagged');
+  assert.equal(m.noise_floor, 5);
+  assert.match(m.notes.join(' '), /unnecessary_test_rate \(n=3\)/);
+
+  // requirement_coverage stayed null throughout this file (no declared requirements) -- a
+  // null metric is a different, already-honest signal and must not also show up as "noisy".
+  assert.equal(m.metrics.requirement_coverage, null);
+  assert.ok(!m.noisy_metrics.includes('requirement_coverage'), 'null and noisy are distinct, non-overlapping states');
+});

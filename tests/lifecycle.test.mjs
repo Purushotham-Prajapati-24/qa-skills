@@ -13,6 +13,8 @@ import * as auth from '../engine/authorization/index.mjs';
 import * as reporting from '../engine/reporting-engine/index.mjs';
 import { analyse } from '../engine/flakiness/index.mjs';
 import { query } from '../engine/traceability/index.mjs';
+import * as risk from '../engine/risk-engine/index.mjs';
+import * as applicability from '../engine/applicability-engine/index.mjs';
 
 const tmp = useTempState('lifecycle');
 test.after(() => tmp.cleanup());
@@ -359,6 +361,38 @@ test('the report is rendered from data and audits its own false confidence', () 
   assert.ok(fs.existsSync(path.join(tmp.dir, 'reports', `${report.report_id}.md`)), 'markdown is written to disk');
 });
 
+/**
+ * PROGRESS.md named this as a gap: the evidence-auditor subagent is described as available
+ * before a report, not required, so a session can finish without it and look no different
+ * from one that ran it and found nothing. No code path can force a subagent launch, but the
+ * report must not stay silent about whether one happened.
+ */
+test('a report is honest about whether the evidence-auditor ran', () => {
+  const before = reporting.generate({ recommendations: [] });
+  assert.equal(before.report.integrity.evidence_auditor_run, false);
+  assert.equal(before.report.metrics.metrics.audit_coverage, 0, 'claims exist in this fixture and no audit record does');
+  assert.ok(
+    before.report.integrity.violations.some((v) => /evidence-auditor/.test(v)),
+    'the omission must be a stated violation, not a silent gap',
+  );
+  assert.match(before.markdown, /\| evidence-auditor ran \|/);
+  assert.match(before.markdown, /\| .* \| no \|/, 'the rendered table must say "no", not just omit the column');
+
+  evidence.add({
+    kind: 'evidence-audit',
+    summary: 'evidence-auditor reviewed all claims this session; found nothing unsupported.',
+    epistemicClass: 'observed',
+  });
+
+  const after = reporting.generate({ recommendations: [] });
+  assert.equal(after.report.integrity.evidence_auditor_run, true);
+  assert.equal(after.report.metrics.metrics.audit_coverage, 1);
+  assert.ok(
+    !after.report.integrity.violations.some((v) => /evidence-auditor/.test(v)),
+    'the violation must clear once an audit record exists, not persist forever',
+  );
+});
+
 test('findings are rendered with their content, not as a list of identifiers', () => {
   const { report, markdown } = reporting.generate({ recommendations: [] });
   const critical = report.finding_details.find((f) => f.severity === 'critical');
@@ -428,6 +462,29 @@ test('not-applicable categories are grouped, not listed one per line', () => {
     (notTested.match(/Repository shows no signal/g) ?? []).length === 0,
     'the repeated boilerplate reason must not appear in the summary section',
   );
+});
+
+/**
+ * Every other report test in this file hand-builds a partial `applicability` fixture, which
+ * is exactly how a real gap survived: applicability-engine started emitting `risk_confidence`
+ * on every row (the confidence-tempering fix), the schema had no such field, and
+ * `reporting.generate()` threw on the very first real applicability output it saw --
+ * `scripts/demo-session.mjs` caught it; no unit test did, because none of them fed the real
+ * engine's output through the real report. This closes that path once.
+ */
+test('the real applicability engine output round-trips through report generation without a schema mismatch', () => {
+  const riskAssessment = risk.score({
+    profile: 'balanced',
+    factors: { security_sensitivity: { value: 0.8, basis: 'auth touched' } },
+  });
+  const matrix = applicability.evaluate({
+    signals: ['ui', 'web-ui', 'http-api', 'auth'],
+    riskAssessment,
+  }).matrix;
+
+  const { report } = reporting.generate({ applicability: matrix, riskAssessment, recommendations: [] });
+  assert.equal(report.applicable_categories.length, matrix.length);
+  assert.ok(report.applicable_categories.some((r) => typeof r.risk_confidence === 'number'));
 });
 
 test('a second session archives the first rather than clobbering it', () => {

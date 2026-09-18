@@ -41,7 +41,8 @@ The awkward cases, because those are where an agent's honesty actually gets test
 | An execution interrupted mid-run | Recovery marks it `INTERRUPTED`, never infers success |
 | A GitHub issue created | Recorded `CONFIRMED` with the issue URL |
 | A Jira comment that failed | Recorded **`NOT CONFIRMED`** with the error |
-| Assignment attempted with no named account | **Refused** |
+| Assignment attempted with no named account | **Refused** — missing information, not a policy ban |
+| Merging a pull request attempted, even with `userAuthorised: true` | **Refused by default** — a different reason: this action cannot be self-authorised at all |
 
 Read section 20 of the report — the integrity self-audit. It states the report's own
 false-confidence rate (0) and lists the checks that produced that number.
