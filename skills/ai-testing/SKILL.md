@@ -4,7 +4,7 @@ description: Test LLM-backed features, RAG pipelines and agent tool-calling — 
 when_to_use: "test the AI feature", "evaluate the RAG pipeline", "test prompt injection", "is the LLM output correct", "evaluate agent tool calls"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.7.0
+  system_version: 0.8.0
   role: specialist
 ---
 

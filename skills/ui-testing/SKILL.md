@@ -4,7 +4,7 @@ description: Test user interface behaviour at the component and page level — r
 when_to_use: "test this component", "test the form", "visual regression", "does the UI render correctly", "test the loading state"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.7.0
+  system_version: 0.8.0
   role: specialist
 ---
 

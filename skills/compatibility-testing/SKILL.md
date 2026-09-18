@@ -4,7 +4,7 @@ description: Test across browsers, viewports, devices, locales and runtime versi
 when_to_use: "cross browser testing", "responsive testing", "does this work on mobile", "test the translations", "i18n testing", "does it work on Node 18"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.7.0
+  system_version: 0.8.0
   role: specialist
 ---
 

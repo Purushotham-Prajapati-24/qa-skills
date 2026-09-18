@@ -6,12 +6,12 @@ completeness.
 
 **Current phase:** core complete and exercised end to end; integrations specified, bound where
 a provider exists.
-**Version:** 0.7.0 · **Last validated:** 2026-09-16
+**Version:** 0.8.0 · **Last validated:** 2026-09-18
 
 ## Validation status
 
 ```
-node --test "tests/*.test.mjs"     136 passed, 0 failed
+node --test "tests/*.test.mjs"     138 passed, 0 failed
 node bin/ast.mjs eval run          41/41 checks across 15 benchmark cases
 node scripts/validate-repo.mjs     0 problems
 node scripts/demo-session.mjs      full pipeline exercised end to end

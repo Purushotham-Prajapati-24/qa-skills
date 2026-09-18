@@ -193,7 +193,7 @@ Install directly as a plugin bundle:
 
 ```bash
 # Pin to a specific tagged release
-npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.7.0
+npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.8.0
 
 # Dry-run inspection (see what files change without writing)
 npx --yes github:Purushotham-Prajapati-24/qa-skills --dry-run
@@ -359,7 +359,7 @@ node bin/ast.mjs metrics
 Run the entire verification suite locally in seconds:
 
 ```bash
-node --test "tests/*.test.mjs"     # 136 tests
+node --test "tests/*.test.mjs"     # 138 tests
 node bin/ast.mjs eval run          # 41 checks across 15 benchmark cases
 node scripts/validate-repo.mjs     # Links, schemas, and catalog cross-references
 ```

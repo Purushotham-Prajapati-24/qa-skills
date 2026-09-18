@@ -1,6 +1,6 @@
 {
   "name": "autonomous-software-testing",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "An evidence-driven, extensible autonomous software testing agent skill system for Claude Code.",
   "type": "module",
   "license": "MIT",
