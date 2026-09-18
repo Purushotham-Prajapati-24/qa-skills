@@ -359,7 +359,7 @@ node bin/ast.mjs metrics
 Run the entire verification suite locally in seconds:
 
 ```bash
-node --test "tests/*.test.mjs"     # 131 tests
+node --test "tests/*.test.mjs"     # 136 tests
 node bin/ast.mjs eval run          # 41 checks across 15 benchmark cases
 node scripts/validate-repo.mjs     # Links, schemas, and catalog cross-references
 ```
