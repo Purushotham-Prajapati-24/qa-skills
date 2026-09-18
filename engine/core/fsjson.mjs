@@ -120,14 +120,29 @@ function withLock(file, fn, opts = {}) {
       let broke = false;
       try {
         const ownerPid = lockOwnerPid(lockFile);
-        if (Date.now() - fs.statSync(lockFile).mtimeMs > staleMs && (ownerPid === null || !processAlive(ownerPid))) {
+        // A confirmed-dead owner needs no grace period. The PID check is the real signal;
+        // age is only a proxy for it. Requiring BOTH meant the case this recovery exists
+        // for -- a process that crashed mid-update -- was the one case it could not handle:
+        // the retry budget (retries x maxDelayMs, ~6s by default) expires long before
+        // staleMs, so a lock younger than staleMs was never breakable and the caller failed
+        // hard, telling the user to delete a file by hand instead of just recovering.
+        //
+        // Age still gates the ownerPid === null case, because there death cannot be
+        // established either. That branch therefore needs staleMs to elapse across
+        // invocations -- the budget cannot reach it within one call, which is acceptable
+        // because an unreadable lock means a partially-written or corrupt file, not an
+        // ordinary crash.
+        const ownerConfirmedGone = ownerPid !== null && !processAlive(ownerPid);
+        const unreadableAndStale = ownerPid === null
+          && Date.now() - fs.statSync(lockFile).mtimeMs > staleMs;
+        if (ownerConfirmedGone || unreadableAndStale) {
           fs.rmSync(lockFile, { force: true });
           broke = true;
         }
       } catch { /* lock vanished between the failed write and this stat -- fine, loop retries */ }
 
       if (attempt >= retries) {
-        throw new Error(`Timed out waiting for the lock on "${path.basename(file)}" after ${retries} attempts. If another process is confirmed dead, delete "${lockFile}" manually.`);
+        throw new Error(`Timed out waiting for the lock on "${path.basename(file)}" after ${retries} attempts. The owner recorded in "${lockFile}" is still running, so the lock was not broken: either it is wedged, or its PID has been reused by an unrelated process. Check the PID in that file, then delete it if that process is not an ${path.basename(file)} writer.`);
       }
       // Counted even when the lock was broken, so a lock that cannot be cleared terminates
       // with the message above instead of spinning forever.

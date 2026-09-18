@@ -119,3 +119,63 @@ test('releasing a lock does not delete a successor lock that replaced ours', () 
   assert.equal(fs.readFileSync(lockFile, 'utf8').trim(), '0:successor');
   fs.rmSync(lockFile, { force: true });
 });
+
+/**
+ * The case the stale-lock recovery actually exists for: a process that crashed mid-update.
+ *
+ * Breaking used to require the lock to be older than `staleMs` AND its owner to be gone.
+ * The retry budget (retries x maxDelayMs, ~6s by default) expires long before the 15s
+ * default `staleMs`, so a lock left by a process that died seconds ago was not breakable
+ * within one call -- the caller burned its whole budget and threw, telling the user to
+ * delete a file by hand. A confirmed-dead owner needs no grace period: the PID is the real
+ * signal and age is only a proxy for it.
+ */
+test('a lock whose owner is confirmed dead is broken immediately, at any age', () => {
+  // A PID that cannot be running. Linux caps at 2^22 and Windows PIDs are far below this.
+  const deadPid = 4_194_305;
+  for (const ageMs of [0, 1_000, 60_000]) {
+    const file = path.join(tmp.dir, `dead-${ageMs}.json`);
+    const lockFile = `${file}.lock`;
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(lockFile, `${deadPid}:crashed-owner\n`, 'utf8');
+    const when = Date.now() - ageMs;
+    fs.utimesSync(lockFile, new Date(when), new Date(when));
+
+    const started = Date.now();
+    const result = updateJson(file, (current) => ({ ...(current ?? {}), recovered: true }), null);
+    assert.equal(result.recovered, true, `a ${ageMs}ms-old lock from a dead owner must be broken`);
+    assert.ok(
+      Date.now() - started < 2_000,
+      `breaking a dead owner's lock must not wait out staleMs (took ${Date.now() - started}ms)`,
+    );
+    assert.equal(fs.existsSync(lockFile), false, 'the lock is released afterwards');
+  }
+});
+
+/**
+ * An unreadable lock still needs the age check, because a lock file with no parseable PID
+ * proves nothing about its owner. This branch is reachable across invocations rather than
+ * within one, which is the deliberate trade: an unreadable lock means a partially-written
+ * or corrupt file, not an ordinary crash.
+ */
+test('a lock with no parseable owner is broken only once it is older than staleMs', () => {
+  const file = path.join(tmp.dir, 'unreadable.json');
+  const lockFile = `${file}.lock`;
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+
+  fs.writeFileSync(lockFile, 'not-a-pid\n', 'utf8');
+  assert.throws(
+    () => updateJson(file, () => ({ n: 1 }), null, { retries: 3 }),
+    /Timed out waiting for the lock/,
+    'a fresh unreadable lock is not broken: nothing establishes that its owner is gone',
+  );
+
+  const old = Date.now() - 60_000;
+  fs.utimesSync(lockFile, new Date(old), new Date(old));
+  assert.equal(
+    updateJson(file, () => ({ n: 2 }), null, { retries: 3 }).n,
+    2,
+    'once older than staleMs an unreadable lock is broken',
+  );
+  fs.rmSync(lockFile, { force: true });
+});
