@@ -46,7 +46,26 @@ function sleepSync(ms) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, Math.max(0, ms));
 }
 
-const LOCK_DEFAULTS = { retries: 200, minDelayMs: 4, maxDelayMs: 40, staleMs: 15000 };
+/**
+ * `staleMs` must stay inside the retry budget, or it can never be reached.
+ *
+ * The budget is `retries` x the mean of [minDelayMs, maxDelayMs] = 250 x 22ms = 5500ms of
+ * deliberate waiting, against a 5000ms deadline. That ordering is the point, and
+ * `tests/concurrency.test.mjs` asserts it: the old 15000 was unreachable, so a caller
+ * entitled to clear a lock spent its whole budget and threw instead.
+ *
+ * `retries` is 250 rather than 200 so the margin comes from the configured delays alone.
+ * At 200 the expected budget is 4400ms and only per-attempt syscall cost pushed real
+ * elapsed time past 5000 -- true on the filesystem this was measured on, and not something
+ * to depend on.
+ *
+ * Only the `ownerPid === null` branch consults `staleMs` now; a confirmed-dead owner is
+ * broken on the PID check alone. So this governs one case: a lock file with no parseable
+ * owner. Writing one is a single small `writeFileSync`, so a live owner cannot leave its
+ * lock unreadable for five continuous seconds -- anything that does is a partially-written
+ * or corrupt file, not a running process.
+ */
+export const LOCK_DEFAULTS = { retries: 250, minDelayMs: 4, maxDelayMs: 40, staleMs: 5000 };
 
 /**
  * Error codes that mean "someone else has the lock", not "the filesystem is broken".
@@ -123,15 +142,12 @@ function withLock(file, fn, opts = {}) {
         // A confirmed-dead owner needs no grace period. The PID check is the real signal;
         // age is only a proxy for it. Requiring BOTH meant the case this recovery exists
         // for -- a process that crashed mid-update -- was the one case it could not handle:
-        // the retry budget (retries x maxDelayMs, ~6s by default) expires long before
-        // staleMs, so a lock younger than staleMs was never breakable and the caller failed
-        // hard, telling the user to delete a file by hand instead of just recovering.
+        // the lock had to outlive staleMs, which was longer than the retry budget, so the
+        // caller failed hard and told the user to delete a file by hand instead of just
+        // recovering.
         //
         // Age still gates the ownerPid === null case, because there death cannot be
-        // established either. That branch therefore needs staleMs to elapse across
-        // invocations -- the budget cannot reach it within one call, which is acceptable
-        // because an unreadable lock means a partially-written or corrupt file, not an
-        // ordinary crash.
+        // established either. See LOCK_DEFAULTS for why staleMs stays inside the budget.
         const ownerConfirmedGone = ownerPid !== null && !processAlive(ownerPid);
         const unreadableAndStale = ownerPid === null
           && Date.now() - fs.statSync(lockFile).mtimeMs > staleMs;

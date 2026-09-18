@@ -52,14 +52,20 @@ for different strengths of claim. Compare across the boundary with care.
   owner is identified by a `<pid>:<uuid>` token, and that token governs both breaking and
   releasing. Every traceability guarantee rests on IDs being unique, and the suite only
   exercised sequential allocation, which is why this survived.
-- **A lock whose owner had crashed could not be broken for 15 seconds.** Breaking required
-  the lock to be older than `staleMs` *and* its owner to be gone, but the retry budget
-  (`retries` x `maxDelayMs`, about six seconds) expires long before the 15-second default --
-  so the one case the recovery exists for, a process that died mid-update, was the one case
-  it could not handle. The caller burned its budget and told the user to delete a file by
-  hand. A confirmed-dead owner is now broken immediately: the PID check is the real signal
-  and age is only a proxy for it. Age still gates the unreadable-lock case, where death
-  cannot be established either.
+- **A lock whose owner had crashed could not be broken at all.** Breaking required the lock
+  to be older than `staleMs` *and* its owner to be gone, but `staleMs` defaulted to 15000
+  while the retry budget was about six seconds -- so the deadline was unreachable inside a
+  single call, and the one case this recovery exists for, a process that died mid-update,
+  was the one case it could not handle. The caller burned its budget and told the user to
+  delete a file by hand. A confirmed-dead owner is now broken immediately: the PID check is
+  the real signal and age is only a proxy for it. Age still gates the unreadable-lock case,
+  where death cannot be established either.
+- **The lock's staleness deadline now falls inside its retry budget.** `staleMs` drops to
+  5000 and `retries` rises to 250, so the 5500ms of configured waiting exceeds the deadline
+  on the delays alone rather than relying on incidental syscall cost, and
+  `tests/concurrency.test.mjs` asserts that ordering. A deadline longer than the budget is
+  not a conservative setting, it is a disabled one. `LOCK_DEFAULTS` is exported so the
+  invariant can be tested rather than commented.
 - **The write read-back conflated "the object is not there" with "I could not look."** Both
   returned a bare `exists: false`, which loses the only fact a caller needs. A refuted write
   did not happen, so retrying is safe; an unverifiable one may well have landed, so retrying

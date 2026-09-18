@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
-import { updateJson } from '../engine/core/fsjson.mjs';
+import { updateJson, LOCK_DEFAULTS } from '../engine/core/fsjson.mjs';
 import { useTempState } from './helpers.mjs';
 import { PACKAGE_ROOT } from '../engine/core/paths.mjs';
 
@@ -123,12 +123,11 @@ test('releasing a lock does not delete a successor lock that replaced ours', () 
 /**
  * The case the stale-lock recovery actually exists for: a process that crashed mid-update.
  *
- * Breaking used to require the lock to be older than `staleMs` AND its owner to be gone.
- * The retry budget (retries x maxDelayMs, ~6s by default) expires long before the 15s
- * default `staleMs`, so a lock left by a process that died seconds ago was not breakable
- * within one call -- the caller burned its whole budget and threw, telling the user to
- * delete a file by hand. A confirmed-dead owner needs no grace period: the PID is the real
- * signal and age is only a proxy for it.
+ * Breaking used to require the lock to be older than `staleMs` AND its owner to be gone,
+ * with a `staleMs` longer than the retry budget -- so a lock left by a process that died
+ * seconds ago was not breakable at all: the caller burned its whole budget and threw,
+ * telling the user to delete a file by hand. A confirmed-dead owner needs no grace period:
+ * the PID is the real signal and age is only a proxy for it.
  */
 test('a lock whose owner is confirmed dead is broken immediately, at any age', () => {
   // A PID that cannot be running. Linux caps at 2^22 and Windows PIDs are far below this.
@@ -154,9 +153,7 @@ test('a lock whose owner is confirmed dead is broken immediately, at any age', (
 
 /**
  * An unreadable lock still needs the age check, because a lock file with no parseable PID
- * proves nothing about its owner. This branch is reachable across invocations rather than
- * within one, which is the deliberate trade: an unreadable lock means a partially-written
- * or corrupt file, not an ordinary crash.
+ * proves nothing about its owner -- not even that it is dead.
  */
 test('a lock with no parseable owner is broken only once it is older than staleMs', () => {
   const file = path.join(tmp.dir, 'unreadable.json');
@@ -178,4 +175,40 @@ test('a lock with no parseable owner is broken only once it is older than staleM
     'once older than staleMs an unreadable lock is broken',
   );
   fs.rmSync(lockFile, { force: true });
+});
+
+/**
+ * The deadline has to be reachable.
+ *
+ * `staleMs` longer than the retry budget is not a conservative setting, it is a disabled
+ * one: the loop gives up before the lock can ever qualify as stale. Guarding the arithmetic
+ * rather than the timing keeps this honest without making the suite wait five seconds --
+ * and the margin has to come from the configured delays, not from incidental syscall cost.
+ */
+test('the default staleness deadline falls inside the default retry budget', () => {
+  const { retries, minDelayMs, maxDelayMs, staleMs } = LOCK_DEFAULTS;
+  const expectedBudgetMs = retries * ((minDelayMs + maxDelayMs) / 2);
+  assert.ok(
+    staleMs < expectedBudgetMs,
+    `staleMs (${staleMs}ms) must be under the expected retry budget `
+    + `(${retries} x ${(minDelayMs + maxDelayMs) / 2}ms = ${expectedBudgetMs}ms), `
+    + 'or a stale lock can never be broken within one call',
+  );
+});
+
+/**
+ * The same branch, driven by an explicit short deadline so it runs in milliseconds rather
+ * than waiting out the real one. This is what the arithmetic above buys.
+ */
+test('an unreadable lock is broken once it outlives staleMs, within a single call', () => {
+  const file = path.join(tmp.dir, 'unreadable-reachable.json');
+  const lockFile = `${file}.lock`;
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(lockFile, 'not-a-pid\n', 'utf8');
+
+  const started = Date.now();
+  const result = updateJson(file, () => ({ ok: true }), null, { staleMs: 50, retries: 100 });
+  assert.equal(result.ok, true, 'the loop must outlast staleMs and then break the lock');
+  assert.ok(Date.now() - started >= 50, 'it waited for the deadline rather than breaking early');
+  assert.equal(fs.existsSync(lockFile), false);
 });
