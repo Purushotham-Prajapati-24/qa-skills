@@ -3,6 +3,150 @@
 Semantic versioning. See [docs/versioning.md](docs/versioning.md) for what is versioned
 independently — document schemas and policy files carry their own versions.
 
+## [0.8.0] - 2026-09-18
+
+Four guarantees this system documents as structural were, until now, enforced by the agent
+remembering to follow them. Three of the four are now enforced by code. That is a change in
+what a report *means*, not a bug-fix release: `PASSED` and `confirmed: true` are harder to
+obtain than they were in 0.7.0, and a report from either version uses the same vocabulary
+for different strengths of claim. Compare across the boundary with care.
+
+### Changed
+
+- **`PASSED` now requires evidence that does not contradict it.** `verifyClaim` reads the
+  evidence, not just its kind: a `command-output` recording a non-zero exit code, a
+  `test-report` with zero total cases, and execution evidence belonging to a different
+  execution are each refused for a success claim, and downgraded to `INCONCLUSIVE` with the
+  reason recorded. Evidence links via `execution_id` or by listing the execution in
+  `supports`. A `FAILED` or `PARTIAL` claim backed by a failing command is unaffected --
+  that pairing is correct, and refusing it would make failures unreportable.
+- **`confirmed: true` on a delegated write now requires an independent read-back.** A write
+  performed through the agent's own MCP tools is a self-attestation; `completeWrite` treats
+  the response as an unverified claim and re-reads the object with `gh` -- run by this
+  process, deliberately not routed through `caps.resolve()`, because capability resolution
+  would prefer the agent's own provider and hand verification back to the party being
+  verified. A fabricated identifier no longer produces a confirmed ledger entry.
+- **An undeclared capability is unavailable again, everywhere.** `browser-decision` and
+  `applicability-engine` tested `!== false`, so an unsupplied capability counted as present
+  -- the opposite of the three-state contract, and a plan whose steps silently never run.
+  Both now require `=== true`, and `bin/ast.mjs` injects the environment's resolved
+  capabilities into `browser decide` and `applicability eval` so the check cannot be
+  defeated by omitting the input. An explicit value still wins, for a skill deliberately
+  testing a blocked path.
+- **Every persistence path redacts.** `save()` and `saveProfile()` wrote through to disk
+  untouched, so a token pasted into a request landed verbatim in `testing-state.json` and
+  was then archived to `history/`. Redaction now runs on the session and the repository
+  profile as well as on collections and telemetry.
+- **A risk level carries its confidence.** `risk_level_qualified`, `confidence_band` and
+  `confidence_warning` accompany `risk_level`, so `critical` backed by one evidenced factor
+  out of fourteen no longer reads identically to `critical` backed by thirteen. The band is
+  advisory: it is stated for the reader and the agent, and does not yet gate category
+  selection.
+
+### Fixed
+
+- **Concurrent ID allocation lost IDs or crashed** (`FIND-00001`, found by this system
+  against itself). `nextId` did an unsynchronised read-modify-write on `counters.json`; four
+  processes sharing a state directory allocated 25 of 100 requested IDs, three of them dying
+  on the atomic rename with `EPERM`. Allocation now runs under a cross-process lock whose
+  owner is identified by a `<pid>:<uuid>` token, and that token governs both breaking and
+  releasing. Every traceability guarantee rests on IDs being unique, and the suite only
+  exercised sequential allocation, which is why this survived.
+- **A lock whose owner had crashed could not be broken at all.** Breaking required the lock
+  to be older than `staleMs` *and* its owner to be gone, but `staleMs` defaulted to 15000
+  while the retry budget was about six seconds -- so the deadline was unreachable inside a
+  single call, and the one case this recovery exists for, a process that died mid-update,
+  was the one case it could not handle. The caller burned its budget and told the user to
+  delete a file by hand. A confirmed-dead owner is now broken immediately: the PID check is
+  the real signal and age is only a proxy for it. Age still gates the unreadable-lock case,
+  where death cannot be established either.
+- **The lock's staleness deadline now falls inside its retry budget.** `staleMs` drops to
+  5000 and `retries` rises to 250, so the 5500ms of configured waiting exceeds the deadline
+  on the delays alone rather than relying on incidental syscall cost, and
+  `tests/concurrency.test.mjs` asserts that ordering. A deadline longer than the budget is
+  not a conservative setting, it is a disabled one. `LOCK_DEFAULTS` is exported so the
+  invariant can be tested rather than commented.
+- **The write read-back conflated "the object is not there" with "I could not look."** Both
+  returned a bare `exists: false`, which loses the only fact a caller needs. A refuted write
+  did not happen, so retrying is safe; an unverifiable one may well have landed, so retrying
+  files a duplicate -- the exact failure the write ledger exists to prevent. The read-back
+  now classifies the provider failure through `classifyProviderError` and reports
+  `verification: 'refuted' | 'unavailable' | 'confirmed'` with an explicit `retry_safe`,
+  which `completeWrite` passes to the caller along with the matching next action. Only a
+  genuine 404 licenses a retry.
+- **The lock could be held by two processes at once**, in three ways: a losing `wx` open
+  surfaced as `EPERM`/`EACCES` rather than `EEXIST` on Windows when the winner's file was
+  pending-delete and escaped the retry loop; a lock older than `staleMs` was broken on age
+  alone, so a slow owner had its lock taken and then wrote its stale value over the thief's
+  update; and release unlinked whatever lock was present, including a successor's.
+  Reproduced at 2 failures in 50 runs before the fix.
+- **`caps declare` reported success and changed nothing.** The declaration was written to
+  `declared` while resolution read only `providers`, which is populated by `probe()` alone
+  -- so the documented order (`probe`, then `declare`) left every agent-declared provider
+  unavailable, and browser testing was blocked on a fresh install. Declaring now updates
+  resolution directly.
+- **`probe()` held the registry lock across five 15-second command probes**, longer than any
+  sane staleness deadline. The shell-outs now run before the lock and only the merge is
+  serialised, with agent-declared entries re-read inside the lock so a `caps declare`
+  landing mid-probe survives.
+- **Three verbs failed their own read-back after succeeding.** `comment`, `updateIssue` and
+  `assign` store their target as `owner/repo#42`, and that whole string was forwarded to
+  `gh --repo`, which takes `[HOST/]OWNER/REPO` and nothing else. Every delegated write of
+  those verbs was therefore recorded `INCONCLUSIVE` after working. Added
+  `repoSlugFromTarget`, which previously had no tests -- which is why this shipped.
+- **A non-product signal outranked `product-defect` unconditionally.** The comparator sorted
+  by class before score, so one incidental `timeout` displaced three strong product signals
+  and a real defect was classified as a slow environment. The non-product preference now
+  applies within a margin, keeping the conservative bias for a genuine tie while letting
+  weight of evidence decide otherwise.
+- **Flakiness was asserted from absent data.** `commits.size <= 1` treated *no* recorded
+  commit as "the same commit", so three mixed runs with no git metadata -- the default, since
+  `git` is optional on `exec start` -- were labelled `flaky` at 0.7 confidence. Mislabelling
+  a real defect as flaky teaches people to ignore a true signal, so this now returns
+  `unstable-cause-unknown` and says that whether the code changed is unknown.
+- **Record ordering broke past the ID pad width.** `readCollection` relied on filename order
+  matching ID order, which holds only while every counter fits its padding: `DEC-100000`
+  sorts before `DEC-99999` lexically. Digit runs now compare numerically.
+- **`classifyEnvironment` was unreachable**, and returned a `'likely-non-production'` value
+  that could never satisfy the `non-production-only` gate it existed to serve. Wired into
+  `check()` and exposed on the CLI.
+- **The load-tool guard matched a bare `ab`**, firing on any command containing that token.
+  A guard that fires constantly gets disabled, and then it guards nothing.
+
+### Added
+
+- **Skills resolve the CLI through `${CLAUDE_PLUGIN_ROOT}`.** Every skill invoked
+  `node bin/ast.mjs`, a relative path that resolves only inside this checkout -- so under a
+  plugin install, where the working directory is the repository under test, every command in
+  every skill failed. 32 files updated, and the installer rewrites the path again for a
+  project- or user-scoped install.
+- **43 tests**, and coverage for the two engines that had none. `capability-registry` was
+  one of them, and it held the `caps declare` defect above -- a declare-then-resolve
+  assertion would have caught it. New suites: `concurrency`, `evidence-engine`,
+  `capability-registry`, `capabilities`.
+- `scripts/validate-repo.mjs` now asserts the test count quoted in the documentation against
+  the number the suite actually defines, and reports the version. Version and count drift had
+  accumulated across five files; this turns a recurring correction into an invariant.
+
+### Removed
+
+- The answer key from the benchmark application. All eight seeded defects were commented in
+  place (`// INJECTED LOGICAL ERROR #1`), so `grep -rn INJECTED` found every one of them
+  without testing anything, and 8-of-8 detection was not evidence of testing capability. The
+  markers are gone. The application itself is still held out of the repository, which
+  `PROGRESS.md` records as an open gap: a calibration harness nobody else can run is not yet
+  a calibration harness.
+
+### Known gaps
+
+- A fabricated **comment** identifier against a real issue still confirms. The read-back
+  verifies that the issue exists and its number matches, and a comment's `result_id` embeds
+  the issue number as its leading segment, so `github.comment` remains self-attestable where
+  `github.create_issue` no longer is. Closing it needs
+  `gh api repos/.../issues/comments/<id>`.
+- The risk **confidence band is advisory**. Nothing consumes it, so a `critical` at 0.10
+  confidence still drives category selection exactly as one at 0.95 would.
+
 ## [0.7.0] - 2026-09-16
 
 Installable into any repository on any machine with one command, and a report format
@@ -217,6 +361,7 @@ Recorded because they are the kind that would otherwise recur:
 - Decision accuracy is self-assessed unless a human sets the verdict.
 - Redaction cannot recognise a secret that looks like ordinary text.
 
+[0.8.0]: https://github.com/Purushotham-Prajapati-24/qa-skills/releases/tag/v0.8.0
 [0.7.0]: https://github.com/Purushotham-Prajapati-24/qa-skills/releases/tag/v0.7.0
 [0.6.0]: https://github.com/Purushotham-Prajapati-24/qa-skills/releases/tag/v0.6.0
 [0.5.0]: https://github.com/Purushotham-Prajapati-24/qa-skills/releases/tag/v0.5.0

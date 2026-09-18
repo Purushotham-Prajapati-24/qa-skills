@@ -4,7 +4,7 @@ description: Test complete user journeys against a running application — criti
 when_to_use: "end to end test", "test the whole checkout journey", "test the signup flow", "critical path testing", "pre-release testing"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.7.0
+  system_version: 0.8.0
   role: specialist
 ---
 
