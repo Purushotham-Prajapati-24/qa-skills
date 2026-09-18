@@ -490,3 +490,91 @@ test('a delegated comment verifies against the repository, not against "owner/re
     'the argv handed to gh must be one gh actually accepts',
   );
 });
+
+/**
+ * "The object is not there" and "this process could not look" are different findings with
+ * opposite consequences, and the read-back used to report both as a bare `exists: false`.
+ *
+ * A refuted write did not happen, so retrying it is safe. An unverifiable write may well
+ * have landed -- the agent performed it with its own MCP tools -- so retrying files a
+ * duplicate, which is the exact failure the write ledger exists to prevent. Only a genuine
+ * 404 may license a retry.
+ */
+test('the read-back separates a refuted write from one it could not verify', async () => {
+  const exec = (out) => async () => out;
+
+  const refuted = await verifyIssueRead(
+    { resultId: '#4242', target: 'acme/shop' },
+    { exec: exec({ exit_code: 1, stdout: '', stderr: 'could not resolve to an Issue: 404 Not Found' }) },
+  );
+  assert.equal(refuted.exists, false);
+  assert.equal(refuted.verification, 'refuted', 'a 404 refutes the claim');
+  assert.equal(refuted.retry_safe, true, 'a write that provably did not happen is safe to retry');
+  assert.match(refuted.reason, /safe to retry/);
+
+  // Every way of being prevented from looking must read the same: not refuted.
+  const blind = {
+    unauthenticated: { exit_code: 1, stdout: '', stderr: 'gh: Bad credentials (HTTP 401)' },
+    forbidden: { exit_code: 1, stdout: '', stderr: 'HTTP 403: Resource not accessible' },
+    'network-error': { exit_code: 1, stdout: '', stderr: 'dial tcp: lookup api.github.com: ENOTFOUND' },
+  };
+  for (const [kind, out] of Object.entries(blind)) {
+    const check = await verifyIssueRead({ resultId: '#4242', target: 'acme/shop' }, { exec: exec(out) });
+    assert.equal(check.exists, false, `${kind} cannot confirm`);
+    assert.equal(check.verification, 'unavailable', `${kind} must not be reported as a refutation`);
+    assert.equal(check.retry_safe, false, `${kind} must never license a retry -- the write may have landed`);
+    assert.equal(check.failure_kind, kind, 'the provider failure is classified, not flattened');
+  }
+
+  const confirmed = await verifyIssueRead(
+    { resultId: '#4242', target: 'acme/shop' },
+    { exec: exec({ exit_code: 0, stdout: JSON.stringify({ number: 4242, url: ISSUE_URL, state: 'open' }), stderr: '' }) },
+  );
+  assert.equal(confirmed.exists, true);
+  assert.equal(confirmed.verification, 'confirmed');
+});
+
+test('a response with no usable identifier is unverifiable, not refuted', async () => {
+  const check = await verifyIssueRead(
+    { resultId: 'not-a-number', target: 'acme/shop' },
+    { exec: async () => { throw new Error('gh must not be called when there is nothing to look up'); } },
+  );
+  assert.equal(check.exists, false);
+  assert.equal(check.verification, 'unavailable');
+  assert.equal(check.retry_safe, false, 'nothing was refuted, so a retry could still duplicate');
+});
+
+/**
+ * The retry verdict has to survive the trip back to the caller, because the caller is what
+ * decides whether to try again. Two unconfirmed writes that look identical in the ledger
+ * but differ in retry-safety is precisely how a duplicate gets filed.
+ */
+test('completeWrite tells the caller whether an unconfirmed write is safe to retry', async () => {
+  setProviders({ 'mcp-github': true, 'gh-cli': false, shell: true });
+
+  const attempt = async (readBack) => {
+    const finding = newFinding();
+    const r = await createGitHubAdapter({ exec: fakeExec() }).createIssueFromFinding({
+      findingId: finding.finding_id, repo: 'acme/shop', authorisation: AUTHORISED,
+    });
+    const done = await adapters.getAdapter('github', { exec: fakeExec(readBack) }).complete({
+      ticket: r.ticket,
+      response: JSON.stringify({ number: 4242, html_url: 'https://github.com/acme/shop/issues/4242' }),
+    });
+    return done;
+  };
+
+  const refuted = await attempt({ stdout: '', stderr: 'could not resolve to an Issue: 404 Not Found', exit_code: 1 });
+  assert.equal(refuted.confirmed, false);
+  assert.equal(refuted.verification, 'refuted');
+  assert.equal(refuted.retry_safe, true, 'a provably absent issue is safe to re-file');
+  assert.match(refuted.caller_should, /retry is safe/);
+
+  const blind = await attempt({ stdout: '', stderr: 'dial tcp: lookup api.github.com: ENOTFOUND', exit_code: 1 });
+  assert.equal(blind.confirmed, false);
+  assert.equal(blind.verification, 'unavailable');
+  assert.equal(blind.retry_safe, false, 'an unreachable provider must never license a retry');
+  assert.match(blind.caller_should, /duplicate/);
+
+  setProviders({ 'gh-cli': true, shell: true });
+});

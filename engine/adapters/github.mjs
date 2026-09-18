@@ -15,7 +15,7 @@ import { dir } from '../core/paths.mjs';
 import { ensureDir, writeText, sha256String } from '../core/fsjson.mjs';
 import * as state from '../state-engine/index.mjs';
 import * as defects from '../defect-engine/index.mjs';
-import { performRead, performWrite, completeWrite, shellExec, OUTCOME } from './base.mjs';
+import { performRead, performWrite, completeWrite, shellExec, classifyProviderError, OUTCOME } from './base.mjs';
 
 export const SYSTEM = 'github';
 
@@ -286,28 +286,70 @@ export function repoSlugFromTarget(target) {
 export async function verifyIssueRead({ resultId, target } = {}, { exec = shellExec } = {}) {
   const number = /^#?(\d+)/.exec(String(resultId ?? ''))?.[1];
   if (!number) {
-    return { exists: false, reason: `Could not extract an issue number from "${resultId}"; nothing to verify.` };
+    return {
+      exists: false,
+      verification: 'unavailable',
+      failure_kind: 'no-identifier',
+      retry_safe: false,
+      reason: `Could not extract an issue number from "${resultId}"; there is nothing to verify. `
+        + 'This does not refute the write, so confirm by hand before retrying.',
+    };
   }
 
   const slug = repoSlugFromTarget(target);
   const repoArgs = slug ? ['--repo', slug] : [];
   const raw = await exec(['gh', 'issue', 'view', number, ...repoArgs, '--json', 'number,url,state']);
   if (raw.exit_code !== 0) {
+    // "The issue is not there" and "this process could not look" are different findings
+    // with opposite consequences, and returning `exists: false` for both loses the one
+    // fact the caller needs. A refuted write failed, so retrying it is safe. An
+    // unverifiable write may well have landed -- the agent performed it with its own MCP
+    // tools -- so retrying files a duplicate. `classifyProviderError` already draws this
+    // line for the write path; the read-back has to draw the same one.
+    const failure = classifyProviderError(raw) ?? { kind: 'unknown' };
+    const refuted = failure.kind === 'not-found';
     return {
       exists: false,
-      reason: `Independent read-back via \`gh issue view ${number}\` failed (exit ${raw.exit_code}). ` +
-        'Either the issue does not exist, or `gh` cannot reach it from here. A number the agent ' +
-        'reported that this process cannot independently confirm is not confirmed.',
+      verification: refuted ? 'refuted' : 'unavailable',
+      failure_kind: failure.kind,
+      retry_safe: refuted,
+      reason: refuted
+        ? `Independent read-back refuted the claim: \`gh issue view ${number}\` reports no such issue. ` +
+          'The write did not happen, so it is safe to retry.'
+        : `Independent read-back could not run: \`gh issue view ${number}\` failed with "${failure.kind}" ` +
+          `(exit ${raw.exit_code}). This does not refute the write -- the agent may well have created ` +
+          'the object with its own tools. Confirm by hand before retrying, or a retry will duplicate it.',
     };
   }
 
   try {
     const parsed = JSON.parse(raw.stdout);
     return Number(parsed.number) === Number(number)
-      ? { exists: true, reason: `Confirmed by \`gh issue view\`: issue #${parsed.number} exists.`, data: parsed }
-      : { exists: false, reason: `\`gh issue view ${number}\` returned issue #${parsed.number}, which does not match.` };
+      ? {
+        exists: true,
+        verification: 'confirmed',
+        retry_safe: false,
+        reason: `Confirmed by \`gh issue view\`: issue #${parsed.number} exists.`,
+        data: parsed,
+      }
+      // A mismatch means the read-back worked but returned something else. That is not a
+      // clean refutation, so it does not license a retry.
+      : {
+        exists: false,
+        verification: 'unavailable',
+        failure_kind: 'identifier-mismatch',
+        retry_safe: false,
+        reason: `\`gh issue view ${number}\` returned issue #${parsed.number}, which does not match. `
+          + 'Confirm by hand before retrying.',
+      };
   } catch (err) {
-    return { exists: false, reason: `Read-back output could not be parsed: ${err.message}` };
+    return {
+      exists: false,
+      verification: 'unavailable',
+      failure_kind: 'unparseable-read-back',
+      retry_safe: false,
+      reason: `Read-back output could not be parsed: ${err.message}. This does not refute the write.`,
+    };
   }
 }
 

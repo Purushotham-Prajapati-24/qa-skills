@@ -488,14 +488,24 @@ export async function completeWrite({ ticket, response, parseResult, verifyRead,
 
   let verifyReason = 'No independent read-back is configured for this adapter, so a self-reported identifier cannot be confirmed. Treating the write as unconfirmed.';
   let verified = false;
+  // Three outcomes, not two. "Refuted" means the read-back looked and the object is not
+  // there, so the write failed and retrying is safe. "Unavailable" means the read-back
+  // could not look -- no `gh`, no auth, no network -- which does not refute anything: the
+  // agent performed the call with its own tools and it may well have landed. Collapsing
+  // those two into `verified: false` is how a retry files a duplicate.
+  let verification = 'unavailable';
+  let retrySafe = false;
   if (claimed.confirmed && claimed.result_id) {
     if (verifyRead) {
       const check = await verifyRead({ resultId: claimed.result_id, url: claimed.url, target: rec.target });
       verified = check.exists === true;
       verifyReason = check.reason;
+      verification = check.verification ?? (verified ? 'confirmed' : 'unavailable');
+      retrySafe = check.retry_safe === true;
     }
   } else {
     verifyReason = 'The response contained no identifier to verify.';
+    verification = 'no-identifier';
   }
 
   // Only a successful, independent read-back may set `confirmed: true`. The agent's own
@@ -510,10 +520,19 @@ export async function completeWrite({ ticket, response, parseResult, verifyRead,
   });
 
   consumeTicket(ticket);
+  if (result.confirmed) {
+    return { ...result, ticket, verified, verification };
+  }
   return {
     ...result,
     ticket,
     verified,
-    verify_reason: result.confirmed ? undefined : verifyReason,
+    verification,
+    retry_safe: retrySafe,
+    verify_reason: verifyReason,
+    caller_should: retrySafe
+      ? 'The read-back refuted this write: the object is not there. Report it as failed, and a retry is safe.'
+      : 'Report this as attempted, not done. The read-back could not refute it either, so the write may have '
+        + 'landed. Confirm the target by hand before any retry, or the retry will duplicate it.',
   };
 }
