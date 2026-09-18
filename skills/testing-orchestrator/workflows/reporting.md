@@ -64,7 +64,38 @@ written contracts but no module yet — for those, follow
 [../../../integrations/jira/adapter.md](../../../integrations/jira/adapter.md) by hand and
 record the outcome with `ast write record`.
 
-## 4. Generate the report
+## 4. Run the evidence-auditor before you generate the report
+
+**Required, not optional.** `ast report generate` (below) computes `false_confidence_rate`
+from evidence *kind and attachment* — it cannot tell a test report with a real failure
+apart from one that asserts nothing, or catch a status reason that says "works" without
+naming a scenario. That is exactly what `evidence-auditor` is for, and skipping it is
+easiest exactly when a report is about to overstate something.
+
+Launch it (Task tool, `evidence-auditor`) before every report generation. Then record that
+it ran, so the omission is visible on any session that skips it instead of looking identical
+to one that didn't:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input '{
+  "kind": "evidence-audit",
+  "summary": "evidence-auditor reviewed N claims; found <M issues | nothing unsupported>",
+  "epistemicClass": "observed",
+  "excerpt": "<the auditor'"'"'s findings, verbatim>"
+}'
+```
+
+If the auditor flagged a claim, downgrade it (`ast exec update` / re-file the finding)
+**before** generating the report — the report renders from state, so a claim fixed after
+the report is generated does not retroactively fix the report.
+
+A report generated without this record still gets produced — `report generate` does not
+block on it, because nothing in this codebase can force a subagent launch — but its
+`integrity.evidence_auditor_run` will read `false` and `audit_coverage` will read `0`. Both
+are counted as a report defect. Do not treat a missing-audit report as equivalent to one
+with a clean audit.
+
+## 5. Generate the report
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" report generate --input report-context.json
@@ -84,7 +115,7 @@ The report always contains:
 - Evaluation metrics with their denominators
 - An **integrity self-audit** stating this report's own false-confidence rate
 
-## 5. Validate before you speak
+## 6. Validate before you speak
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" validate
@@ -93,7 +124,7 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" validate
 Fix everything it reports. Dangling evidence references and still-open executions are
 real defects in the record, not cosmetic.
 
-## 6. The external documentation layer
+## 7. The external documentation layer
 
 If a documents capability resolved, maintain **one canonical testing log** and append to
 it — do not create a document per action. If no provider resolved, the fallback is the
@@ -105,7 +136,7 @@ timestamp, goals, completed/failed/blocked/deferred/skipped/not-applicable work,
 interruptions, uncertainties, decisions, tools used, evidence, findings, issues created,
 tests added, coverage change, remaining work, next recommended action.
 
-## 7. What you say to the user
+## 8. What you say to the user
 
 In this order:
 

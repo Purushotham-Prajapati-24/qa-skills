@@ -351,6 +351,10 @@
           "items": {
             "type": "string"
           }
+        },
+        "evidence_auditor_run": {
+          "type": "boolean",
+          "description": "Whether the evidence-auditor subagent recorded an independent review of this session's claims. False does not mean the report is wrong -- it means the one check built to catch what the mechanical evidence gate cannot has not run."
         }
       },
       "additionalProperties": false

@@ -1,5 +1,12 @@
 # JiraAdapter — contract
 
+**Not implemented.** No executable module exists at `engine/adapters/jira.mjs` (see
+PROGRESS.md). `jira` is listed in `engine/capability-registry/capabilities.json`'s
+`manual_only_systems`, so `ast caps resolve jira.*` still reports `available: true` once
+credentials or the connector are present — but every resolution now also carries
+`executable: false` and a reason stating there is no code to drive it. Follow this contract
+by hand; record any write with `ast write record` the same way `performWrite` would have.
+
 ## Shape
 
 ```

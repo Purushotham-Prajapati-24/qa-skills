@@ -104,6 +104,46 @@ test('an unknown signal is rejected, not ignored', () => {
   assert.throws(() => applicability.evaluate({ signals: ['quantum'] }), /Unknown repository signal/);
 });
 
+/**
+ * CHANGELOG 0.8.0 named this as a known gap: "critical" at 0.10 confidence used to drive
+ * category selection exactly as one at 0.95 would, because nothing downstream consulted
+ * `confidence` -- only `risk_score`. This asserts the fix actually changes an outcome, not
+ * just that the field is now threaded through somewhere.
+ */
+test('a critical risk score backed by thin evidence produces a materially different applicability outcome than one backed by thorough evidence', () => {
+  const ALL_FACTORS = Object.keys(risk.factorCatalog());
+  const thinAssessment = risk.score({
+    profile: 'balanced',
+    factors: { security_sensitivity: { value: 1, basis: 'auth touched' } },
+  });
+  const thoroughAssessment = risk.score({
+    profile: 'balanced',
+    factors: Object.fromEntries(ALL_FACTORS.map((f) => [f, { value: 1, basis: 'evidenced' }])),
+  });
+
+  // Same headline risk_score both times -- the only thing that differs is how much of it
+  // is backed by evidence. If applicability selection did not change, confidence is still
+  // advisory only.
+  assert.equal(thinAssessment.risk_score, 1);
+  assert.equal(thoroughAssessment.risk_score, 1);
+  assert.equal(thinAssessment.confidence_band, 'low');
+  assert.equal(thoroughAssessment.confidence_band, 'high');
+
+  const thin = applicability.evaluate({ signals: ['user-input', 'auth'], riskAssessment: thinAssessment });
+  const thorough = applicability.evaluate({ signals: ['user-input', 'auth'], riskAssessment: thoroughAssessment });
+  const thinRow = thin.matrix.find((r) => r.category === 'security');
+  const thoroughRow = thorough.matrix.find((r) => r.category === 'security');
+
+  assert.ok(
+    thoroughRow.expected_value > thinRow.expected_value,
+    `well-evidenced critical (${thoroughRow.expected_value}) must score higher than thinly-evidenced critical (${thinRow.expected_value})`,
+  );
+  assert.equal(thoroughRow.priority, 'P0', 'full-confidence critical earns the P0 override');
+  assert.notEqual(thinRow.priority, 'P0', 'low-confidence critical must not force the same override');
+  assert.match(thinRow.reason, /tempered toward neutral/, 'the qualification must be visible in the reason, not just the score');
+  assert.doesNotMatch(thoroughRow.reason, /tempered toward neutral/, 'high-confidence rows carry no such caveat');
+});
+
 /* -------------------------------------------------------- browser method */
 
 test('a CI gate never selects the agent-driven browser session', () => {

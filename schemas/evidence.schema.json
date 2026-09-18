@@ -18,7 +18,7 @@
         "coverage-report", "static-analysis", "dependency-scan", "accessibility-scan",
         "performance-metric", "database-snapshot", "diff", "file-content",
         "github-object", "jira-object", "document-revision", "user-statement",
-        "external-api-response", "screenshot-diff", "other"
+        "external-api-response", "screenshot-diff", "evidence-audit", "other"
       ]
     },
     "epistemic_class": { "$ref": "common.schema.json#/definitions/epistemicClass" },

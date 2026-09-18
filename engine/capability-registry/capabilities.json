@@ -1,6 +1,12 @@
 {
   "$comment": "Capability -> provider bindings. The testing skills reason ONLY in terms of the abstract verbs on the left. Nothing in skills/ may name an MCP tool directly, because MCP tool names are the least stable thing in this whole stack. Providers are tried in the listed order.",
-  "version": "1.0.0",
+  "version": "1.1.0",
+  "manual_only_systems": {
+    "$comment": "A capability can resolve 'available: true' -- credentials or a connector are present -- with no executable module in engine/adapters/ behind it. That gap is the worst of both: an agent sees the verb resolve and may assume it can be invoked like github.*, then either hand-roll the call or, worse, infer the content from something else (a commit message, its own reading of the code) and report it as if it came from the system. Every system listed here gets that warning attached to every verb resolution. scripts/validate-repo.mjs cross-checks this list against engine/adapters/index.mjs so it cannot go stale in either direction: dropped here without the adapter shipping, or left here after it does.",
+    "jira": "No executable module yet; see integrations/jira/adapter.md and PROGRESS.md.",
+    "docs": "No Google MCP server was available when this was built; see integrations/google/docs.md. Falls back to state/reports/.",
+    "drive": "No Google MCP server was available when this was built; see integrations/google/drive.md."
+  },
   "providers": {
     "shell": { "kind": "builtin", "probe": { "type": "always" }, "notes": "Claude Code Bash/PowerShell tool." },
     "git": { "kind": "command", "probe": { "type": "command", "command": "git --version" } },

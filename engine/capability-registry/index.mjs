@@ -167,6 +167,14 @@ export function resolve(verb, db = loadProbe()) {
   }));
   const chosen = candidates.find((c) => c.available === true) ?? null;
 
+  // A credential or connector being present is not the same as there being code to drive
+  // it. Resolving `true` for a verb like this and stopping there is the exact gap
+  // PROGRESS.md names: the agent sees "available", and under time pressure may hand-roll
+  // the call or, worse, infer the answer from somewhere else and report it as if this
+  // system produced it.
+  const system = verb.split('.')[0];
+  const manualOnlyNote = REG.manual_only_systems?.[system] ?? null;
+
   return {
     verb,
     available: Boolean(chosen),
@@ -176,8 +184,15 @@ export function resolve(verb, db = loadProbe()) {
     authorization: def.authorization ?? (def.write ? 'explicit' : 'none'),
     idempotency: def.idempotency ?? null,
     description: def.description ?? '',
+    executable: manualOnlyNote ? false : null,
     reason: chosen
-      ? `Resolved to "${chosen.provider}" (${chosen.detail}).`
+      ? `Resolved to "${chosen.provider}" (${chosen.detail}).${
+          manualOnlyNote
+            ? ` No executable adapter exists for "${system}" -- ${manualOnlyNote} Perform this call by hand${
+                def.write ? ' and record the outcome with `ast write record`' : ''
+              }; do not treat "available" as "there is code that will do this for you".`
+            : ''
+        }`
       : `No available provider. Tried: ${candidates.map((c) => `${c.provider}=${c.available === null ? 'unknown' : c.available}`).join(', ')}. Report this capability as unavailable; do not simulate it.`,
   };
 }

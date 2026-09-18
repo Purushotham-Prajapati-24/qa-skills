@@ -1,7 +1,7 @@
 {
   "report_id": "REPORT-2026-00001",
   "report_version": "1.1.0",
-  "generated_at": "2026-09-16T11:19:16.491Z",
+  "generated_at": "2026-09-18T09:38:21.570Z",
   "session_id": "SESSION-0001",
   "executive_summary": {
     "headline": "**FAILED** — 4 executions run · 1 finding, worst critical · 2 planned items not run.",
@@ -60,7 +60,7 @@
       "NOT_APPLICABLE": 1,
       "INTERRUPTED": 1
     },
-    "total_duration_ms": 24,
+    "total_duration_ms": 19,
     "test_cases": 3
   },
   "detailed_results": [
@@ -71,7 +71,7 @@
       "method": "api-client",
       "status": "FAILED",
       "status_reason": "GET /api/payment-methods/:id returned another user's card with HTTP 200.",
-      "duration_ms": 8,
+      "duration_ms": 6,
       "evidence": [
         "EV-2026-00002"
       ],
@@ -153,7 +153,7 @@
       "method": "existing-suite",
       "status": "PASSED",
       "status_reason": "vitest suite executed against abc1234; 211 tests passed, 0 failed.",
-      "duration_ms": 11,
+      "duration_ms": 8,
       "evidence": [
         "EV-2026-00001"
       ],
@@ -167,14 +167,14 @@
       "evidence_id": "EV-2026-00001",
       "kind": "command-output",
       "summary": "vitest: 211/211 passed",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-cRnOgw\\evidence\\blobs\\output-2026-09-16T11-19-16-425Z-18112.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-wXn3KG\\evidence\\blobs\\output-2026-09-18T09-38-21-512Z-62516.txt",
       "sha256": "sha256:08847719b18700defc4e5811a3e0be639fa4d8c92fcbdefd7cff7a429ac59e38"
     },
     {
       "evidence_id": "EV-2026-00002",
       "kind": "command-output",
       "summary": "api: 11/12 passed, 1 failed",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-cRnOgw\\evidence\\blobs\\output-2026-09-16T11-19-16-438Z-18112.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-wXn3KG\\evidence\\blobs\\output-2026-09-18T09-38-21-523Z-62516.txt",
       "sha256": "sha256:6860525264278abb9c4fb263992a6bcbbfd9d5d8d074c9c5f1779db558c4b2b8"
     }
   ],
@@ -307,7 +307,7 @@
     }
   ],
   "metrics": {
-    "computed_at": "2026-09-16T11:19:16.506Z",
+    "computed_at": "2026-09-18T09:38:21.580Z",
     "sample_sizes": {
       "executions": 6,
       "decisions": 1,
@@ -323,18 +323,50 @@
       "decision_assessment_rate": 0,
       "actionable_finding_rate": 0,
       "evidence_completeness": 1,
+      "audit_coverage": 0,
       "automation_conversion": null,
       "unnecessary_test_rate": 0.5,
-      "runtime_efficiency_ms_per_case": 8,
+      "runtime_efficiency_ms_per_case": 6.3333,
       "flaky_identification_quality": null,
       "interruption_recovery_rate": 0.5,
       "authorization_compliance": 1,
       "reproducibility": 0.5
     },
+    "denominators": {
+      "false_confidence_rate": 1,
+      "requirement_coverage": 3,
+      "high_risk_coverage": 6,
+      "decision_accuracy": 0,
+      "decision_assessment_rate": 1,
+      "actionable_finding_rate": 1,
+      "evidence_completeness": 2,
+      "audit_coverage": 2,
+      "automation_conversion": 0,
+      "unnecessary_test_rate": 4,
+      "runtime_efficiency_ms_per_case": 3,
+      "flaky_identification_quality": 0,
+      "interruption_recovery_rate": 2,
+      "authorization_compliance": 1,
+      "reproducibility": 4
+    },
+    "noise_floor": 5,
+    "noisy_metrics": [
+      "false_confidence_rate",
+      "requirement_coverage",
+      "decision_assessment_rate",
+      "actionable_finding_rate",
+      "evidence_completeness",
+      "audit_coverage",
+      "unnecessary_test_rate",
+      "runtime_efficiency_ms_per_case",
+      "interruption_recovery_rate",
+      "authorization_compliance",
+      "reproducibility"
+    ],
     "violations": [],
     "notes": [
       "A null metric means the denominator was zero. Nulls are honest; do not substitute 0 or 1.",
-      "Metrics with a small sample_size are noise. Report the denominator alongside the ratio.",
+      "Metrics with a denominator under 5 are noise, not signal -- read them qualitatively: false_confidence_rate (n=1), requirement_coverage (n=3), decision_assessment_rate (n=1), actionable_finding_rate (n=1), evidence_completeness (n=2), audit_coverage (n=2), unnecessary_test_rate (n=4), runtime_efficiency_ms_per_case (n=3), interruption_recovery_rate (n=2), authorization_compliance (n=1), reproducibility (n=4).",
       "Categories executed: smoke, regression, authn-authz, accessibility."
     ],
     "definitions": {
@@ -373,6 +405,13 @@
       "evidence_completeness": {
         "formula": "executions with at least one execution-grade evidence item / executions that claim a status",
         "direction": "higher-is-better"
+      },
+      "audit_coverage": {
+        "formula": "1 if any evidence-audit record exists this session, 0 if there are claims and none does, null if there are no PASSED/FAILED/COMPLETED/PARTIAL claims to review",
+        "direction": "higher-is-better",
+        "target": 1,
+        "why": "The evidence-auditor subagent catches what the mechanical evidence gate cannot -- a vague status reason, a screenshot standing in for an assertion. It only helps if it ran.",
+        "blind_spot": "Confirms the audit happened, not that it was thorough. A rubber-stamp record still reads 1."
       },
       "automation_conversion": {
         "formula": "exploratory scenarios converted into committed tests / scenarios that met the conversion threshold",
@@ -420,13 +459,16 @@
       "unfinished executions surfaced as INTERRUPTED",
       "not-applicable categories listed with reasons"
     ],
-    "violations": []
+    "violations": [
+      "No evidence-auditor record for this session (kind: evidence-audit). Claims here have only passed the mechanical evidence gate, not independent adversarial review."
+    ],
+    "evidence_auditor_run": false
   },
   "provenance": {
-    "skill_version": "0.6.0",
+    "skill_version": "0.8.0",
     "skill_name": "test-reporting",
-    "engine_version": "0.6.0",
-    "created_at": "2026-09-16T11:19:16.491Z",
+    "engine_version": "0.8.0",
+    "created_at": "2026-09-18T09:38:21.570Z",
     "created_by": "agent",
     "session_id": "SESSION-0001"
   },
@@ -440,8 +482,11 @@
   "risk_assessment": {
     "risk_score": 0.8905,
     "risk_level": "critical",
+    "risk_level_qualified": "critical (moderate confidence)",
     "weights_profile": "security-critical",
     "confidence": 0.6176,
+    "confidence_band": "moderate",
+    "confidence_warning": "Only 7 of 14 weighted factors could be evidenced (62% of profile weight). Quote this level as \"critical (moderate confidence)\" and do not use it on its own to exclude a test category.",
     "factors": [
       {
         "factor": "security_sensitivity",
@@ -512,35 +557,16 @@
   },
   "applicable_categories": [
     {
-      "category": "dependency-scan",
-      "applicable": true,
-      "reason": "Signals present: third-party-deps. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): security_sensitivity.",
-      "priority": "P0",
-      "expected_value": 0.7,
-      "risk_addressed": [
-        "security_sensitivity"
-      ],
-      "estimated_cost_minutes": 10,
-      "existing_coverage": "unknown",
-      "tool_available": true,
-      "prerequisites": [
-        "a package manager audit command"
-      ],
-      "automation_suitability": "high",
-      "recommended_method": "delegate to skill: security-testing",
-      "score": 0.84,
-      "execution_priority": 1
-    },
-    {
       "category": "security",
       "applicable": true,
-      "reason": "Signals present: user-input, auth, pii. Existing coverage \"none\" leaves a deficit of 1; addresses risk factor(s): security_sensitivity, data_sensitivity.",
-      "priority": "P0",
-      "expected_value": 1,
+      "reason": "Signals present: user-input, auth, pii. Existing coverage \"none\" leaves a deficit of 1; addresses risk factor(s): security_sensitivity, data_sensitivity. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
+      "priority": "P1",
+      "expected_value": 0.8088,
       "risk_addressed": [
         "security_sensitivity",
         "data_sensitivity"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 50,
       "existing_coverage": "none",
       "tool_available": true,
@@ -549,36 +575,38 @@
       ],
       "automation_suitability": "medium",
       "recommended_method": "delegate to skill: security-testing",
-      "score": 0.6,
-      "execution_priority": 2
+      "score": 0.4853,
+      "execution_priority": 1
     },
     {
       "category": "input-validation",
       "applicable": true,
-      "reason": "Signals present: user-input. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): security_sensitivity.",
-      "priority": "P0",
-      "expected_value": 0.7,
+      "reason": "Signals present: user-input. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): security_sensitivity. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
+      "priority": "P1",
+      "expected_value": 0.5662,
       "risk_addressed": [
         "security_sensitivity"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 30,
       "existing_coverage": "unknown",
       "tool_available": true,
       "prerequisites": [],
       "automation_suitability": "high",
       "recommended_method": "delegate to skill: security-testing",
-      "score": 0.56,
-      "execution_priority": 3
+      "score": 0.453,
+      "execution_priority": 2
     },
     {
       "category": "session-management",
       "applicable": true,
-      "reason": "Signals present: sessions. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): security_sensitivity.",
-      "priority": "P0",
-      "expected_value": 0.7,
+      "reason": "Signals present: sessions. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): security_sensitivity. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
+      "priority": "P1",
+      "expected_value": 0.5662,
       "risk_addressed": [
         "security_sensitivity"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 30,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -587,18 +615,19 @@
       ],
       "automation_suitability": "high",
       "recommended_method": "delegate to skill: security-testing",
-      "score": 0.56,
-      "execution_priority": 4
+      "score": 0.453,
+      "execution_priority": 3
     },
     {
       "category": "database",
       "applicable": true,
-      "reason": "Signals present: database. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): data_sensitivity. Deferred: would exceed the 150-minute budget (already committed 120 minutes on higher- or equal-priority work).",
-      "priority": "P0",
-      "expected_value": 0.7,
+      "reason": "Signals present: database. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): data_sensitivity. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
+      "priority": "P1",
+      "expected_value": 0.5662,
       "risk_addressed": [
         "data_sensitivity"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 35,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -607,59 +636,19 @@
       ],
       "automation_suitability": "high",
       "recommended_method": "delegate to skill: database-testing",
-      "score": 0.5169,
-      "execution_priority": 5
-    },
-    {
-      "category": "authn-authz",
-      "applicable": true,
-      "reason": "Signals present: auth, authz. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): security_sensitivity. Deferred: would exceed the 150-minute budget (already committed 120 minutes on higher- or equal-priority work).",
-      "priority": "P0",
-      "expected_value": 0.7,
-      "risk_addressed": [
-        "security_sensitivity"
-      ],
-      "estimated_cost_minutes": 40,
-      "existing_coverage": "unknown",
-      "tool_available": true,
-      "prerequisites": [
-        "test accounts across roles"
-      ],
-      "automation_suitability": "high",
-      "recommended_method": "delegate to skill: security-testing",
-      "score": 0.48,
-      "execution_priority": 6
-    },
-    {
-      "category": "data-integrity",
-      "applicable": true,
-      "reason": "Signals present: database. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): data_sensitivity, irreversibility. Deferred: would exceed the 150-minute budget (already committed 120 minutes on higher- or equal-priority work).",
-      "priority": "P0",
-      "expected_value": 0.6125,
-      "risk_addressed": [
-        "data_sensitivity",
-        "irreversibility"
-      ],
-      "estimated_cost_minutes": 35,
-      "existing_coverage": "unknown",
-      "tool_available": true,
-      "prerequisites": [
-        "representative seed data"
-      ],
-      "automation_suitability": "high",
-      "recommended_method": "delegate to skill: database-testing",
-      "score": 0.4523,
-      "execution_priority": 7
+      "score": 0.4181,
+      "execution_priority": 4
     },
     {
       "category": "migration",
       "applicable": true,
-      "reason": "Signals present: migrations. Existing coverage \"none\" leaves a deficit of 1; addresses risk factor(s): irreversibility. Deferred: would exceed the 150-minute budget (already committed 120 minutes on higher- or equal-priority work).",
-      "priority": "P0",
-      "expected_value": 0.75,
+      "reason": "Signals present: migrations. Existing coverage \"none\" leaves a deficit of 1; addresses risk factor(s): irreversibility. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
+      "priority": "P1",
+      "expected_value": 0.6544,
       "risk_addressed": [
         "irreversibility"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 50,
       "existing_coverage": "none",
       "tool_available": true,
@@ -668,18 +657,62 @@
       ],
       "automation_suitability": "medium",
       "recommended_method": "delegate to skill: database-testing",
-      "score": 0.45,
-      "execution_priority": 8
+      "score": 0.3926,
+      "execution_priority": 5
+    },
+    {
+      "category": "authn-authz",
+      "applicable": true,
+      "reason": "Signals present: auth, authz. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): security_sensitivity. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
+      "priority": "P1",
+      "expected_value": 0.5662,
+      "risk_addressed": [
+        "security_sensitivity"
+      ],
+      "risk_confidence": 0.6176,
+      "estimated_cost_minutes": 40,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "test accounts across roles"
+      ],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: security-testing",
+      "score": 0.3883,
+      "execution_priority": 6
+    },
+    {
+      "category": "data-integrity",
+      "applicable": true,
+      "reason": "Signals present: database. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): data_sensitivity, irreversibility. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
+      "priority": "P1",
+      "expected_value": 0.5121,
+      "risk_addressed": [
+        "data_sensitivity",
+        "irreversibility"
+      ],
+      "risk_confidence": 0.6176,
+      "estimated_cost_minutes": 35,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [
+        "representative seed data"
+      ],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: database-testing",
+      "score": 0.3782,
+      "execution_priority": 7
     },
     {
       "category": "acceptance",
       "applicable": true,
-      "reason": "Signals present: any repository. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): business_criticality. Deferred: would exceed the 150-minute budget (already committed 120 minutes on higher- or equal-priority work).",
+      "reason": "Signals present: any repository. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): business_criticality. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
       "priority": "P2",
-      "expected_value": 0.3889,
+      "expected_value": 0.374,
       "risk_addressed": [
         "business_criticality"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 35,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -688,19 +721,60 @@
       ],
       "automation_suitability": "medium",
       "recommended_method": "delegate to skill: test-strategy",
-      "score": 0.2872,
+      "score": 0.2762,
+      "execution_priority": 8
+    },
+    {
+      "category": "dependency-scan",
+      "applicable": true,
+      "reason": "Relevant (signals: third-party-deps) but the required capability \"shell.run\" is unavailable. Treat as BLOCKED, not as done. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
+      "priority": "P2",
+      "expected_value": 0.5662,
+      "risk_addressed": [
+        "security_sensitivity"
+      ],
+      "risk_confidence": 0.6176,
+      "estimated_cost_minutes": 10,
+      "existing_coverage": "unknown",
+      "tool_available": false,
+      "prerequisites": [
+        "a package manager audit command"
+      ],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: security-testing",
+      "score": 0.2718,
       "execution_priority": 9
+    },
+    {
+      "category": "sanity",
+      "applicable": true,
+      "reason": "Signals present: any repository. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): change_magnitude. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
+      "priority": "P2",
+      "expected_value": 0.2203,
+      "risk_addressed": [
+        "change_magnitude"
+      ],
+      "risk_confidence": 0.6176,
+      "estimated_cost_minutes": 10,
+      "existing_coverage": "unknown",
+      "tool_available": true,
+      "prerequisites": [],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: regression-testing",
+      "score": 0.2644,
+      "execution_priority": 10
     },
     {
       "category": "regression",
       "applicable": true,
-      "reason": "Signals present: existing-tests. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): coverage_deficit, change_frequency.",
+      "reason": "Signals present: existing-tests. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): coverage_deficit, change_frequency. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
       "priority": "P2",
-      "expected_value": 0.2275,
+      "expected_value": 0.2743,
       "risk_addressed": [
         "coverage_deficit",
         "change_frequency"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 20,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -709,40 +783,20 @@
       ],
       "automation_suitability": "high",
       "recommended_method": "delegate to skill: regression-testing",
-      "score": 0.2184,
-      "execution_priority": 10
-    },
-    {
-      "category": "api",
-      "applicable": true,
-      "reason": "Signals present: http-api. Existing coverage \"minimal\" leaves a deficit of 0.8; addresses risk factor(s): integration_complexity, coverage_deficit. Deferred: would exceed the 150-minute budget (already committed 140 minutes on higher- or equal-priority work).",
-      "priority": "P2",
-      "expected_value": 0.2133,
-      "risk_addressed": [
-        "integration_complexity",
-        "coverage_deficit"
-      ],
-      "estimated_cost_minutes": 25,
-      "existing_coverage": "minimal",
-      "tool_available": true,
-      "prerequisites": [
-        "reachable API instance"
-      ],
-      "automation_suitability": "high",
-      "recommended_method": "delegate to skill: api-testing",
-      "score": 0.1862,
+      "score": 0.2633,
       "execution_priority": 11
     },
     {
       "category": "accessibility",
       "applicable": true,
-      "reason": "Signals present: web-ui. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): user_impact, business_criticality. Deferred: would exceed the 150-minute budget (already committed 140 minutes on higher- or equal-priority work).",
+      "reason": "Signals present: web-ui. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): user_impact, business_criticality. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
       "priority": "P2",
-      "expected_value": 0.1944,
+      "expected_value": 0.254,
       "risk_addressed": [
         "user_impact",
         "business_criticality"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 25,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -751,37 +805,20 @@
       ],
       "automation_suitability": "medium",
       "recommended_method": "delegate to skill: accessibility-testing",
-      "score": 0.1697,
+      "score": 0.2217,
       "execution_priority": 12
-    },
-    {
-      "category": "sanity",
-      "applicable": true,
-      "reason": "Signals present: any repository. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): change_magnitude.",
-      "priority": "P2",
-      "expected_value": 0.14,
-      "risk_addressed": [
-        "change_magnitude"
-      ],
-      "estimated_cost_minutes": 10,
-      "existing_coverage": "unknown",
-      "tool_available": true,
-      "prerequisites": [],
-      "automation_suitability": "high",
-      "recommended_method": "delegate to skill: regression-testing",
-      "score": 0.168,
-      "execution_priority": 13
     },
     {
       "category": "component",
       "applicable": true,
-      "reason": "Signals present: component-framework. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): coverage_deficit, user_impact. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
+      "reason": "Signals present: component-framework. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): coverage_deficit, user_impact. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
       "priority": "P2",
-      "expected_value": 0.1867,
+      "expected_value": 0.2491,
       "risk_addressed": [
         "coverage_deficit",
         "user_impact"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 25,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -790,19 +827,20 @@
       ],
       "automation_suitability": "high",
       "recommended_method": "delegate to skill: ui-testing",
-      "score": 0.1629,
-      "execution_priority": 14
+      "score": 0.2174,
+      "execution_priority": 13
     },
     {
       "category": "exploratory",
       "applicable": true,
-      "reason": "Signals present: ui, http-api. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): coverage_deficit, historical_failures. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
-      "priority": "P3",
-      "expected_value": 0.1867,
+      "reason": "Signals present: ui, http-api. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): coverage_deficit, historical_failures. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
+      "priority": "P2",
+      "expected_value": 0.2491,
       "risk_addressed": [
         "coverage_deficit",
         "historical_failures"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 30,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -811,112 +849,57 @@
       ],
       "automation_suitability": "low",
       "recommended_method": "delegate to skill: browser-testing",
-      "score": 0.1494,
-      "execution_priority": 15
-    },
-    {
-      "category": "unit",
-      "applicable": true,
-      "reason": "Signals present: any repository. Existing coverage \"substantial\" leaves a deficit of 0.2; addresses risk factor(s): change_magnitude, coverage_deficit. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
-      "priority": "P3",
-      "expected_value": 0.0733,
-      "risk_addressed": [
-        "change_magnitude",
-        "coverage_deficit"
-      ],
-      "estimated_cost_minutes": 15,
-      "existing_coverage": "substantial",
-      "tool_available": true,
-      "prerequisites": [],
-      "automation_suitability": "high",
-      "recommended_method": "delegate to skill: unit-testing",
-      "score": 0.0782,
-      "execution_priority": 16
-    },
-    {
-      "category": "e2e",
-      "applicable": true,
-      "reason": "Signals present: web-ui. Existing coverage \"partial\" leaves a deficit of 0.5; addresses risk factor(s): business_criticality, user_impact. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
-      "priority": "P3",
-      "expected_value": 0.1389,
-      "risk_addressed": [
-        "business_criticality",
-        "user_impact"
-      ],
-      "estimated_cost_minutes": 60,
-      "existing_coverage": "partial",
-      "tool_available": true,
-      "prerequisites": [
-        "deployed or locally runnable application"
-      ],
-      "automation_suitability": "medium",
-      "recommended_method": "delegate to skill: e2e-testing",
-      "score": 0.0741,
-      "execution_priority": 17
+      "score": 0.1993,
+      "execution_priority": 14
     },
     {
       "category": "smoke",
       "applicable": true,
-      "reason": "Signals present: any repository. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): deployment_exposure. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
-      "priority": "P3",
-      "expected_value": 0.035,
+      "reason": "Signals present: any repository. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): deployment_exposure. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
+      "priority": "P2",
+      "expected_value": 0.1555,
       "risk_addressed": [
         "deployment_exposure"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 10,
       "existing_coverage": "unknown",
       "tool_available": true,
       "prerequisites": [],
       "automation_suitability": "high",
       "recommended_method": "delegate to skill: regression-testing",
-      "score": 0.042,
-      "execution_priority": 18
-    },
-    {
-      "category": "ci-cd",
-      "applicable": true,
-      "reason": "Signals present: ci. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): deployment_exposure. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
-      "priority": "P3",
-      "expected_value": 0.035,
-      "risk_addressed": [
-        "deployment_exposure"
-      ],
-      "estimated_cost_minutes": 20,
-      "existing_coverage": "unknown",
-      "tool_available": true,
-      "prerequisites": [],
-      "automation_suitability": "high",
-      "recommended_method": "delegate to skill: integration-testing",
-      "score": 0.0336,
-      "execution_priority": 19
+      "score": 0.1866,
+      "execution_priority": 15
     },
     {
       "category": "functional",
       "applicable": true,
-      "reason": "Signals present: any repository. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): user_impact. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
+      "reason": "Signals present: any repository. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): user_impact. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "user_impact"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 30,
       "existing_coverage": "unknown",
       "tool_available": true,
       "prerequisites": [],
       "automation_suitability": "medium",
       "recommended_method": "delegate to skill: test-strategy",
-      "score": 0.028,
-      "execution_priority": 20
+      "score": 0.1244,
+      "execution_priority": 16
     },
     {
       "category": "ui",
       "applicable": true,
-      "reason": "Signals present: ui. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): user_impact. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
+      "reason": "Signals present: ui. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): user_impact. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "user_impact"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 30,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -925,19 +908,20 @@
       ],
       "automation_suitability": "medium",
       "recommended_method": "delegate to skill: ui-testing",
-      "score": 0.028,
-      "execution_priority": 21
+      "score": 0.1244,
+      "execution_priority": 17
     },
     {
       "category": "integration",
       "applicable": true,
-      "reason": "Signals present: database, http-api, external-integration. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): dependency_complexity, integration_complexity. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
+      "reason": "Signals present: database, http-api, external-integration. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): dependency_complexity, integration_complexity. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "dependency_complexity",
         "integration_complexity"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 35,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -946,38 +930,19 @@
       ],
       "automation_suitability": "high",
       "recommended_method": "delegate to skill: integration-testing",
-      "score": 0.0258,
-      "execution_priority": 22
-    },
-    {
-      "category": "visual",
-      "applicable": true,
-      "reason": "Signals present: web-ui. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): user_impact. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
-      "priority": "P3",
-      "expected_value": 0.035,
-      "risk_addressed": [
-        "user_impact"
-      ],
-      "estimated_cost_minutes": 35,
-      "existing_coverage": "unknown",
-      "tool_available": true,
-      "prerequisites": [
-        "stable baseline screenshots"
-      ],
-      "automation_suitability": "high",
-      "recommended_method": "delegate to skill: ui-testing",
-      "score": 0.0258,
-      "execution_priority": 23
+      "score": 0.1148,
+      "execution_priority": 18
     },
     {
       "category": "browser-automation",
       "applicable": true,
-      "reason": "Signals present: web-ui. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): user_impact. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
+      "reason": "Signals present: web-ui. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): user_impact. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "user_impact"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 40,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -986,18 +951,83 @@
       ],
       "automation_suitability": "high",
       "recommended_method": "delegate to skill: browser-testing",
-      "score": 0.024,
-      "execution_priority": 24
+      "score": 0.1066,
+      "execution_priority": 19
+    },
+    {
+      "category": "api",
+      "applicable": true,
+      "reason": "Relevant (signals: http-api) but the required capability \"http.request\" is unavailable. Treat as BLOCKED, not as done. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
+      "priority": "P3",
+      "expected_value": 0.2847,
+      "risk_addressed": [
+        "integration_complexity",
+        "coverage_deficit"
+      ],
+      "risk_confidence": 0.6176,
+      "estimated_cost_minutes": 25,
+      "existing_coverage": "minimal",
+      "tool_available": false,
+      "prerequisites": [
+        "reachable API instance"
+      ],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: api-testing",
+      "score": 0.0994,
+      "execution_priority": 20
+    },
+    {
+      "category": "e2e",
+      "applicable": true,
+      "reason": "Signals present: web-ui. Existing coverage \"partial\" leaves a deficit of 0.5; addresses risk factor(s): business_criticality, user_impact. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
+      "priority": "P3",
+      "expected_value": 0.1814,
+      "risk_addressed": [
+        "business_criticality",
+        "user_impact"
+      ],
+      "risk_confidence": 0.6176,
+      "estimated_cost_minutes": 60,
+      "existing_coverage": "partial",
+      "tool_available": true,
+      "prerequisites": [
+        "deployed or locally runnable application"
+      ],
+      "automation_suitability": "medium",
+      "recommended_method": "delegate to skill: e2e-testing",
+      "score": 0.0967,
+      "execution_priority": 21
+    },
+    {
+      "category": "unit",
+      "applicable": true,
+      "reason": "Signals present: any repository. Existing coverage \"substantial\" leaves a deficit of 0.2; addresses risk factor(s): change_magnitude, coverage_deficit. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
+      "priority": "P3",
+      "expected_value": 0.0835,
+      "risk_addressed": [
+        "change_magnitude",
+        "coverage_deficit"
+      ],
+      "risk_confidence": 0.6176,
+      "estimated_cost_minutes": 15,
+      "existing_coverage": "substantial",
+      "tool_available": true,
+      "prerequisites": [],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: unit-testing",
+      "score": 0.0891,
+      "execution_priority": 22
     },
     {
       "category": "resilience",
       "applicable": true,
-      "reason": "Signals present: external-integration. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): external_system_dependency. Deferred: would exceed the 150-minute budget (already committed 150 minutes on higher- or equal-priority work).",
+      "reason": "Signals present: external-integration. Existing coverage \"unknown\" leaves a deficit of 0.7; addresses risk factor(s): external_system_dependency. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "external_system_dependency"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 60,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1007,19 +1037,60 @@
       ],
       "automation_suitability": "medium",
       "recommended_method": "delegate to skill: integration-testing",
-      "score": 0.0187,
+      "score": 0.0829,
+      "execution_priority": 23
+    },
+    {
+      "category": "ci-cd",
+      "applicable": true,
+      "reason": "Relevant (signals: ci) but the required capability \"ci.read_runs\" is unavailable. Treat as BLOCKED, not as done. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
+      "priority": "P3",
+      "expected_value": 0.1555,
+      "risk_addressed": [
+        "deployment_exposure"
+      ],
+      "risk_confidence": 0.6176,
+      "estimated_cost_minutes": 20,
+      "existing_coverage": "unknown",
+      "tool_available": false,
+      "prerequisites": [],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: integration-testing",
+      "score": 0.0597,
+      "execution_priority": 24
+    },
+    {
+      "category": "visual",
+      "applicable": true,
+      "reason": "Relevant (signals: web-ui) but the required capability \"browser.screenshot\" is unavailable. Treat as BLOCKED, not as done. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work).",
+      "priority": "P3",
+      "expected_value": 0.1555,
+      "risk_addressed": [
+        "user_impact"
+      ],
+      "risk_confidence": 0.6176,
+      "estimated_cost_minutes": 35,
+      "existing_coverage": "unknown",
+      "tool_available": false,
+      "prerequisites": [
+        "stable baseline screenshots"
+      ],
+      "automation_suitability": "high",
+      "recommended_method": "delegate to skill: ui-testing",
+      "score": 0.0459,
       "execution_priority": 25
     },
     {
       "category": "agent-tool-eval",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: agent-tools; missing: agent-tools).",
+      "reason": "Repository shows no signal for this category (needs any of: agent-tools; missing: agent-tools). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.6125,
+      "expected_value": 0.5121,
       "risk_addressed": [
         "security_sensitivity",
         "irreversibility"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 75,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1034,13 +1105,14 @@
     {
       "category": "ai-llm",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: llm; missing: llm).",
+      "reason": "Repository shows no signal for this category (needs any of: llm; missing: llm). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
       "expected_value": 0.35,
       "risk_addressed": [
         "user_impact",
         "security_sensitivity"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 60,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1056,12 +1128,13 @@
     {
       "category": "caching",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: cache; missing: cache).",
+      "reason": "Repository shows no signal for this category (needs any of: cache; missing: cache). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "dependency_complexity"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 30,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1076,12 +1149,13 @@
     {
       "category": "compatibility",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: multi-browser, container; missing: multi-browser, container).",
+      "reason": "Repository shows no signal for this category (needs any of: multi-browser, container; missing: multi-browser, container). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "dependency_complexity"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 40,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1096,12 +1170,13 @@
     {
       "category": "concurrency",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: concurrency; missing: concurrency).",
+      "reason": "Repository shows no signal for this category (needs any of: concurrency; missing: concurrency). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "historical_failures"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 50,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1114,13 +1189,14 @@
     {
       "category": "contract",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: public-contract; missing: public-contract).",
+      "reason": "Repository shows no signal for this category (needs any of: public-contract; missing: public-contract). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.2625,
+      "expected_value": 0.296,
       "risk_addressed": [
         "integration_complexity",
         "irreversibility"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 40,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1135,12 +1211,13 @@
     {
       "category": "cross-browser",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: multi-browser; missing: multi-browser).",
+      "reason": "Repository shows no signal for this category (needs any of: multi-browser; missing: multi-browser). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "user_impact"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 45,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1155,12 +1232,13 @@
     {
       "category": "deployment",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: deploy-config; missing: deploy-config).",
+      "reason": "Repository shows no signal for this category (needs any of: deploy-config; missing: deploy-config). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "deployment_exposure"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 30,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1175,12 +1253,13 @@
     {
       "category": "endurance",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive).",
+      "reason": "Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "historical_failures"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 240,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1196,12 +1275,13 @@
     {
       "category": "infrastructure",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: container, deploy-config; missing: container, deploy-config).",
+      "reason": "Repository shows no signal for this category (needs any of: container, deploy-config; missing: container, deploy-config). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "deployment_exposure"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 35,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1216,12 +1296,13 @@
     {
       "category": "load",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs all of: perf-sensitive, http-api; missing: perf-sensitive).",
+      "reason": "Repository shows no signal for this category (needs all of: perf-sensitive, http-api; missing: perf-sensitive). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "user_impact"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 90,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1237,12 +1318,13 @@
     {
       "category": "localization",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: i18n; missing: i18n).",
+      "reason": "Repository shows no signal for this category (needs any of: i18n; missing: i18n). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "user_impact"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 30,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1257,12 +1339,13 @@
     {
       "category": "logging-monitoring",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: observability; missing: observability).",
+      "reason": "Repository shows no signal for this category (needs any of: observability; missing: observability). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.7,
+      "expected_value": 0.5662,
       "risk_addressed": [
         "security_sensitivity"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 20,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1275,15 +1358,16 @@
     {
       "category": "mobile-viewport",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: responsive; missing: responsive).",
+      "reason": "Repository shows no signal for this category (needs any of: responsive; missing: responsive). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "user_impact"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 25,
       "existing_coverage": "unknown",
-      "tool_available": true,
+      "tool_available": false,
       "prerequisites": [
         "runnable UI"
       ],
@@ -1295,12 +1379,13 @@
     {
       "category": "non-functional",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: perf-sensitive, observability; missing: perf-sensitive, observability).",
+      "reason": "Repository shows no signal for this category (needs any of: perf-sensitive, observability; missing: perf-sensitive, observability). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "user_impact"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 45,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1315,12 +1400,13 @@
     {
       "category": "observability",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: observability; missing: observability).",
+      "reason": "Repository shows no signal for this category (needs any of: observability; missing: observability). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "historical_failures"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 25,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1335,13 +1421,14 @@
     {
       "category": "performance",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive).",
+      "reason": "Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.1944,
+      "expected_value": 0.254,
       "risk_addressed": [
         "user_impact",
         "business_criticality"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 60,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1356,12 +1443,13 @@
     {
       "category": "rag-evaluation",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: rag; missing: rag).",
+      "reason": "Repository shows no signal for this category (needs any of: rag; missing: rag). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "user_impact"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 90,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1376,15 +1464,16 @@
     {
       "category": "responsive",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: responsive; missing: responsive).",
+      "reason": "Repository shows no signal for this category (needs any of: responsive; missing: responsive). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "user_impact"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 25,
       "existing_coverage": "unknown",
-      "tool_available": true,
+      "tool_available": false,
       "prerequisites": [
         "runnable UI"
       ],
@@ -1396,12 +1485,13 @@
     {
       "category": "rollback",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: rollback-path; missing: rollback-path).",
+      "reason": "Repository shows no signal for this category (needs any of: rollback-path; missing: rollback-path). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.525,
+      "expected_value": 0.4581,
       "risk_addressed": [
         "irreversibility"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 40,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1416,12 +1506,13 @@
     {
       "category": "spike",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive).",
+      "reason": "Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.035,
+      "expected_value": 0.1555,
       "risk_addressed": [
         "user_impact"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 60,
       "existing_coverage": "unknown",
       "tool_available": true,
@@ -1437,12 +1528,13 @@
     {
       "category": "stress",
       "applicable": false,
-      "reason": "Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive).",
+      "reason": "Repository shows no signal for this category (needs any of: perf-sensitive; missing: perf-sensitive). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced.",
       "priority": "P3",
-      "expected_value": 0.525,
+      "expected_value": 0.4581,
       "risk_addressed": [
         "irreversibility"
       ],
+      "risk_confidence": 0.6176,
       "estimated_cost_minutes": 90,
       "existing_coverage": "unknown",
       "tool_available": true,

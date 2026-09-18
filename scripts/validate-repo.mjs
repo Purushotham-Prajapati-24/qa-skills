@@ -80,6 +80,16 @@ for (const file of skillFiles) {
     if (combined > 1536) {
       problems.push(`${file}: description + when_to_use is ${combined} chars, over the 1536 listing cap`);
     }
+
+    // docs/concepts.md: "the description matters more than anything else in the file. A
+    // vague one ('helps with testing') never gets picked. A specific one that names the
+    // triggering situations does." This does not judge how GOOD the trigger phrasing is --
+    // that is a prose call scripts/validate-repo.mjs has no business making -- it only
+    // catches the case where a description describes what a skill does and never says when
+    // to reach for it at all, which is a silent regression nothing else here would notice.
+    if (!/\buse (when|whenever|for)\b|\bwhen(?:ever)? the user\b|\bwhen asked\b|\bif the user\b/i.test(description + ' ' + whenToUse)) {
+      warnings.push(`${file}: description names no triggering situation ("Use when...", "when the user...") -- Claude picks a skill by when its description says to use it, not by what it does`);
+    }
   }
 
   const lines = text.split('\n').length;
@@ -145,6 +155,41 @@ for (const [verb, def] of Object.entries(caps.capabilities)) {
   }
 }
 stats.capabilities = Object.keys(caps.capabilities).length;
+
+/* ------------------- 5b. manual-only systems agree with what actually has an adapter */
+
+// This is the fact that makes `caps resolve jira.read_ticket` honest: a verb resolving
+// `available: true` with no executable module behind it is the worst state a capability can
+// be in (PROGRESS.md), so every such system is named in `manual_only_systems` and every
+// verb resolution carries the warning. That list has to track engine/adapters/index.mjs in
+// both directions, or it drifts exactly the way the thing it exists to prevent drifted.
+const { SYSTEMS: EXECUTABLE_ADAPTER_SYSTEMS } = await import('../engine/adapters/index.mjs');
+const manualOnly = new Set(Object.keys(caps.manual_only_systems ?? {}));
+
+// Only the enforced write protocol (engine/adapters/base.mjs performWrite) makes the
+// specific promise at risk here: capability + authorisation + ledger + independent
+// read-back. A read, or an agent-driven capability like browser.explore that was never
+// claimed to run through that protocol, does not need this warning even when its provider
+// is an MCP server -- so this is scoped to write verbs with a non-builtin, non-shell
+// provider, not to every capability under a system's name.
+const writeSystems = new Set(
+  Object.entries(caps.capabilities)
+    .filter(([, def]) => def.write && def.providers.some((p) => !['builtin', 'command'].includes(caps.providers[p]?.kind)))
+    .map(([verb]) => verb.split('.')[0]),
+);
+
+for (const system of writeSystems) {
+  const executable = EXECUTABLE_ADAPTER_SYSTEMS.includes(system);
+  const manual = manualOnly.has(system);
+  if (!executable && !manual) {
+    problems.push(`capabilities.json: "${system}.*" has a write verb with no executable adapter and is not listed in manual_only_systems -- a verb here can resolve "available: true" with nothing to enforce the write protocol`);
+  }
+}
+for (const system of manualOnly) {
+  if (EXECUTABLE_ADAPTER_SYSTEMS.includes(system)) {
+    problems.push(`capabilities.json: "${system}" is listed in manual_only_systems but engine/adapters/index.mjs now has an executable adapter for it -- remove the stale entry, its verbs no longer need the warning`);
+  }
+}
 
 /* ---------------------------- 6. browser matrix method capabilities are declared */
 

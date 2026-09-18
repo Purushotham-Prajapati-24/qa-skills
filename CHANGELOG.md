@@ -3,6 +3,68 @@
 Semantic versioning. See [docs/versioning.md](docs/versioning.md) for what is versioned
 independently — document schemas and policy files carry their own versions.
 
+## [Unreleased]
+
+A round of fixes against a set of gaps this project had already named about itself in
+PROGRESS.md and the "Known gaps" entries below — not new discoveries, but several of them
+had sat as prose without a structural backstop. Left as Unreleased rather than bumped: the
+changes are additive and backward-compatible (no removed capability, no required field), and
+cutting a numbered release is a decision for whoever is ready to publish one, not a side
+effect of closing gaps.
+
+### Fixed
+
+- **The risk confidence band now actually affects category selection.** Previously
+  advisory-only: a `critical` backed by one evidenced factor out of fourteen (confidence
+  0.10) drove `applicability-engine` category priority exactly as one backed by thirteen
+  (confidence 0.95) would. Both the per-category risk alignment and the global P0 override
+  now temper toward a neutral midpoint — not toward zero — as confidence drops, so thin
+  evidence reads as "we don't know" rather than "it's safe". Every row's `reason` states the
+  qualification when it applies. `engine/applicability-engine/index.mjs`,
+  `skills/risk-analysis/SKILL.md`.
+- **A fabricated GitHub comment identifier against a real issue no longer confirms.** The
+  read-back for a delegated write previously verified only that the parent issue existed;
+  `verifyCommentWrite` now reads the comment itself back via
+  `gh api repos/.../issues/comments/<id>` and, when the hash of what was sent is available,
+  checks the comment's actual body. `verifyGitHubWrite` dispatches to it automatically by the
+  shape of the result ID. `engine/adapters/github.mjs`, `engine/adapters/base.mjs`.
+- **The `evidence-auditor` subagent's omission is now visible, not silent.** Nothing can
+  force a subagent launch from code, so this does not make the audit mandatory in the sense
+  of blocking anything — but a report generated without an `evidence-audit` record now
+  states `integrity.evidence_auditor_run: false`, a matching `audit_coverage: 0` metric, and
+  a stated violation, instead of looking identical to a session where the audit ran and found
+  nothing. `skills/testing-orchestrator/workflows/reporting.md` makes running it before
+  `report generate` an explicit, required step. `engine/reporting-engine/index.mjs`,
+  `engine/evaluation-engine/metrics.mjs`, `schemas/evidence.schema.json`,
+  `schemas/report.schema.json`.
+- **A Jira (or Google Docs/Drive) capability resolving `available: true` no longer looks like
+  one with code behind it.** `manual_only_systems` in `capabilities.json` names every system
+  with no executable adapter; `resolve()` now attaches `executable: false` and an explicit
+  "perform this by hand" reason to every such verb, so an agent cannot mistake a present
+  credential for a working adapter. `scripts/validate-repo.mjs` cross-checks the list against
+  `engine/adapters/index.mjs` so it cannot drift in either direction.
+- **The `PreToolUse` hook guard has test coverage for the first time** (`tests/hooks.test.mjs`),
+  driven as a subprocess against the real JSON-in/JSON-out contract. Writing the corpus found
+  two real gaps in the pattern set — `DROP TABLE` and `git clean -fd` were not denied — which
+  are now added. The corpus also records, honestly, that obfuscated commands (base64,
+  variable substitution) remain an accepted blind spot rather than pretending otherwise.
+- **Evaluation metrics now expose their own denominators and a noise floor.** A metric like
+  `decision_assessment_rate: 0.5` no longer has to be cross-referenced against a separate
+  `sample_sizes` object to know whether the denominator was 2 or 200; `denominators` pairs
+  every metric with its actual count, and `noisy_metrics` flags any non-null metric below a
+  denominator of 5, distinct from a null (zero-denominator) metric. Surfaced in the rendered
+  report table with a ⚠️. `engine/evaluation-engine/metrics.mjs`,
+  `engine/reporting-engine/index.mjs`.
+- **`scripts/validate-repo.mjs` now warns when a skill's `description` names no triggering
+  situation** ("Use when...", "when the user...", etc.) — the property `docs/concepts.md`
+  says matters more than anything else in the file for whether a skill gets picked at all.
+  Warn-only: it does not judge phrasing quality, only that a trigger is named at all.
+- Stale counts (test count, a schema-mismatch the demo caught that no unit test did) fixed
+  across `README.md`, `PROGRESS.md`, `CONTRIBUTING.md`, `docs/installation.md`, and the
+  regenerated `examples/artifacts/` (which also picked up a `github.merge_pr` refused-by-default
+  demonstration `demo-session.mjs` did not previously exercise, and fixed stale
+  `skill_version`/`engine_version` stamps left over from an earlier regeneration).
+
 ## [0.8.0] - 2026-09-18
 
 Four guarantees this system documents as structural were, until now, enforced by the agent

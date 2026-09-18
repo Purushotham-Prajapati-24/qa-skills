@@ -276,6 +276,12 @@ log('external writes recorded', '1 confirmed, 1 NOT confirmed');
 const assignAttempt = auth.check({ action: 'github.assign_issue', target: '#418', userAuthorised: true, assignee: null });
 log('assignment without a name', `allowed=${assignAttempt.allowed}`);
 
+// A distinct refusal from the one above: this is not "you forgot to name the account", it
+// is "this action is refused by default, regardless of what the user says here" -- the
+// agent cannot self-authorise around it even with userAuthorised: true.
+const mergeAttempt = auth.check({ action: 'github.merge_pr', target: '#418', userAuthorised: true });
+log('merge refused by default', `allowed=${mergeAttempt.allowed} (${mergeAttempt.level})`);
+
 /* ----------------------------------------------------------- 12. remaining work */
 
 state.update((s) => {

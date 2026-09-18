@@ -16,10 +16,11 @@ import fs from 'node:fs';
 const DENY = [
   [/\bgit\s+push\b[^\n]*--force(?!-with-lease)/i, 'Force push discards history irreversibly. Use --force-with-lease, and only when the user asked for it.'],
   [/\bgit\s+push\b[^\n]*\s-f\b/i, 'Force push discards history irreversibly.'],
-  [/\bDROP\s+(DATABASE|SCHEMA)\b/i, 'Dropping a database or schema is irreversible and is never part of testing.'],
+  [/\bDROP\s+(DATABASE|SCHEMA|TABLE)\b/i, 'Dropping a database, schema or table is irreversible and is never part of testing.'],
   [/\bTRUNCATE\s+TABLE\b/i, 'TRUNCATE is irreversible. Use a disposable test database and recreate it instead.'],
   [/\bDELETE\s+FROM\s+\w+\s*(;|$)/i, 'An unqualified DELETE removes every row. Add a WHERE clause or use a disposable database.'],
   [/\brm\s+(-[a-zA-Z]*r[a-zA-Z]*f|-[a-zA-Z]*f[a-zA-Z]*r)\s+\/(?:\s|$)/i, 'Recursive force delete of the filesystem root.'],
+  [/\bgit\s+clean\s+(-[a-zA-Z]*f[a-zA-Z]*d|-[a-zA-Z]*d[a-zA-Z]*f)[a-zA-Z]*\b/i, 'git clean -fd removes untracked files irreversibly, including ones a test run created and nothing else backs up.'],
   [/\bgh\s+pr\s+merge\b/i, 'Merging a pull request is prohibited by default for this agent. The user performs merges.'],
   [/\bgh\s+(issue|pr)\s+close\b/i, 'Closing issues or pull requests is prohibited by default for this agent.'],
   [/\bgh\s+repo\s+delete\b/i, 'Deleting a repository is prohibited.'],
