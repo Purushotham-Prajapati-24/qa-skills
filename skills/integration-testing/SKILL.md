@@ -4,7 +4,7 @@ description: Test how components work together — database access, queues, cach
 when_to_use: "integration tests", "test the service boundary", "does this work end to end internally", "test the queue/cache", "resilience testing", "test the CI config"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.8.0
+  system_version: 0.9.0
   role: specialist
 ---
 

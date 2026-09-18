@@ -1,7 +1,7 @@
 {
   "report_id": "REPORT-2026-00001",
   "report_version": "1.1.0",
-  "generated_at": "2026-09-18T09:38:21.570Z",
+  "generated_at": "2026-09-18T10:50:38.781Z",
   "session_id": "SESSION-0001",
   "executive_summary": {
     "headline": "**FAILED** — 4 executions run · 1 finding, worst critical · 2 planned items not run.",
@@ -60,7 +60,7 @@
       "NOT_APPLICABLE": 1,
       "INTERRUPTED": 1
     },
-    "total_duration_ms": 19,
+    "total_duration_ms": 23,
     "test_cases": 3
   },
   "detailed_results": [
@@ -71,7 +71,7 @@
       "method": "api-client",
       "status": "FAILED",
       "status_reason": "GET /api/payment-methods/:id returned another user's card with HTTP 200.",
-      "duration_ms": 6,
+      "duration_ms": 7,
       "evidence": [
         "EV-2026-00002"
       ],
@@ -109,7 +109,7 @@
       "method": "existing-suite",
       "status": "INCONCLUSIVE",
       "status_reason": "Checkout works. [DOWNGRADED from PASSED: \"[REDACTED]\" claims something was executed, but no evidence is attached. Absence of failure is not proof of correctness.]",
-      "duration_ms": 5,
+      "duration_ms": 6,
       "evidence": [],
       "findings": [],
       "failure_classification": {
@@ -153,7 +153,7 @@
       "method": "existing-suite",
       "status": "PASSED",
       "status_reason": "vitest suite executed against abc1234; 211 tests passed, 0 failed.",
-      "duration_ms": 8,
+      "duration_ms": 10,
       "evidence": [
         "EV-2026-00001"
       ],
@@ -167,14 +167,14 @@
       "evidence_id": "EV-2026-00001",
       "kind": "command-output",
       "summary": "vitest: 211/211 passed",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-wXn3KG\\evidence\\blobs\\output-2026-09-18T09-38-21-512Z-62516.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-yYpj7b\\evidence\\blobs\\output-2026-09-18T10-50-38-720Z-49732.txt",
       "sha256": "sha256:08847719b18700defc4e5811a3e0be639fa4d8c92fcbdefd7cff7a429ac59e38"
     },
     {
       "evidence_id": "EV-2026-00002",
       "kind": "command-output",
       "summary": "api: 11/12 passed, 1 failed",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-wXn3KG\\evidence\\blobs\\output-2026-09-18T09-38-21-523Z-62516.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-yYpj7b\\evidence\\blobs\\output-2026-09-18T10-50-38-731Z-49732.txt",
       "sha256": "sha256:6860525264278abb9c4fb263992a6bcbbfd9d5d8d074c9c5f1779db558c4b2b8"
     }
   ],
@@ -307,7 +307,7 @@
     }
   ],
   "metrics": {
-    "computed_at": "2026-09-18T09:38:21.580Z",
+    "computed_at": "2026-09-18T10:50:38.792Z",
     "sample_sizes": {
       "executions": 6,
       "decisions": 1,
@@ -326,7 +326,7 @@
       "audit_coverage": 0,
       "automation_conversion": null,
       "unnecessary_test_rate": 0.5,
-      "runtime_efficiency_ms_per_case": 6.3333,
+      "runtime_efficiency_ms_per_case": 7.6667,
       "flaky_identification_quality": null,
       "interruption_recovery_rate": 0.5,
       "authorization_compliance": 1,
@@ -465,10 +465,10 @@
     "evidence_auditor_run": false
   },
   "provenance": {
-    "skill_version": "0.8.0",
+    "skill_version": "0.9.0",
     "skill_name": "test-reporting",
-    "engine_version": "0.8.0",
-    "created_at": "2026-09-18T09:38:21.570Z",
+    "engine_version": "0.9.0",
+    "created_at": "2026-09-18T10:50:38.781Z",
     "created_by": "agent",
     "session_id": "SESSION-0001"
   },

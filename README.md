@@ -11,7 +11,7 @@
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node.js-%3E%3D20.6.0-43853D?style=for-the-badge&logo=node.js&logoColor=white" alt="Node version"></a>
   <a href="#as-a-claude-code-plugin"><img src="https://img.shields.io/badge/Claude%20Code-Plugin%20Ready-6B4FBB?style=for-the-badge&logo=anthropic&logoColor=white" alt="Claude Code Plugin"></a>
   <a href="https://playwright.dev"><img src="https://img.shields.io/badge/Playwright-Automated-2EAD33?style=for-the-badge&logo=playwright&logoColor=white" alt="Playwright"></a>
-  <a href="https://github.com/Purushotham-Prajapati-24/qa-skills/actions"><img src="https://img.shields.io/badge/Tests-125%20Passing-success?style=for-the-badge&logo=github-actions&logoColor=white" alt="Tests"></a>
+  <a href="https://github.com/Purushotham-Prajapati-24/qa-skills/actions"><img src="https://img.shields.io/badge/Tests-153%20Passing-success?style=for-the-badge&logo=github-actions&logoColor=white" alt="Tests"></a>
   <a href="evaluation/README.md"><img src="https://img.shields.io/badge/Benchmark-41%2F41%20Passed-blue?style=for-the-badge&logo=checkmarx&logoColor=white" alt="Benchmark"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="License"></a>
 </p>
@@ -193,7 +193,7 @@ Install directly as a plugin bundle:
 
 ```bash
 # Pin to a specific tagged release
-npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.8.0
+npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.9.0
 
 # Dry-run inspection (see what files change without writing)
 npx --yes github:Purushotham-Prajapati-24/qa-skills --dry-run

@@ -3,14 +3,12 @@
 Semantic versioning. See [docs/versioning.md](docs/versioning.md) for what is versioned
 independently — document schemas and policy files carry their own versions.
 
-## [Unreleased]
+## [0.9.0] - 2026-09-18
 
 A round of fixes against a set of gaps this project had already named about itself in
 PROGRESS.md and the "Known gaps" entries below — not new discoveries, but several of them
-had sat as prose without a structural backstop. Left as Unreleased rather than bumped: the
-changes are additive and backward-compatible (no removed capability, no required field), and
-cutting a numbered release is a decision for whoever is ready to publish one, not a side
-effect of closing gaps.
+had sat as prose without a structural backstop. Additive and backward-compatible throughout:
+no capability removed, no field made required, no document schema version bumped.
 
 ### Fixed
 

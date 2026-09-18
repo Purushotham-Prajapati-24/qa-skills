@@ -266,9 +266,10 @@ for (const f of ['.claude-plugin/plugin.json', '.claude-plugin/marketplace.json'
 
 // A hard-coded x.y.z in our own prose is the drift source. Exempt the places a version
 // number is deliberately not the current one: the changelog is historical, templates and
-// examples carry placeholder provenance, and the benchmark app is the thing under test
-// rather than our documentation.
-const OURS = (f) => !['CHANGELOG.md', 'docs/versioning.md', 'templates/', 'examples/', 'integrations/', 'evaluation/', 'sample-ecommerce-app/', 'state/']
+// examples carry placeholder provenance, the benchmark app is the thing under test rather
+// than our documentation, and drafts/ holds dated point-in-time reviews that quote a past
+// CHANGELOG entry verbatim -- "correcting" those to the live version would misquote them.
+const OURS = (f) => !['CHANGELOG.md', 'docs/versioning.md', 'templates/', 'examples/', 'integrations/', 'evaluation/', 'sample-ecommerce-app/', 'state/', 'drafts/']
   .some((e) => f === e || f.startsWith(e));
 
 for (const f of mdFiles.filter(OURS)) {

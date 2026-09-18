@@ -4,7 +4,7 @@ description: Re-run existing tests intelligently against a change — selecting 
 when_to_use: "run the regression suite", "did this break anything", "smoke test", "is this test flaky", "add a regression test for this bug"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.8.0
+  system_version: 0.9.0
   role: specialist
 ---
 
