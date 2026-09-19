@@ -1,7 +1,7 @@
 {
   "report_id": "REPORT-2026-00001",
   "report_version": "1.2.0",
-  "generated_at": "2026-09-19T08:18:12.178Z",
+  "generated_at": "2026-09-19T08:38:53.990Z",
   "session_id": "SESSION-0001",
   "executive_summary": {
     "headline": "**FAILED** — 4 executions run · 1 finding, worst critical · 2 planned items not run.",
@@ -170,7 +170,7 @@
       "kind": "command-output",
       "summary": "vitest: 211/211 passed",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\claude\\D--QATesting\\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\\scratchpad\\demo-real-state\\evidence\\blobs\\output-2026-09-19T08-18-12-120Z-56708.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\claude\\D--QATesting\\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\\scratchpad\\demo-real-state\\evidence\\blobs\\output-2026-09-19T08-38-53-925Z-5768.txt",
       "sha256": "sha256:08847719b18700defc4e5811a3e0be639fa4d8c92fcbdefd7cff7a429ac59e38"
     },
     {
@@ -178,7 +178,7 @@
       "kind": "command-output",
       "summary": "api: 11/12 passed, 1 failed",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\claude\\D--QATesting\\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\\scratchpad\\demo-real-state\\evidence\\blobs\\output-2026-09-19T08-18-12-131Z-56708.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\claude\\D--QATesting\\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\\scratchpad\\demo-real-state\\evidence\\blobs\\output-2026-09-19T08-38-53-937Z-5768.txt",
       "sha256": "sha256:6860525264278abb9c4fb263992a6bcbbfd9d5d8d074c9c5f1779db558c4b2b8"
     }
   ],
@@ -311,7 +311,7 @@
     }
   ],
   "metrics": {
-    "computed_at": "2026-09-19T08:18:12.190Z",
+    "computed_at": "2026-09-19T08:38:54.000Z",
     "sample_sizes": {
       "executions": 6,
       "decisions": 1,
@@ -481,7 +481,7 @@
     "skill_version": "0.9.0",
     "skill_name": "test-reporting",
     "engine_version": "0.9.0",
-    "created_at": "2026-09-19T08:18:12.178Z",
+    "created_at": "2026-09-19T08:38:53.990Z",
     "created_by": "agent",
     "session_id": "SESSION-0001"
   },
@@ -1587,5 +1587,5 @@
       ]
     }
   ],
-  "digest": "sha256:b2bdb5b398f51ac95755761bbfc1e2f988457c608858a37f5cf9e0eace1600fa"
+  "digest": "sha256:c40553664252e1492ce173dbd77d1048d62bf007dd3e93eab226840fc1c0e64a"
 }

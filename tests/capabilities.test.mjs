@@ -172,8 +172,12 @@ test('an unevidenced PASSED claim shows up as false confidence', () => {
   const m = metrics.compute();
   assert.equal(m.sample_sizes.executions, 1);
   // The evidence gate already downgraded the claim, so there is no surviving unevidenced
-  // PASSED to count -- which is the point. The gate is what keeps this metric at zero.
-  assert.equal(m.metrics.false_confidence_rate, 0);
+  // PASSED to audit -- which is the point: zero PASSED/COMPLETED claims is a zero
+  // denominator, and every other metric in this file already reports that as null rather
+  // than a real-looking 0 (see engine/evaluation-engine/metrics.mjs's comment on this
+  // exact field). "The gate caught it" and "nothing was there to check" are different
+  // facts; this test previously conflated them.
+  assert.equal(m.metrics.false_confidence_rate, null);
   assert.equal(m.metrics.evidence_completeness, null, 'a downgraded claim no longer claims a status');
 });
 

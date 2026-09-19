@@ -11,7 +11,7 @@ a provider exists.
 ## Validation status
 
 ```
-node --test "tests/*.test.mjs"     273 passed, 0 failed
+node --test "tests/*.test.mjs"     278 passed, 0 failed
 node bin/ast.mjs eval run          41/41 checks across 15 benchmark cases
 node scripts/validate-repo.mjs     0 problems
 node scripts/demo-session.mjs      full pipeline exercised end to end

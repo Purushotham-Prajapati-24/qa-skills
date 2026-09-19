@@ -588,19 +588,39 @@ export function render(r) {
       ['Goal', 'Description', 'Success criterion', 'Status', 'Evidence'],
     ), { level: 3 }),
 
-    section('Evaluation metrics', [
-      table(
-        Object.entries(r.metrics?.metrics ?? {}).map(([k, v]) => [
-          k,
-          v === null ? '_n/a (zero denominator)_' : v,
-          r.metrics?.denominators?.[k] ?? '—',
-          r.metrics?.noisy_metrics?.includes(k) ? `⚠️ below noise floor (${r.metrics.noise_floor})` : '',
-          r.metrics.definitions?.[k]?.direction ?? '',
-        ]),
-        ['Metric', 'Value', 'n', 'Noise', 'Direction'],
-      ),
-      `_A null means the denominator was zero — honest, and not to be read as 0. A ⚠️ means the denominator is real but thin (n < ${r.metrics?.noise_floor ?? 5}); read that value qualitatively, not as a ratio._`,
-    ], { level: 3 }),
+    // A metrics table is the most quantitative-looking part of a report, and the least
+    // trustworthy if a zero-denominator row sits next to real ones. Nulls used to render
+    // inline as "_n/a (zero denominator)_", indistinguishable at a glance from a real
+    // measurement -- a field trial's own report carried three defective rows this way, with
+    // nothing about their PRESENTATION setting them apart from the twelve honest ones next
+    // to them. A short table of what was actually measured, plus one collapsed line naming
+    // what wasn't, beats a long table where a reader has to check each row to tell which is
+    // which.
+    section('Evaluation metrics', (() => {
+      const entries = Object.entries(r.metrics?.metrics ?? {});
+      const measured = entries.filter(([, v]) => v !== null);
+      const notMeasured = entries.filter(([, v]) => v === null);
+      return [
+        measured.length
+          ? table(
+            measured.map(([k, v]) => [
+              k,
+              v,
+              r.metrics?.denominators?.[k] ?? '—',
+              r.metrics?.noisy_metrics?.includes(k) ? `⚠️ below noise floor (${r.metrics.noise_floor})` : '',
+              r.metrics.definitions?.[k]?.direction ?? '',
+            ]),
+            ['Metric', 'Value', 'n', 'Noise', 'Direction'],
+          )
+          : '_No metric had a real denominator this session._',
+        measured.length
+          ? `_A ⚠️ means the denominator is real but thin (n < ${r.metrics?.noise_floor ?? 5}); read that value qualitatively, not as a ratio._`
+          : '',
+        notMeasured.length
+          ? `_Not measured this session (zero denominator, honestly excluded rather than shown as 0): ${notMeasured.map(([k]) => k).join(', ')}._`
+          : '',
+      ];
+    })(), { level: 3 }),
 
     section('Integrity self-audit', [
       table(

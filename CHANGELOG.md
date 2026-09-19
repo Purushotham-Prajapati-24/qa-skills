@@ -5,6 +5,27 @@ independently — document schemas and policy files carry their own versions.
 
 ## [Unreleased]
 
+### Changed
+
+- **The Evaluation metrics table now renders only metrics with a real denominator; the
+  rest collapse into one named line instead of sitting inline as `_n/a (zero
+  denominator)_`.** A field trial's own report had three defective-by-construction metrics
+  (G-04, G-06, G-10) rendered in the same table as its honest ones, with nothing about the
+  table's presentation marking a difference in kind — a reader had to check each row by
+  hand to tell a real measurement from a zero-denominator artifact. The table's own
+  reviewer recommendation: "render only metrics with a real, non-defective denominator;
+  move the rest to a collapsed 'not measured this session' list. A short honest table beats
+  a long one with three broken rows." Found and fixed along the way: `false_confidence_rate`
+  itself returned a real-looking `0`, not `null`, whenever there were zero PASSED/COMPLETED
+  claims to audit — the one metric in this file that did not follow its own "null means
+  zero denominator" convention, so it would have sat in the "real" table with `n: 0` under
+  this exact change had it gone untouched. `report.integrity.false_confidence_rate`
+  (schema-locked to `type: number`) is deliberately left returning `0` in that unrelated
+  location — fixing it there would require a schema version bump disproportionate to this
+  change, and it was not what the field trial's own recommendation was about.
+  `engine/reporting-engine/index.mjs`, `engine/evaluation-engine/metrics.mjs`,
+  `examples/artifacts/*` (regenerated).
+
 ### Added
 
 - **A version-skew warning when persisted records were stamped under a different skill

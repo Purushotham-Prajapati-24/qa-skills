@@ -12,7 +12,7 @@ hand-written approximation of it.
 
 | Session | Repository | Commit | PR | Generated | Skill |
 | --- | --- | --- | --- | --- | --- |
-| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-09-19 08:18:12Z | v0.9.0 |
+| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-09-19 08:38:53Z | v0.9.0 |
 
 ## Verdict
 
@@ -120,8 +120,8 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 
 | ID | Kind | Summary | Anchored? | Artifact |
 | --- | --- | --- | --- | --- |
-| EV-2026-00001 | command-output | vitest: 211/211 passed | yes | C:\Users\purus\AppData\Local\Temp\claude\D--QATesting\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\scratchpad\demo-real-state\evidence\blobs\output-2026-09-19T08-18-12-120Z-56708.txt |
-| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | yes | C:\Users\purus\AppData\Local\Temp\claude\D--QATesting\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\scratchpad\demo-real-state\evidence\blobs\output-2026-09-19T08-18-12-131Z-56708.txt |
+| EV-2026-00001 | command-output | vitest: 211/211 passed | yes | C:\Users\purus\AppData\Local\Temp\claude\D--QATesting\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\scratchpad\demo-real-state\evidence\blobs\output-2026-09-19T08-38-53-925Z-5768.txt |
+| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | yes | C:\Users\purus\AppData\Local\Temp\claude\D--QATesting\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\scratchpad\demo-real-state\evidence\blobs\output-2026-09-19T08-38-53-937Z-5768.txt |
 
 ### External writes
 
@@ -233,21 +233,20 @@ _Excluded for lack of evidence — not scored, not guessed: user_impact, depende
 | false_confidence_rate | 0 | 1 | ⚠️ below noise floor (5) | lower-is-better |
 | requirement_coverage | 0.6667 | 3 | ⚠️ below noise floor (5) | higher-is-better |
 | high_risk_coverage | 0 | 6 |  | higher-is-better |
-| decision_accuracy | _n/a (zero denominator)_ | 0 |  | higher-is-better |
 | decision_assessment_rate | 0 | 1 | ⚠️ below noise floor (5) | higher-is-better |
 | actionable_finding_rate | 1 | 1 | ⚠️ below noise floor (5) | higher-is-better |
 | evidence_completeness | 1 | 2 | ⚠️ below noise floor (5) | higher-is-better |
 | evidence_anchored_rate | 1 | 2 | ⚠️ below noise floor (5) | higher-is-better |
 | audit_coverage | 0 | 2 | ⚠️ below noise floor (5) | higher-is-better |
-| automation_conversion | _n/a (zero denominator)_ | 0 |  | higher-is-better |
 | unnecessary_test_rate | 0.5 | 4 | ⚠️ below noise floor (5) | lower-is-better |
 | runtime_efficiency_ms_per_case | 6.3333 | 3 | ⚠️ below noise floor (5) | lower-is-better |
-| flaky_identification_quality | _n/a (zero denominator)_ | 0 |  | higher-is-better |
 | interruption_recovery_rate | 0.5 | 2 | ⚠️ below noise floor (5) | higher-is-better |
 | authorization_compliance | 1 | 1 | ⚠️ below noise floor (5) | higher-is-better |
 | reproducibility | 0.5 | 4 | ⚠️ below noise floor (5) | higher-is-better |
 
-_A null means the denominator was zero — honest, and not to be read as 0. A ⚠️ means the denominator is real but thin (n < 5); read that value qualitatively, not as a ratio._
+_A ⚠️ means the denominator is real but thin (n < 5); read that value qualitatively, not as a ratio._
+
+_Not measured this session (zero denominator, honestly excluded rather than shown as 0): decision_accuracy, automation_conversion, flaky_identification_quality._
 
 ### Integrity self-audit
 
@@ -270,4 +269,4 @@ _A null means the denominator was zero — honest, and not to be read as 0. A �
 
 Produced by the Autonomous Software Testing skill system v0.9.0. Every status above is traceable to a record under `state/`.
 
-_Rendered from REPORT-2026-00001 · digest `sha256:b2bdb5b398f51ac95755761bbfc1e2f988457c608858a37f5cf9e0eace1600fa` · verify with `ast report verify`. A report with no digest line was not produced by this system._
+_Rendered from REPORT-2026-00001 · digest `sha256:c40553664252e1492ce173dbd77d1048d62bf007dd3e93eab226840fc1c0e64a` · verify with `ast report verify`. A report with no digest line was not produced by this system._

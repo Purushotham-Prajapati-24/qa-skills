@@ -208,7 +208,14 @@ export function compute({ declaredRequirements = [], highRiskBehaviours = [], au
   const recovered = interruptions.filter((i) => i.recovered_at);
 
   const metrics = {
-    false_confidence_rate: audit.false_confidence_rate,
+    // `auditClaims()` itself returns 0, not null, when there are no PASSED/COMPLETED claims
+    // to audit -- the report's `integrity.false_confidence_rate` is schema-locked to
+    // `type: number` (schemas/report.schema.json), so that field keeps returning 0 for a
+    // zero-claim session rather than forcing a schema change here. This metrics table has
+    // no such constraint, and every other metric in it already treats a zero denominator as
+    // null, not a real 0 -- without this, "no PASSED/COMPLETED claims exist yet" renders
+    // indistinguishably from "checked, and all of them were honest".
+    false_confidence_rate: audit.pass_claims === 0 ? null : audit.false_confidence_rate,
     requirement_coverage: ratio(covered.length, declared.length),
     high_risk_coverage: ratio(riskCovered.length, highRiskBehaviours.length),
     decision_accuracy: ratio(correct.length, assessed.length),
