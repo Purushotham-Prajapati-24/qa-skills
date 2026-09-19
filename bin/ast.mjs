@@ -145,7 +145,21 @@ const COMMANDS = {
 
   /* ---- session ---- */
   'session start': {
-    help: 'Start a session: session start --request "..." [--trigger ...] [--input goals.json]',
+    help: 'Start a session: session start --request "..." [--trigger ...] [--input goals.json]. '
+      + 'See "session start --example" for a valid goals.json shape.',
+    example: {
+      request: 'Test the saved-card checkout change on branch feat/SHOP-412-saved-card',
+      goals: [
+        {
+          goal: 'Confirm a saved card cannot be used to charge another user',
+          success_criteria: [
+            'API rejects a payment-method ID that does not belong to the session user',
+            'No regression in the existing single-user checkout path',
+          ],
+        },
+        'Baseline: the existing unit and integration suites still pass at head',
+      ],
+    },
     run: ({ flags }) => {
       const body = payload(flags);
       return state.startSession({
@@ -192,7 +206,22 @@ const COMMANDS = {
 
   /* ---- risk ---- */
   'risk score': {
-    help: 'Score risk: risk score --input factors.json [--profile balanced]',
+    help: 'Score risk: risk score --input factors.json [--profile balanced]. '
+      + 'See "risk score --example" for a valid factors.json shape, or `risk profiles` for the full factor catalog.',
+    // Reused verbatim from skills/risk-analysis/SKILL.md's own worked example -- the exact
+    // shape a field trial's agent found only after invoking this command blind, because
+    // that skill had not been loaded. The contract belongs here, not only in a sibling
+    // skill's prose.
+    example: {
+      profile: 'security-critical',
+      factors: {
+        business_criticality: { value: 1.0, basis: 'checkout is the only revenue path', epistemic_class: 'observed' },
+        security_sensitivity: { value: 0.9, basis: 'diff modifies auth/session.ts middleware', epistemic_class: 'observed' },
+        change_magnitude: { value: 0.6, basis: '312 changed lines across 7 files in a ~2k-line module', epistemic_class: 'observed' },
+        coverage_deficit: { value: 0.8, basis: 'no test exercises the saved-card branch (grep across test/ found none)', epistemic_class: 'observed' },
+        irreversibility: { value: 0.9, basis: 'captures a real payment; refunds are manual', epistemic_class: 'inferred' },
+      },
+    },
     run: ({ flags }) => {
       // shouldAlias=false: `factors` is a map of FACTOR NAMES to {value, basis} objects, not
       // an options bag. Aliasing would twin every factor name that contains an underscore
@@ -226,7 +255,21 @@ const COMMANDS = {
 
   /* ---- browser method ---- */
   'browser decide': {
-    help: 'Choose a browser testing method: browser decide --input factors.json',
+    help: 'Choose a browser testing method: browser decide --input factors.json. '
+      + 'See "browser decide --example" for a valid factors.json shape, or `browser matrix` for the full factor catalog.',
+    // A flat body, not { factors: {...} } -- unlike risk score. See G-07's fix (the two
+    // adjacent commands with opposite payload shapes and opposite failure modes): this
+    // command discards anything outside a top-level "factors" key silently rather than
+    // erroring, so this example exists precisely to show the shape it actually needs.
+    example: {
+      factors: {
+        ui_known: 0.2,
+        exploratory_value: 0.8,
+        repeatability: 0.85,
+        business_criticality: 0.9,
+        existing_automation: 0.3,
+      },
+    },
     run: ({ flags }) => {
       const body = payload(flags);
       return browser.decide({ ...body, capabilities: withResolvedCapabilities(body.capabilities) });
@@ -425,7 +468,18 @@ const COMMANDS = {
 
   /* ---- reporting ---- */
   'report generate': {
-    help: 'Generate the report: report generate [--input context.json] [--format md]',
+    help: 'Generate the report: report generate [--input context.json] [--format md]. '
+      + 'context.json is entirely optional -- see "report generate --example".',
+    // `plan`, `riskAssessment` and `applicability` are normally the literal output of
+    // `plan compute` / `risk score` / `applicability eval` piped straight through, not
+    // hand-typed -- this example shows the one field worth hand-authoring directly:
+    // recommendations, prose a human or agent adds on top of what state already proves.
+    example: {
+      recommendations: [
+        'Prioritise adding an owner check on the payment-methods endpoint before the next release.',
+        'Re-run the accessibility scan once the interrupted session resumes.',
+      ],
+    },
     run: ({ flags }) => {
       const body = payload(flags);
       const result = reporting.generate(body);
@@ -668,6 +722,22 @@ async function main() {
 
   if (!key) {
     fail(`unknown command "${positional.slice(0, 2).join(' ')}"`, 'run `node bin/ast.mjs help` for the command list');
+    return;
+  }
+
+  // A field trial's agent hit `session start --input goals.json` with no goals.json to
+  // point at, read the session schema cold, then gave up and ran with just --request.
+  // The four commands that need this most (session start, risk score, browser decide,
+  // report generate) had no worked example anywhere the agent's own reading path reached
+  // -- risk score's WAS documented, but only in a sibling skill the agent had not loaded.
+  // Payload contracts belong to the CLI itself: `--example` prints one directly, on any
+  // command that has declared one, so an agent never has to guess a shape or go find it.
+  if (flags.example) {
+    if (!COMMANDS[key].example) {
+      fail(`no example payload is defined yet for "${key}"`, 'run with --input pointing at a real payload, or check the command\'s own --help text');
+      return;
+    }
+    process.stdout.write(`${JSON.stringify(COMMANDS[key].example, null, 2)}\n`);
     return;
   }
 

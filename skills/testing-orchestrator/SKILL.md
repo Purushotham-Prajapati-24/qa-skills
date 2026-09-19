@@ -83,9 +83,12 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session resume
   from `next_action`. Do **not** assume anything the previous session started actually
   finished; the recovery pass has already marked unfinished executions `INTERRUPTED`.
 
-Then open a session and declare the goals:
+Then open a session and declare the goals. `goals.json` is a file you create yourself --
+if you have not seen its shape before, print one first:
 
 ```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session start --example > goals.json
+# edit goals.json to describe this session's actual goals, then:
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session start --request "<the user's actual words>" --input goals.json
 ```
 

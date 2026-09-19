@@ -7,6 +7,24 @@ independently — document schemas and policy files carry their own versions.
 
 ### Added
 
+- **`ast <command> --example` (G-12, remediation item 15).** A field trial's agent hit
+  `session start --input goals.json` with no goals.json to point at and no example
+  anywhere in its reading path -- it read the session schema cold, then gave up and ran
+  with just `--request`. `risk score`'s payload WAS documented with a worked example, but
+  only in a sibling skill (`risk-analysis/SKILL.md`) the agent had not loaded at the moment
+  it needed it: correct and unreachable. "Payload contracts belong to the CLI, not to
+  prose in a sibling skill." `--example` prints a valid, realistic payload directly from
+  the command that needs it, for any command that declares one, without executing it --
+  the four commands the field trial named as needing this most now have one:
+  `session start` (a `goals.json` shape), `risk score` (the exact worked example already
+  in `risk-analysis/SKILL.md`, now reachable from the CLI itself), `browser decide` (a
+  `factors.json` shape), and `report generate` (a minimal `context.json`). Each is verified
+  by a test that round-trips the printed example straight back through the real command,
+  not merely that the flag prints something. Left for later, not silently dropped: the
+  other ~20 `--input`-taking commands have no declared example yet -- the flag mechanism
+  supports adding one to any of them at any time, it is just unpopulated. `bin/ast.mjs`,
+  `skills/testing-orchestrator/SKILL.md`, `skills/risk-analysis/SKILL.md`.
+
 - **An "Unblock these" report section (G-16, remediation item 11).** A field trial's admin
   had to interrogate the agent turn by turn ("why didnt you do it? do you have any
   boundation from the .claude skills?") to learn that three untested features were blocked
