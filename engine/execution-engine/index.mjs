@@ -11,6 +11,7 @@ import { provenance } from '../core/version.mjs';
 import * as state from '../state-engine/index.mjs';
 import { verifyClaim } from '../evidence-engine/index.mjs';
 import { classify } from '../failure-classifier/index.mjs';
+import { inheritedGit } from '../core/git.mjs';
 
 export function start({
   goal,
@@ -21,7 +22,11 @@ export function start({
   command = null,
   cwd = null,
   environment = null,
-  git = null,
+  // No default: an omitted key (undefined) inherits the session's captured git info; an
+  // explicit `git: null` means "no git context for this execution specifically" and must
+  // stay distinguishable from "not supplied" all the way to inheritedGit(). See
+  // core/git.mjs.
+  git,
   skillName = 'testing-orchestrator',
   now = new Date(),
 } = {}) {
@@ -48,7 +53,8 @@ export function start({
   if (command) rec.command = command;
   if (cwd) rec.cwd = cwd;
   if (environment) rec.environment = environment;
-  if (git) rec.git = git;
+  const gitInfo = inheritedGit(git, session);
+  if (gitInfo) rec.git = gitInfo;
 
   state.put('executions', id, rec, 'execution');
   state.update((s) => {

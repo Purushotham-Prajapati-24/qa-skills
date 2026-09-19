@@ -31,7 +31,12 @@ test.after(() => tmp.cleanup());
 state.startSession({ request: 'process-completeness in-process test session' });
 
 function openRealExecution(goal = 'typecheck') {
-  return execution.start({ goal, method: 'static-analysis', testCategory: 'sanity' });
+  // git: null, explicitly -- this whole file's fixture is meant to stay git-less until
+  // "an execution carrying a real commit clears the no-git-provenance finding" adds the
+  // first one. Without this, git auto-capture (now real) would silently inherit this
+  // actual repository's git info onto every execution the fixture creates, since none of
+  // them would be explicitly opting out.
+  return execution.start({ goal, method: 'static-analysis', testCategory: 'sanity', git: null });
 }
 
 test('a session with no real executions at all raises no findings -- nothing has happened yet to be incomplete', () => {
@@ -70,7 +75,7 @@ test('recording a decision clears the no-decisions finding', () => {
 });
 
 test('a BLOCKED execution with no uncertainty raised is a blocking finding naming the execution', () => {
-  const blocked = execution.start({ goal: 'Live payment E2E', method: 'playwright-script', testCategory: 'e2e' });
+  const blocked = execution.start({ goal: 'Live payment E2E', method: 'playwright-script', testCategory: 'e2e', git: null });
   execution.finish(blocked.execution_id, { status: 'BLOCKED', statusReason: 'no sandbox credentials' });
   const findings = checkCompleteness();
   const f = findings.find((c) => c.check === 'blocked-without-uncertainty');
@@ -169,7 +174,10 @@ test('CLI: "ast validate --final" promotes the same gap to a failure', () => {
 test('CLI: "ast validate --final" never promotes the advisory-only no-git-provenance finding', () => {
   const dir = freshState('git-advisory');
   ast(['session', 'start', '--request', 'x'], dir);
-  const execOut = JSON.parse(astInput(['exec', 'start'], { goal: 'smoke', method: 'static-analysis' }, dir));
+  // git: null, explicitly -- git is now auto-captured from this real repo checkout by
+  // default (this test's whole point), so simulating "testing a target with no git
+  // provenance" requires opting out explicitly rather than simply omitting the field.
+  const execOut = JSON.parse(astInput(['exec', 'start'], { goal: 'smoke', method: 'static-analysis', git: null }, dir));
   astInput(['decide'], {
     question: 'How deep should this pass go?', options: ['shallow', 'deep'], selected: 'shallow',
     reason: 'time-boxed', confidence: 0.7, reversible: true,

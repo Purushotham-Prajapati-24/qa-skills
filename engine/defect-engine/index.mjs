@@ -17,6 +17,7 @@ import { provenance } from '../core/version.mjs';
 import { sha256String } from '../core/fsjson.mjs';
 import * as state from '../state-engine/index.mjs';
 import * as auth from '../authorization/index.mjs';
+import { inheritedGit } from '../core/git.mjs';
 
 /** Below this, a finding is an observation to discuss, not an issue to file. */
 export const REPORTING_CONFIDENCE_THRESHOLD = 0.6;
@@ -43,7 +44,9 @@ export function create({
   environment = '',
   reproduction = null,
   impact = '',
-  git = null,
+  // No default: see core/git.mjs -- an omitted key inherits the session's git info; an
+  // explicit `git: null` must stay distinguishable from "not supplied".
+  git,
   evidence = [],
   relatedRequirements = [],
   recommendedAction = '',
@@ -81,7 +84,8 @@ export function create({
   };
   if (session) rec.session_id = session.session_id;
   if (executionId) rec.execution_id = executionId;
-  if (git) rec.git = git;
+  const gitInfo = inheritedGit(git, session);
+  if (gitInfo) rec.git = gitInfo;
   if (reproduction) rec.reproduction = reproduction;
   if (existing) {
     rec.duplicate_of = existing.finding_id;

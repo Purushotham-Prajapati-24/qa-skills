@@ -5,6 +5,39 @@ independently — document schemas and policy files carry their own versions.
 
 ## [Unreleased]
 
+### Added
+
+- **Git provenance is now captured automatically instead of being purely agent-suppliable
+  input nothing ever supplied.** `session start` detects the repository under test's
+  commit, branch, dirty-tree state and (best-effort) `owner/repo` name via a new
+  `engine/core/git.mjs`, failing closed to `null` — never throwing — when the target isn't
+  a git repository at all. `exec start`, `evidence add` and `finding add` each inherit the
+  session's captured value unless a caller explicitly supplies its own, including an
+  explicit `git: null` to say "no git context for this specific record" — which now stays
+  distinguishable from simply omitting the field (the three call sites destructure `git`
+  with no default of their own, specifically so `undefined` and an explicit `null` are not
+  conflated before `inheritedGit()` ever sees them). The `session start` CLI wrapper
+  previously forced `git: body.git ?? null` regardless of whether the agent supplied one,
+  which made auto-detection unreachable through the real CLI path even after it existed as
+  the engine's own default — fixed alongside it.
+  `engine/core/git.mjs` (new), `bin/ast.mjs`, `engine/state-engine/index.mjs`,
+  `engine/execution-engine/index.mjs`, `engine/evidence-engine/index.mjs`,
+  `engine/defect-engine/index.mjs`, `skills/testing-orchestrator/policies/evidence-policy.md`.
+
+### Fixed
+
+- **The report footer no longer asserts traceability to a commit it cannot name.**
+  Previously unconditional ("every row above executed against the commit named at the
+  top"), even when no commit was ever recorded. Now states one of three honest facts:
+  the commit, the same sentence qualified with "uncommitted changes in the working tree"
+  when the session's git info says the tree was dirty at capture time, or a plain
+  statement that no commit was recorded at all. `engine/reporting-engine/index.mjs`.
+- **The `reproducibility` metric was structurally 0 in every session, regardless of what
+  was actually reproducible**, because its formula (`git.commit && environment &&
+  command`) could never be satisfied while nothing captured `git`. Fixed as a direct
+  consequence of git auto-capture above — no change to the metric's own formula was
+  needed once the data existed to satisfy it.
+
 Two field trials of the pack against real repositories surfaced defects in the CLI's own
 input handling and in one decision engine's output shape — not in the judgement content,
 which both trials independently praised, but in the bookkeeping layer that is supposed to

@@ -18,6 +18,7 @@ import { sha256File, ensureDir } from '../core/fsjson.mjs';
 import { redactText, containsSecret } from '../core/redact.mjs';
 import { dir } from '../core/paths.mjs';
 import * as state from '../state-engine/index.mjs';
+import { inheritedGit } from '../core/git.mjs';
 
 /** Evidence kinds that can, on their own, support a PASSED/FAILED claim. */
 export const EXECUTION_EVIDENCE = new Set([
@@ -47,7 +48,9 @@ export function add({
   summary,
   epistemicClass = 'observed',
   executionId = null,
-  git = null,
+  // No default: see core/git.mjs -- an omitted key inherits the session's git info; an
+  // explicit `git: null` must stay distinguishable from "not supplied".
+  git,
   environment = null,
   command = null,
   artifactPath = null,
@@ -72,7 +75,8 @@ export function add({
   };
   if (session) rec.session_id = session.session_id;
   if (executionId) rec.execution_id = executionId;
-  if (git) rec.git = git;
+  const gitInfo = inheritedGit(git, session);
+  if (gitInfo) rec.git = gitInfo;
   if (environment) rec.environment = environment;
   if (command) rec.command = { ...command, argv: redactText(command.argv ?? '') };
 

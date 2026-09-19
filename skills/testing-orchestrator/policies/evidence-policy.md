@@ -79,7 +79,12 @@ excerpt. Registering an artefact that does not exist is an error — the engine 
 ## Reproducibility
 
 A result nobody can re-run is an anecdote. The `reproducibility` metric counts executions
-carrying commit **and** environment **and** command. Supply all three.
+carrying commit **and** environment **and** command. The commit is captured automatically
+— `session start` detects it from the repository under test, and every execution,
+evidence and finding record inherits it unless you explicitly override with your own
+`git` object (or `git: null`, if this specific record genuinely has none — testing a
+target outside the session's own repository, for instance). You still have to supply
+`environment` and `command` yourself; nothing can infer those.
 
 ## Writing the claim
 

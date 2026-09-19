@@ -151,7 +151,11 @@ const COMMANDS = {
       return state.startSession({
         request: flags.request ?? body.request,
         trigger: flags.trigger ?? body.trigger ?? 'user-request',
-        git: body.git ?? null,
+        // No "?? null" here: an explicit git object still wins, but the absent case must
+        // stay `undefined` so startSession's own default (auto-detect from the working
+        // directory) actually runs. Forcing null here was the reason auto-detection was
+        // unreachable through the real CLI path even after it existed as a default.
+        git: body.git,
         goals: body.goals ?? [],
       });
     },

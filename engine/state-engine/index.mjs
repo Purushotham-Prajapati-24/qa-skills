@@ -14,6 +14,7 @@ import { nextId } from '../core/ids.mjs';
 import { provenance, DOC_VERSIONS } from '../core/version.mjs';
 import { assertValid } from '../schema/validate.mjs';
 import { redact } from '../core/redact.mjs';
+import { captureGitInfo } from '../core/git.mjs';
 
 const COLLECTIONS = ['decisions', 'executions', 'evidence', 'findings', 'uncertainties', 'reports', 'ledger', 'history', 'logs'];
 
@@ -34,7 +35,7 @@ export function loadSession() {
   return readJson(sessionFile(), null);
 }
 
-export function startSession({ request, trigger = 'user-request', git = null, goals = [], now = new Date() }) {
+export function startSession({ request, trigger = 'user-request', git = captureGitInfo(), goals = [], now = new Date() }) {
   init();
   const existing = loadSession();
   // Archive the previous session rather than clobbering it: history is evidence.

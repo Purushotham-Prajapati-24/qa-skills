@@ -429,12 +429,23 @@ export function render(r) {
 
   const proven = (r.detailed_results ?? []).filter((d) => ['PASSED', 'COMPLETED'].includes(d.status));
   if (proven.length) {
+    // This sentence must never assert a commit the report cannot actually name -- it did,
+    // unconditionally, before git provenance was ever auto-captured (see core/git.mjs),
+    // and a report with no commit still claimed traceability to one. Three honest states:
+    // a real, clean commit; a real commit with the qualification that the tree had
+    // uncommitted changes at capture time (which materially qualifies every result); or
+    // no commit at all, stated plainly instead of asserted.
+    const traceability = r.git?.commit
+      ? r.git.dirty
+        ? `_Every row above executed against commit \`${r.git.commit.slice(0, 7)}\` **with uncommitted changes in the working tree** at the time -- these results are not fixed against a stable, committed point -- and is backed by the evidence cited. Nothing else in this report is a claim that something works._`
+        : '_Every row above executed against the commit named at the top and is backed by the evidence cited. Nothing else in this report is a claim that something works._'
+      : '_No commit was recorded for this session, so these results are not traceable to a fixed point in the codebase -- only to the evidence cited. Nothing else in this report is a claim that something works._';
     add(section('What was proven', [
       table(
         proven.map((d) => [d.execution_id, d.goal, d.category ?? '—', d.method, (d.evidence ?? []).join(', ') || '—']),
         ['Execution', 'What was checked', 'Category', 'Method', 'Evidence'],
       ),
-      '_Every row above executed against the commit named at the top and is backed by the evidence cited. Nothing else in this report is a claim that something works._',
+      traceability,
     ]));
   }
 
