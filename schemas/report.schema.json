@@ -475,6 +475,19 @@
           },
           "resolved": {
             "type": "boolean"
+          },
+          "impact": {
+            "type": "string"
+          },
+          "blocking": {
+            "type": "boolean",
+            "description": "True when this uncertainty's status is one that actually stalls work (blocked, user-input-required, environment-unavailable, external-dependency) -- see uncertainty-register's BLOCKING_STATUSES. Backs the report's 'Unblock these' section."
+          },
+          "raised_by_execution": {
+            "anyOf": [
+              { "$ref": "common.schema.json#/definitions/executionId" },
+              { "type": "null" }
+            ]
           }
         },
         "additionalProperties": false

@@ -20,10 +20,12 @@ export const DOC_VERSIONS = {
   'repository-profile': '1.0.0',
   'testing-plan': '1.0.0',
   'session-state': '1.0.0',
-  // 1.2.0: added optional `digest` (see reporting-engine's verify()) and optional `grade`
-  // on each evidence_index entry (see evidence-engine's anchored/asserted grading). Both
-  // additive; 1.2.0 has not shipped in a release yet, so both landed under the same bump
-  // rather than churning the version for a shape no released build ever printed.
+  // 1.2.0: added optional `digest` (see reporting-engine's verify()), optional `grade` on
+  // each evidence_index entry (see evidence-engine's anchored/asserted grading), and
+  // optional `impact`/`blocking`/`raised_by_execution` on each uncertainty_details entry
+  // (backs the "Unblock these" section). All additive; 1.2.0 has not shipped in a release
+  // yet, so each landed under the same bump rather than churning the version for a shape
+  // no released build ever printed.
   report: '1.2.0',
 };
 

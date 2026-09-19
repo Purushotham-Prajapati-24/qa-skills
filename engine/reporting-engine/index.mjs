@@ -19,7 +19,7 @@ import { auditClaims } from '../evidence-engine/index.mjs';
 import { summarise } from '../execution-engine/index.mjs';
 import { listWrites } from '../authorization/index.mjs';
 import { compute } from '../evaluation-engine/metrics.mjs';
-import { open as openUncertainties } from '../uncertainty-register/index.mjs';
+import { open as openUncertainties, BLOCKING_STATUSES } from '../uncertainty-register/index.mjs';
 import { check as checkProcessCompleteness } from '../evaluation-engine/process-completeness.mjs';
 
 const STATUS_ORDER = ['FAILED', 'BLOCKED', 'NEEDS_USER_INPUT', 'INCONCLUSIVE', 'INTERRUPTED', 'PARTIAL', 'DEFERRED', 'SKIPPED', 'NOT_APPLICABLE', 'PASSED', 'COMPLETED'];
@@ -197,10 +197,13 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
       id: u.id,
       status: u.status,
       question: u.question,
+      impact: u.impact,
       next_action: u.next_action,
       owner: u.owner ?? 'agent',
       affected_scope: u.affected_scope ?? [],
       resolved: u.status === 'resolved',
+      blocking: BLOCKING_STATUSES.has(u.status),
+      raised_by_execution: u.raised_by_execution ?? null,
     })),
     coverage_gaps: (plan?.change_summary?.coverage_gaps ?? []).concat(
       applicability.filter((a) => a.applicable && a.existing_coverage === 'none').map((a) => `${a.category}: no existing coverage`),
@@ -430,6 +433,27 @@ export function render(r) {
       ]),
     ];
     add(section('Needs attention', body));
+  }
+
+  /* -------------------------------------------------------- 2b. unblock these */
+
+  // A field trial's admin had to interrogate the agent turn by turn to learn that three
+  // untested features were blocked by legitimate policy, not laziness or a bug -- and even
+  // on the compliant path (a report that DOES say "BLOCKED: no explicit authorisation for
+  // load traffic"), that sentence never tells the reader THEY are the one who can clear it.
+  // Scoped to owner user/external specifically: an agent-owned open question is the
+  // agent's own job to resolve, not something to phrase as an offer to the reader, and
+  // mixing the two here would bury the ones that are.
+  const unblockable = (r.uncertainty_details ?? []).filter((u) => !u.resolved && u.blocking && ['user', 'external'].includes(u.owner));
+  if (unblockable.length) {
+    add(section('Unblock these', [
+      '_Every item below is waiting on you, not on more agent work. Say so and it runs._',
+      bullets(unblockable, (u) => {
+        const exec = u.raised_by_execution ? (r.detailed_results ?? []).find((d) => d.execution_id === u.raised_by_execution) : null;
+        const what = exec?.goal ?? u.question;
+        return `**${what}** — blocked: ${u.impact}. ${u.next_action}`;
+      }),
+    ]));
   }
 
   /* ------------------------------------------------------ 3. what was proven */

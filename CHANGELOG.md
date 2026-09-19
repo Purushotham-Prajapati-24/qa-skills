@@ -7,6 +7,28 @@ independently — document schemas and policy files carry their own versions.
 
 ### Added
 
+- **An "Unblock these" report section (G-16, remediation item 11).** A field trial's admin
+  had to interrogate the agent turn by turn ("why didnt you do it? do you have any
+  boundation from the .claude skills?") to learn that three untested features were blocked
+  by legitimate, well-reasoned policy, not laziness or a bug. Even on the compliant path --
+  a report that already states "BLOCKED: no explicit authorisation for load traffic" -- the
+  reader was never told THEY were the one who could clear it: the system knew what
+  authorisation or capability would unblock the item and never offered. This section lists
+  every open, currently-blocking uncertainty (status `blocked`, `user-input-required`,
+  `environment-unavailable` or `external-dependency` -- see
+  `uncertainty-register`'s exported `BLOCKING_STATUSES`) whose `owner` is `user` or
+  `external`, phrased as a direct offer: "**{what's blocked}** — blocked: {impact}.
+  {next action}." Deliberately excludes `owner: 'agent'` uncertainties -- those are the
+  agent's own job to resolve, and mixing them in would bury the ones that are actually
+  waiting on the reader -- and non-blocking statuses like `future-case`, which do not stall
+  anything right now. Reuses fields the uncertainty register already required
+  (`next_action`, `impact`, `owner`, `raised_by_execution`); no new capability-registry
+  threading needed. `engine/reporting-engine/index.mjs`, `engine/uncertainty-register/index.mjs`
+  (`BLOCKING_STATUSES` now exported), `schemas/report.schema.json`
+  (`uncertainty_details[].impact`/`.blocking`/`.raised_by_execution`, all optional; report
+  schema stays at 1.2.0 -- see `engine/core/version.mjs`'s comment), `examples/artifacts/*`
+  (regenerated).
+
 - **`wall_clock_ms` and `command_duration_ms` on executions (remediation item 7).**
   `duration_ms` has always measured the gap between two CLI calls (`exec start` ..
   `exec finish`) -- the agent's own reasoning, tool calls and everything else in between,
