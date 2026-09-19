@@ -5,6 +5,15 @@ independently — document schemas and policy files carry their own versions.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`ast adapter complete`'s own `--help` text was the one place in the CLI still leading
+  with `--json '<provider response>'`** instead of `--input`, the shell-agnostic path every
+  other command's help text already uses (G-08's fix #2: "keep `--json` in the CLI but
+  remove it from the documented path"). The flag itself still works unchanged
+  (`flags.json ? JSON.parse(flags.json) : payload(flags)`) -- only the shown example
+  changed, to `--input response.json`. `bin/ast.mjs`.
+
 ### Added
 
 - **`ast <command> --example` (G-12, remediation item 15).** A field trial's agent hit

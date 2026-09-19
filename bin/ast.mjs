@@ -560,7 +560,7 @@ const COMMANDS = {
     }),
   },
   'adapter complete': {
-    help: 'Finish a delegated (MCP) write: adapter complete --ticket WT-... --json \'<provider response>\'',
+    help: 'Finish a delegated (MCP) write: adapter complete --ticket WT-... --input response.json',
     run: ({ flags }) => {
       const ticket = adapters.readTicket(flags.ticket);
       if (!ticket) throw new Error(`No such ticket: ${flags.ticket}. Run \`ast adapter pending\` to list open ones.`);
