@@ -81,6 +81,57 @@ more follow under the same heading.
   absolute path with a space — most commonly `process.execPath` itself, wherever Node is
   installed under `Program Files`. Every argv element containing whitespace is now quoted
   before being handed to a Windows shell spawn. `bin/ast.mjs` (`evidence capture`).
+- **`redact()` was silently corrupting `metrics.denominators.authorization_compliance`
+  into `"[REDACTED]"` on every write, in every report, since `denominators` shipped in
+  0.9.0.** `KEY_HINTS` matches `authorization` as an unanchored substring — the same class
+  of bug the file's own comment says `token` was deliberately anchored to avoid, just never
+  applied to this term. Nothing caught it because nothing compared a stored, reloaded
+  record against a fresh render until `report verify` (below) did, on its first real run.
+  `authorization_compliance` added to `SAFE_KEYS`; confirmed the only field name in the
+  entire schema + metric vocabulary that collided. `engine/core/redact.mjs`.
+
+### Added
+
+- **`ast validate [--final]` now checks whether the orchestrator's own process actually
+  happened, not just whether the records left behind are well-formed.** `validate` already
+  checked schemas and referential integrity; it said nothing about a session that ran real
+  executions, recorded zero decisions, and left blocked work never raised as an
+  uncertainty — exactly what a field trial did, with its own report's integrity block
+  still saying "No integrity violations detected." Two new checks (`no-decisions`,
+  `blocked-without-uncertainty`) surface as warnings by default — correct at any point
+  mid-session — and are promoted to failures only under `--final`, the orchestrator's own
+  "before you tell the user you are done" gate; promoting them unconditionally would fail
+  the exact, correct, mid-session moment the orchestrator's own workflow calls `validate`.
+  A third check (`no-git-provenance`) stays advisory even under `--final`: nothing in this
+  system yet captures git provenance automatically, so failing every session on a gap it
+  cannot close itself would be a bug, not a gate. All three also appear in every report's
+  `integrity.violations`, where the mid-session/advisory distinction no longer applies —
+  by report time the session is over. `engine/evaluation-engine/process-completeness.mjs`
+  (new), `bin/ast.mjs`, `engine/reporting-engine/index.mjs`.
+- **`ast report verify` proves a rendered report was actually produced by this system.**
+  The orchestrator's rule that the report handed to the user is the one the CLI rendered
+  was stated twice in its skills and enforced nowhere; one field trial hand-wrote a report,
+  back-filled state afterwards, and `ast validate` returned `valid: true` over it. Every
+  report now carries a `digest` (SHA-256 over its own content, excluding itself) printed in
+  the rendered footer; `report verify <path.md | REPORT-ID>` recomputes it, re-renders the
+  stored record, and compares the result byte for byte (CRLF-normalised, so an incidental
+  line-ending conversion is not mistaken for a content edit). Distinguishes three failure
+  reasons: no title line at all (not this system's output), a report_id with no stored
+  record or a digest that does not match its own content (altered on disk), or a
+  byte-for-byte mismatch with a named first differing line (hand-written or edited after
+  rendering). Verified against real field-trial artifacts: the renderer-produced report
+  verifies clean; the hand-written one is correctly rejected (no matching title line at
+  all). Added as **Rule 4** to the orchestrator's three overriding rules — the only one an
+  agent could otherwise route around by paraphrasing instead of pasting.
+  `engine/reporting-engine/index.mjs`, `schemas/report.schema.json` (`digest`, optional;
+  report schema 1.1.0 → 1.2.0), `bin/ast.mjs`, `skills/testing-orchestrator/SKILL.md`,
+  `skills/testing-orchestrator/workflows/reporting.md`, `skills/test-reporting/SKILL.md`,
+  `docs/debugging.md`, `docs/versioning.md`.
+- **`ast validate` also derives `integrity.checks_run`'s counts from what actually ran**,
+  instead of printing the same four lines regardless of whether there was anything to
+  check — e.g. "external writes checked for provider confirmation (0 write(s) — nothing to
+  check)" rather than a bare claim indistinguishable from an audited zero.
+  `engine/reporting-engine/index.mjs`.
 
 ## [0.9.0] - 2026-09-18
 

@@ -20,7 +20,7 @@ export const DOC_VERSIONS = {
   'repository-profile': '1.0.0',
   'testing-plan': '1.0.0',
   'session-state': '1.0.0',
-  report: '1.1.0',
+  report: '1.2.0', // 1.2.0: added optional `digest` (see engine/reporting-engine's verify())
 };
 
 /** Stamp used on every persisted record. */

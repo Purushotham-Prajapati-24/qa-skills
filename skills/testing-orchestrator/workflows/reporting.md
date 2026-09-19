@@ -118,11 +118,21 @@ The report always contains:
 ## 6. Validate before you speak
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" validate
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" validate --final
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" report verify <the markdown_path report generate just printed>
 ```
 
-Fix everything it reports. Dangling evidence references and still-open executions are
-real defects in the record, not cosmetic.
+Fix everything `validate` reports. Dangling evidence references and still-open executions
+are real defects in the record, not cosmetic. `--final` additionally turns a blocking
+process gap — no decision records anywhere in the session; blocked work never raised as an
+uncertainty — into a failure instead of a warning. Both are real at this point in the
+session: there is no "still in progress" excuse left once you are about to speak.
+
+`report verify` proves the exact file you are about to hand the user is the one this
+renderer produced — not your summary of it, not an edited copy. Rule 4 (this skill's
+overriding rules) exists because that distinction is the entire point of rendering from
+state in the first place: a report a hand could have written is a report a hand should be
+suspected of having written, until this check says otherwise.
 
 ## 7. The external documentation layer
 

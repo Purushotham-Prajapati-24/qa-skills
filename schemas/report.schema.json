@@ -32,6 +32,11 @@
     "git": {
       "$ref": "common.schema.json#/definitions/gitRef"
     },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "SHA-256 over this record's own content with this field excluded, set by the renderer and printed in the rendered footer. Its purpose is `ast report verify`: a hand-written or hand-edited report carries no valid digest. Optional so records from before this field existed remain valid."
+    },
     "executive_summary": {
       "type": "object",
       "required": [

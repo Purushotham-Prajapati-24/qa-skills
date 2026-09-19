@@ -15,8 +15,9 @@
  */
 import process from 'node:process';
 import fs from 'node:fs';
+import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { setStateRoot, stateRoot } from '../engine/core/paths.mjs';
+import { setStateRoot, stateRoot, dir } from '../engine/core/paths.mjs';
 import { readJson } from '../engine/core/fsjson.mjs';
 import { SYSTEM_VERSION } from '../engine/core/version.mjs';
 import * as state from '../engine/state-engine/index.mjs';
@@ -34,6 +35,7 @@ import * as flakiness from '../engine/flakiness/index.mjs';
 import * as trace from '../engine/traceability/index.mjs';
 import * as reporting from '../engine/reporting-engine/index.mjs';
 import * as evaluation from '../engine/evaluation-engine/index.mjs';
+import * as processCompleteness from '../engine/evaluation-engine/process-completeness.mjs';
 import * as adapters from '../engine/adapters/index.mjs';
 import { compute as computeMetrics } from '../engine/evaluation-engine/metrics.mjs';
 import { validate as validateSchema } from '../engine/schema/validate.mjs';
@@ -420,6 +422,28 @@ const COMMANDS = {
     raw: (flags) => flags.format === 'md',
   },
   'report show': { help: 'Print a stored report: report show REPORT-2026-00001', run: ({ positional }) => state.get('reports', positional[2]) },
+  'report verify': {
+    help: 'Prove a rendered report was actually produced by this system, not hand-written or '
+      + 'edited after the fact: report verify <path/to/report.md | REPORT-2026-00001>',
+    run: ({ positional }) => {
+      const target = positional[2];
+      if (!target) {
+        throw new Error('report verify requires a path to a rendered .md file, or a bare REPORT-ID (e.g. REPORT-2026-00002) to check the stored copy under state/reports/.');
+      }
+      let text;
+      if (/^REPORT-\d{4}-\d{5,}$/.test(target)) {
+        const storedPath = path.join(dir('reports'), `${target}.md`);
+        if (!fs.existsSync(storedPath)) throw new Error(`No stored report file at ${storedPath}.`);
+        text = fs.readFileSync(storedPath, 'utf8');
+      } else {
+        if (!fs.existsSync(target)) throw new Error(`No such file: ${target}`);
+        text = fs.readFileSync(target, 'utf8');
+      }
+      const result = reporting.verify(text);
+      if (!result.rendered) process.exitCode = 1;
+      return result;
+    },
+  },
 
   /* ---- metrics + evaluation ---- */
   'metrics': { help: 'Compute evaluation metrics for the current state.', run: ({ flags }) => computeMetrics(payload(flags)) },
@@ -491,8 +515,11 @@ const COMMANDS = {
 
   /* ---- integrity ---- */
   'validate': {
-    help: 'Validate every stored record against its schema and check referential integrity.',
-    run: () => validateAll(),
+    help: 'Validate schemas + referential integrity, plus process-completeness warnings. '
+      + 'Add --final (the orchestrator\'s "before you tell the user you are done" gate) to '
+      + 'promote blocking process gaps (no decisions; blocked work never raised as an '
+      + 'uncertainty) into failures.',
+    run: ({ flags }) => validateAll({ final: Boolean(flags.final) }),
   },
 };
 
@@ -515,8 +542,9 @@ const COLLECTION_SCHEMAS = {
   reports: { schema: 'report', idField: 'report_id' },
 };
 
-function validateAll() {
+function validateAll({ final = false } = {}) {
   const problems = [];
+  const warnings = [];
   const counts = {};
 
   const session = state.loadSession();
@@ -577,7 +605,17 @@ function validateAll() {
     }
   }
 
-  return { valid: problems.length === 0, counts, problems, state_root: stateRoot() };
+  // Schema and referential-integrity problems above are always fatal. Process-completeness
+  // findings are advisory by default -- correct at any point mid-session -- and a
+  // "blocking"-severity one is promoted into `problems` only under --final, the
+  // orchestrator's own finishing gate. See process-completeness.mjs for why the split
+  // exists and why "no git provenance" never promotes today.
+  for (const f of processCompleteness.check()) {
+    if (f.severity === 'blocking' && final) problems.push(`process: ${f.message}`);
+    else warnings.push(`process (${f.severity}): ${f.message}`);
+  }
+
+  return { valid: problems.length === 0, counts, problems, warnings, state_root: stateRoot() };
 }
 
 /* --------------------------------------------------------------------- main */

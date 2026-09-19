@@ -88,6 +88,27 @@ If the claim got through the gate, the gate has a bug. That is worth a test in
 For an adversarial second opinion, the `evidence-auditor` subagent exists to look for
 exactly this.
 
+## "The report doesn't look like it was actually rendered"
+
+```bash
+node bin/ast.mjs report verify state/reports/REPORT-2026-00001.md
+```
+
+`rendered: false` and a `reason` naming which of three things went wrong:
+
+- **No title line found** — this text was not produced by this renderer at all (hand-written).
+- **No stored record**, or **digest does not match its own content** — the `report_id` in
+  the title does not resolve in this state directory, or the stored record was edited on
+  disk after being written.
+- **Does not reproduce this text byte for byte**, with a `first_diff_line` — the text was
+  edited after rendering. Diff that line against `ast report show <ID>` re-rendered fresh.
+
+A digest mismatch on a report you are certain you never touched by hand is worth checking
+against `engine/core/redact.mjs`'s `SAFE_KEYS` first: a field name that collides with
+`KEY_HINTS` gets silently mangled by `redact()` on every write, which changes the stored
+record without anyone editing anything. That is exactly how `authorization_compliance`
+was found — `report verify`'s own first real run caught it.
+
 ## "It stopped too early"
 
 Check whether it genuinely had nothing to do:

@@ -38,6 +38,16 @@ const SAFE_KEYS = new Set([
   'uncertainty_id', 'report_id', 'plan_id', 'test_case_id', 'tool_use_id',
   'authorised_by', 'authorized_by', 'authorization', 'auth_required',
   'idempotency_key', 'key', 'result_id', 'fingerprint', 'sha256',
+  // The evaluation metric name, not a credential. `token` is anchored above
+  // specifically so it cannot match a longer compound word (`tokens_used`); the same
+  // authorization/authorisation alternatives were never anchored the same way, and
+  // "starts with authorization" is broad enough to also catch this metric's name and
+  // its denominator. Silently corrupted `metrics.authorization_compliance` and
+  // `metrics.denominators.authorization_compliance` into "[REDACTED]" in every stored
+  // report from the moment `denominators` shipped (0.9.0) until `ast report verify`
+  // caught the resulting mismatch between a report's in-memory render and its stored,
+  // redacted-and-reloaded copy.
+  'authorization_compliance',
 ]);
 
 /** Value-shaped patterns, applied to free text. Order matters: longest first. */

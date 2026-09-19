@@ -30,7 +30,7 @@ tell you which migration you owe.
 repository-profile  1.0.0
 testing-plan        1.0.0
 session-state       1.0.0
-report              1.0.0
+report              1.2.0
 ```
 
 ## C. Policy files
