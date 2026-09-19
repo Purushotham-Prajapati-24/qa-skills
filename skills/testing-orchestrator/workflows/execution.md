@@ -111,9 +111,13 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" decision next --json '{"status":"FAILED
 ```
 
 Signal tokens come from real output — `http-500`, `econnrefused`, `timeout`,
-`missing-env-var`, `brittle-selector`, `passed-on-retry`, `stale-test-data`. The
-classifier deliberately lets non-product causes outrank `product-defect` on a tie:
-filing a false defect costs more than investigating one more environment issue.
+`missing-env-var`, `brittle-selector`, `passed-on-retry`, `stale-test-data`. A static
+review or a dependency scan has no runtime output to draw a signal from — use
+`advisory-in-range`, `missing-auth-check`, `hardcoded-secret` or `policy-violation`
+instead of leaving `signals` empty, which routes to `unclassified-no-signals` regardless
+of how solid the underlying finding is. The classifier deliberately lets non-product
+causes outrank `product-defect` on a tie: filing a false defect costs more than
+investigating one more environment issue.
 
 Then act on the classification:
 
@@ -126,7 +130,7 @@ Then act on the classification:
 | authentication-failure | Product defect or missing credentials? Opposite conclusions — get evidence. |
 | timeout | Time a known-good path in the same run to separate slow env from regression. |
 | ambiguous-requirement | Raise an uncertainty. Do not invent the expected behaviour. |
-| insufficient-evidence | Gather more. Do not report a status. |
+| unclassified-no-signals | You gave the classifier nothing to work with — supply real signal tokens from the actual output, or a static-analysis signal (`advisory-in-range`, `missing-auth-check`, `hardcoded-secret`, `policy-violation`) if this is a security-testing/dependency-scan finding rather than a runtime failure. Not a verdict on the finding itself. |
 
 ## When something blocks
 

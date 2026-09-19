@@ -5,6 +5,35 @@ independently — document schemas and policy files carry their own versions.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The failure classifier's no-signal fallback was named and scored like a verdict on
+  the finding, not on the classifier's own inputs.** `classify()` returned
+  `{class: 'insufficient-evidence', confidence: 0.9}` whenever `signals` was empty — the
+  single highest confidence the function could ever return, on its weakest possible input.
+  Worse, the entire signal vocabulary (`econnrefused`, `http-500`, `timeout`, ...) is
+  runtime-shaped: a static review or a dependency scan has no such signal to supply and was
+  routed to this fallback by construction, however solid the underlying finding was. In one
+  field trial, a confirmed critical CVE and a hardcoded JWT secret both rendered as
+  `insufficient-evidence (0.9)`, reading as "the findings are unsupported" when the opposite
+  was true. Renamed to `unclassified-no-signals` at confidence `0.2` (consistent with this
+  file's other low-certainty cases), and the report renderer now suppresses the Failure
+  class cell entirely for it — `—`, the same as no classification at all — rather than
+  printing a confident-looking label for an absence. Four static-analysis-shaped signals
+  (`advisory-in-range`, `missing-auth-check`, `hardcoded-secret`, `policy-violation`) join
+  the existing `product-defect` rule, so a static finding can be classified at all instead
+  of defaulting to the fallback. `engine/failure-classifier/index.mjs`,
+  `engine/reporting-engine/index.mjs`, `schemas/execution.schema.json`,
+  `skills/testing-orchestrator/workflows/execution.md`.
+  (Not touched: `insufficient-evidence` as an *uncertainty* status in
+  `schemas/uncertainty.schema.json` — an unrelated enum with a name collision, not the
+  same field.)
+- Regenerated `examples/artifacts/*` via `node scripts/demo-session.mjs`, per
+  `CONTRIBUTING.md`'s own instruction to run it after touching the pipeline — found stale
+  (`report_version: 1.1.0`, missing this session's `digest`/`grade` fields) from several
+  commits earlier in this same effort that should have triggered a regeneration and did
+  not. Caught the schema/rename mismatch above in the same run, before it shipped.
+
 ### Added
 
 - **Every evidence item is now graded `anchored` or `asserted`, computed by the engine and

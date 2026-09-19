@@ -223,9 +223,10 @@ test('out-of-range factors are rejected', () => {
 
 /* ------------------------------------------------------ failure classes */
 
-test('no signals yields insufficient-evidence, not a defect', () => {
+test('no signals yields unclassified-no-signals, not a defect, at a low confidence that reads as absence', () => {
   const c = classify({ signals: [] });
-  assert.equal(c.class, 'insufficient-evidence');
+  assert.equal(c.class, 'unclassified-no-signals');
+  assert.ok(c.confidence <= 0.3, 'a no-signal fallback must never look more confident than a genuine low-certainty classification');
 });
 
 test('environment causes outrank product-defect on a tie', () => {
@@ -251,4 +252,27 @@ test('classification without evidence is capped', () => {
   const c = classify({ signals: ['http-500', 'unhandled-exception'], evidenceIds: [] });
   assert.ok(c.confidence <= 0.5);
   assert.match(c.signals.join(' '), /No evidence attached/);
+});
+
+test('static-analysis-shaped signals classify as product-defect, not unclassified-no-signals', () => {
+  // A dependency scan or a manual security review has no RUNTIME signal to supply --
+  // econnrefused, http-500 and the rest all describe something that happened while a
+  // program ran. Before these four signals existed, a static finding was routed to the
+  // no-signal fallback by construction, regardless of how solid the underlying finding
+  // was -- exactly what happened to two of Madhubala's most important findings (a
+  // confirmed critical CVE and a hardcoded JWT secret), both rendered as
+  // "insufficient-evidence (0.9)" as if the findings themselves were unsupported.
+  for (const signal of ['advisory-in-range', 'missing-auth-check', 'hardcoded-secret', 'policy-violation']) {
+    const c = classify({ signals: [signal], evidenceIds: ['EV-2026-00001'] });
+    assert.equal(c.class, 'product-defect', `expected "${signal}" to classify as product-defect`);
+  }
+});
+
+test('a static-analysis signal still competes fairly with non-product causes on a tie', () => {
+  // The new signals join the EXISTING product-defect rule rather than becoming their own
+  // rule, so they inherit the same "non-product causes outrank product-defect on a tie"
+  // behaviour as every other product-defect signal -- confirmed here as a regression
+  // guard, since a separate rule would have silently bypassed that protection.
+  const c = classify({ signals: ['hardcoded-secret', 'missing-env-var'], evidenceIds: ['EV-2026-00001'] });
+  assert.equal(c.class, 'environment-defect');
 });

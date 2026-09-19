@@ -1,7 +1,7 @@
 {
   "report_id": "REPORT-2026-00001",
-  "report_version": "1.1.0",
-  "generated_at": "2026-09-18T10:50:38.781Z",
+  "report_version": "1.2.0",
+  "generated_at": "2026-09-19T08:18:12.178Z",
   "session_id": "SESSION-0001",
   "executive_summary": {
     "headline": "**FAILED** — 4 executions run · 1 finding, worst critical · 2 planned items not run.",
@@ -60,7 +60,7 @@
       "NOT_APPLICABLE": 1,
       "INTERRUPTED": 1
     },
-    "total_duration_ms": 23,
+    "total_duration_ms": 19,
     "test_cases": 3
   },
   "detailed_results": [
@@ -75,7 +75,9 @@
       "evidence": [
         "EV-2026-00002"
       ],
-      "findings": [],
+      "findings": [
+        "FIND-00001"
+      ],
       "failure_classification": {
         "class": "authentication-failure",
         "confidence": 0.5,
@@ -109,12 +111,12 @@
       "method": "existing-suite",
       "status": "INCONCLUSIVE",
       "status_reason": "Checkout works. [DOWNGRADED from PASSED: \"[REDACTED]\" claims something was executed, but no evidence is attached. Absence of failure is not proof of correctness.]",
-      "duration_ms": 6,
+      "duration_ms": 4,
       "evidence": [],
       "findings": [],
       "failure_classification": {
-        "class": "insufficient-evidence",
-        "confidence": 0.9,
+        "class": "unclassified-no-signals",
+        "confidence": 0.2,
         "signals": [],
         "evidence_refs": []
       },
@@ -153,7 +155,7 @@
       "method": "existing-suite",
       "status": "PASSED",
       "status_reason": "vitest suite executed against abc1234; 211 tests passed, 0 failed.",
-      "duration_ms": 10,
+      "duration_ms": 8,
       "evidence": [
         "EV-2026-00001"
       ],
@@ -167,14 +169,16 @@
       "evidence_id": "EV-2026-00001",
       "kind": "command-output",
       "summary": "vitest: 211/211 passed",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-yYpj7b\\evidence\\blobs\\output-2026-09-18T10-50-38-720Z-49732.txt",
+      "grade": "anchored",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\claude\\D--QATesting\\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\\scratchpad\\demo-real-state\\evidence\\blobs\\output-2026-09-19T08-18-12-120Z-56708.txt",
       "sha256": "sha256:08847719b18700defc4e5811a3e0be639fa4d8c92fcbdefd7cff7a429ac59e38"
     },
     {
       "evidence_id": "EV-2026-00002",
       "kind": "command-output",
       "summary": "api: 11/12 passed, 1 failed",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-yYpj7b\\evidence\\blobs\\output-2026-09-18T10-50-38-731Z-49732.txt",
+      "grade": "anchored",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\claude\\D--QATesting\\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\\scratchpad\\demo-real-state\\evidence\\blobs\\output-2026-09-19T08-18-12-131Z-56708.txt",
       "sha256": "sha256:6860525264278abb9c4fb263992a6bcbbfd9d5d8d074c9c5f1779db558c4b2b8"
     }
   ],
@@ -307,7 +311,7 @@
     }
   ],
   "metrics": {
-    "computed_at": "2026-09-18T10:50:38.792Z",
+    "computed_at": "2026-09-19T08:18:12.190Z",
     "sample_sizes": {
       "executions": 6,
       "decisions": 1,
@@ -321,12 +325,13 @@
       "high_risk_coverage": 0,
       "decision_accuracy": null,
       "decision_assessment_rate": 0,
-      "actionable_finding_rate": 0,
+      "actionable_finding_rate": 1,
       "evidence_completeness": 1,
+      "evidence_anchored_rate": 1,
       "audit_coverage": 0,
       "automation_conversion": null,
       "unnecessary_test_rate": 0.5,
-      "runtime_efficiency_ms_per_case": 7.6667,
+      "runtime_efficiency_ms_per_case": 6.3333,
       "flaky_identification_quality": null,
       "interruption_recovery_rate": 0.5,
       "authorization_compliance": 1,
@@ -340,6 +345,7 @@
       "decision_assessment_rate": 1,
       "actionable_finding_rate": 1,
       "evidence_completeness": 2,
+      "evidence_anchored_rate": 2,
       "audit_coverage": 2,
       "automation_conversion": 0,
       "unnecessary_test_rate": 4,
@@ -356,6 +362,7 @@
       "decision_assessment_rate",
       "actionable_finding_rate",
       "evidence_completeness",
+      "evidence_anchored_rate",
       "audit_coverage",
       "unnecessary_test_rate",
       "runtime_efficiency_ms_per_case",
@@ -366,7 +373,7 @@
     "violations": [],
     "notes": [
       "A null metric means the denominator was zero. Nulls are honest; do not substitute 0 or 1.",
-      "Metrics with a denominator under 5 are noise, not signal -- read them qualitatively: false_confidence_rate (n=1), requirement_coverage (n=3), decision_assessment_rate (n=1), actionable_finding_rate (n=1), evidence_completeness (n=2), audit_coverage (n=2), unnecessary_test_rate (n=4), runtime_efficiency_ms_per_case (n=3), interruption_recovery_rate (n=2), authorization_compliance (n=1), reproducibility (n=4).",
+      "Metrics with a denominator under 5 are noise, not signal -- read them qualitatively: false_confidence_rate (n=1), requirement_coverage (n=3), decision_assessment_rate (n=1), actionable_finding_rate (n=1), evidence_completeness (n=2), evidence_anchored_rate (n=2), audit_coverage (n=2), unnecessary_test_rate (n=4), runtime_efficiency_ms_per_case (n=3), interruption_recovery_rate (n=2), authorization_compliance (n=1), reproducibility (n=4).",
       "Categories executed: smoke, regression, authn-authz, accessibility."
     ],
     "definitions": {
@@ -398,13 +405,19 @@
         "why": "Guards the metric above: a 100% accuracy over 2 assessed decisions out of 40 means nothing."
       },
       "actionable_finding_rate": {
-        "formula": "findings triaged confirmed|reported|resolved / total findings excluding duplicates",
+        "formula": "(triaged confirmed|reported|resolved OR carries a recommended_action backed by evidence) / total findings excluding duplicates",
         "direction": "higher-is-better",
-        "blind_spot": "A low rate may mean noisy reporting OR a thorough agent surfacing genuine ambiguity."
+        "blind_spot": "A low rate may mean noisy reporting OR a thorough agent surfacing genuine ambiguity.",
+        "why": "Triage has exactly one real writer in this codebase (the duplicate-confirmed path), which pinned this at 0 for every finding filed the normal way -- a recommended action backed by evidence is what \"actionable\" actually means for a freshly-filed finding, and is measurable the moment it is filed rather than depending on a triage step nothing currently exercises."
       },
       "evidence_completeness": {
         "formula": "executions with at least one execution-grade evidence item / executions that claim a status",
         "direction": "higher-is-better"
+      },
+      "evidence_anchored_rate": {
+        "formula": "evidence items graded \"anchored\" (a real artifact/URI, or an excerpt with a real exit code) / total evidence items",
+        "direction": "higher-is-better",
+        "why": "evidence_completeness only asks whether SOMETHING was attached -- a hand-typed sentence with no artifact satisfies it. This asks whether what was attached is checkable: \"3 of 5 claims are anchored to disk\" is a materially different, and more honest, statement than \"5 of 5 claims have evidence attached\"."
       },
       "audit_coverage": {
         "formula": "1 if any evidence-audit record exists this session, 0 if there are claims and none does, null if there are no PASSED/FAILED/COMPLETED/PARTIAL claims to review",
@@ -454,10 +467,10 @@
     "unevidenced_pass_claims": 0,
     "false_confidence_rate": 0,
     "checks_run": [
-      "every PASSED/COMPLETED claim checked against attached evidence",
-      "external writes checked for provider confirmation",
-      "unfinished executions surfaced as INTERRUPTED",
-      "not-applicable categories listed with reasons"
+      "every PASSED/COMPLETED claim checked against attached evidence (1 claim(s))",
+      "external writes checked for provider confirmation (2 write(s))",
+      "unfinished executions surfaced as INTERRUPTED (1 found)",
+      "not-applicable categories listed with reasons (22 categories)"
     ],
     "violations": [
       "No evidence-auditor record for this session (kind: evidence-audit). Claims here have only passed the mechanical evidence gate, not independent adversarial review."
@@ -468,7 +481,7 @@
     "skill_version": "0.9.0",
     "skill_name": "test-reporting",
     "engine_version": "0.9.0",
-    "created_at": "2026-09-18T10:50:38.781Z",
+    "created_at": "2026-09-19T08:18:12.178Z",
     "created_by": "agent",
     "session_id": "SESSION-0001"
   },
@@ -1573,5 +1586,6 @@
         }
       ]
     }
-  ]
+  ],
+  "digest": "sha256:b2bdb5b398f51ac95755761bbfc1e2f988457c608858a37f5cf9e0eace1600fa"
 }

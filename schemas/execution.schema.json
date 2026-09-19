@@ -63,7 +63,7 @@
             "product-defect", "test-defect", "environment-defect", "infrastructure-failure",
             "dependency-failure", "flaky-test", "configuration-failure", "data-failure",
             "authentication-failure", "timeout", "performance-degradation",
-            "expected-behaviour-mismatch", "ambiguous-requirement", "insufficient-evidence",
+            "expected-behaviour-mismatch", "ambiguous-requirement", "unclassified-no-signals",
             "unclassified"
           ]
         },

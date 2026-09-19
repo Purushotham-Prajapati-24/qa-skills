@@ -1,7 +1,7 @@
 {
   "execution_id": "EXEC-2026-00003",
   "session_id": "SESSION-0001",
-  "started_at": "2026-09-18T10:50:38.727Z",
+  "started_at": "2026-09-19T08:18:12.127Z",
   "goal": "User A cannot select user B's saved card",
   "method": "api-client",
   "status": "FAILED",
@@ -9,14 +9,16 @@
   "evidence": [
     "EV-2026-00002"
   ],
-  "findings": [],
+  "findings": [
+    "FIND-00001"
+  ],
   "uncertainties": [],
   "retries": 0,
   "provenance": {
     "skill_version": "0.9.0",
     "skill_name": "testing-orchestrator",
     "engine_version": "0.9.0",
-    "created_at": "2026-09-18T10:50:38.727Z",
+    "created_at": "2026-09-19T08:18:12.127Z",
     "created_by": "agent",
     "session_id": "SESSION-0001"
   },
@@ -31,7 +33,7 @@
     "pull_request": "412",
     "dirty": false
   },
-  "finished_at": "2026-09-18T10:50:38.734Z",
+  "finished_at": "2026-09-19T08:18:12.134Z",
   "duration_ms": 7,
   "test_results": [
     {

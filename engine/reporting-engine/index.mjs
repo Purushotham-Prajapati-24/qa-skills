@@ -496,7 +496,13 @@ export function render(r) {
       table(
         (r.detailed_results ?? []).map((d) => [
           d.execution_id, d.status, d.goal, d.method,
-          d.failure_classification ? `${d.failure_classification.class} (${d.failure_classification.confidence})` : '—',
+          // "unclassified-no-signals" means the caller supplied nothing to classify from
+          // -- it is not a verdict on the finding, and printing it with a confidence
+          // number invites reading it as one anyway. Suppressed to the same "—" as no
+          // classification at all, rather than a confident-looking label for an absence.
+          (d.failure_classification && d.failure_classification.class !== 'unclassified-no-signals')
+            ? `${d.failure_classification.class} (${d.failure_classification.confidence})`
+            : '—',
           d.duration_ms != null ? `${d.duration_ms} ms` : '—',
         ]),
         ['ID', 'Status', 'Goal', 'Method', 'Failure class', 'Duration'],
