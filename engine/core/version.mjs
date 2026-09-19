@@ -20,7 +20,11 @@ export const DOC_VERSIONS = {
   'repository-profile': '1.0.0',
   'testing-plan': '1.0.0',
   'session-state': '1.0.0',
-  report: '1.2.0', // 1.2.0: added optional `digest` (see engine/reporting-engine's verify())
+  // 1.2.0: added optional `digest` (see reporting-engine's verify()) and optional `grade`
+  // on each evidence_index entry (see evidence-engine's anchored/asserted grading). Both
+  // additive; 1.2.0 has not shipped in a release yet, so both landed under the same bump
+  // rather than churning the version for a shape no released build ever printed.
+  report: '1.2.0',
 };
 
 /** Stamp used on every persisted record. */

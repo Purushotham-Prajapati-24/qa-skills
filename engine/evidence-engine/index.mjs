@@ -103,6 +103,18 @@ export function add({
     rec.redacted = clean !== trimmed || containsSecret(trimmed);
   }
 
+  // Never agent-supplied -- an agent grading its own evidence "anchored" defeats the
+  // point. "Anchored" means there is something on disk (or a real exit code alongside a
+  // captured excerpt) a reader could actually go check; everything else is the agent's own
+  // word for what happened. This does not change what the gate above accepts -- a typed
+  // summary with no artifact still passes verifyClaim if its kind is execution-grade -- it
+  // makes the previously invisible difference visible: "3 of 5 claims are anchored to disk;
+  // 2 are the agent's assertion" is now a fact the report and the evidence_anchored_rate
+  // metric can state, where before it could not be seen at all.
+  rec.grade = (rec.artifact?.path || rec.artifact?.uri || (rec.excerpt && Number.isInteger(rec.command?.exit_code)))
+    ? 'anchored'
+    : 'asserted';
+
   state.put('evidence', id, rec, 'evidence');
   state.telemetry({ event: 'evidence', evidence_id: id, kind, execution_id: executionId });
   return rec;

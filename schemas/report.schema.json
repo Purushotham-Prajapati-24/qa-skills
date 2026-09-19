@@ -179,6 +179,10 @@
           "summary": {
             "type": "string"
           },
+          "grade": {
+            "type": ["string", "null"],
+            "enum": ["anchored", "asserted", null]
+          },
           "path": {
             "type": "string"
           },

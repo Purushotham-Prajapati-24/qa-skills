@@ -35,6 +35,15 @@ user statements. Testimony, not verification.
 
 A screenshot shows what a page looked like. It does not show that an assertion held.
 
+**Every evidence item is also graded `anchored` or `asserted`, computed by the engine —
+never something you set.** `anchored` means the record carries a real artifact, a real
+URI, or an excerpt paired with a real command exit code: something a reader could actually
+go check. `asserted` means it is your account with nothing behind it. Grading does not
+change what the gate accepts — an execution-grade kind still passes on its own — it exists
+so the report and `evidence_anchored_rate` can say, honestly, how much of what you claimed
+is checkable versus how much is your word. Prefer driving that ratio up by capturing real
+output (below), not by arguing the gate should accept less.
+
 ## Prefer captured evidence over typed evidence
 
 `evidence add` will accept a hand-typed summary with no artifact behind it — a sentence

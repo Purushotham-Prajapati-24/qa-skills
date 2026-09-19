@@ -5,6 +5,29 @@ independently — document schemas and policy files carry their own versions.
 
 ## [Unreleased]
 
+### Added
+
+- **Every evidence item is now graded `anchored` or `asserted`, computed by the engine and
+  never agent-supplied.** `evidence add` has always treated `artifactPath` as optional, and
+  the false-confidence gate checks the *kind* of evidence, not whether anything was
+  actually captured — so a hand-typed sentence with no artifact has always passed as
+  execution-grade evidence exactly like a hashed command output. One field trial shipped a
+  report where 4 of 5 evidence records had no artifact at all, with `evidence_completeness:
+  1` giving no hint of it. `grade` does not change what the gate accepts (that stays a
+  separate, deliberate design question, recorded as open in the implementation plan) — it
+  makes the previously invisible split visible: `anchored` means a real artifact, a real
+  URI, or an excerpt paired with a real command exit code exists; `asserted` means the
+  record is the agent's own account with nothing behind it. Surfaced in a new
+  `evidence_anchored_rate` metric (distinct from `evidence_completeness`, which only asks
+  whether *something* was attached) and an `Anchored?` column in the report's Evidence
+  table. Evidence written before this field existed has no `grade` and is correctly
+  excluded from the numerator rather than coerced into either bucket.
+  `engine/evidence-engine/index.mjs`, `engine/evaluation-engine/metrics.mjs`,
+  `engine/reporting-engine/index.mjs`, `schemas/evidence.schema.json` (`grade`, optional),
+  `schemas/report.schema.json` (`evidence_index[].grade`, optional; report schema stays at
+  1.2.0 — see `engine/core/version.mjs`'s comment on why this didn't need a further bump),
+  `skills/testing-orchestrator/policies/evidence-policy.md`.
+
 ### Fixed
 
 - **`actionable_finding_rate` was mathematically pinned at 0 for every possible session.**

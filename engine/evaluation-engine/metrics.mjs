@@ -63,6 +63,11 @@ export const DEFINITIONS = {
     formula: 'executions with at least one execution-grade evidence item / executions that claim a status',
     direction: 'higher-is-better',
   },
+  evidence_anchored_rate: {
+    formula: 'evidence items graded "anchored" (a real artifact/URI, or an excerpt with a real exit code) / total evidence items',
+    direction: 'higher-is-better',
+    why: 'evidence_completeness only asks whether SOMETHING was attached -- a hand-typed sentence with no artifact satisfies it. This asks whether what was attached is checkable: "3 of 5 claims are anchored to disk" is a materially different, and more honest, statement than "5 of 5 claims have evidence attached".',
+  },
   audit_coverage: {
     formula: "1 if any evidence-audit record exists this session, 0 if there are claims and none does, null if there are no PASSED/FAILED/COMPLETED/PARTIAL claims to review",
     direction: 'higher-is-better',
@@ -156,6 +161,13 @@ export function compute({ declaredRequirements = [], highRiskBehaviours = [], au
   const statusClaiming = executions.filter((e) => ['PASSED', 'FAILED', 'COMPLETED', 'PARTIAL'].includes(e.status) && e.method !== 'not-executed');
   const withEvidence = statusClaiming.filter((e) => (e.evidence ?? []).length > 0);
 
+  /* evidence anchoring -- distinct from completeness above: completeness asks whether
+   * anything was attached at all; this asks whether what was attached is checkable.
+   * Evidence written before `grade` existed has no such field and is correctly excluded
+   * from the numerator (not "anchored", not "asserted" -- simply unknown), never coerced
+   * into either bucket. */
+  const anchoredEvidence = evidenceItems.filter((e) => e.grade === 'anchored');
+
   /* audit coverage */
   const claimsToAudit = executions.filter((e) => ['PASSED', 'FAILED', 'COMPLETED', 'PARTIAL'].includes(e.status)).length;
   const evidenceAuditorRan = evidenceItems.some((e) => e.kind === 'evidence-audit');
@@ -203,6 +215,7 @@ export function compute({ declaredRequirements = [], highRiskBehaviours = [], au
     decision_assessment_rate: ratio(assessed.length, decisions.length),
     actionable_finding_rate: ratio(actionable.length, nonDuplicate.length),
     evidence_completeness: ratio(withEvidence.length, statusClaiming.length),
+    evidence_anchored_rate: ratio(anchoredEvidence.length, evidenceItems.length),
     audit_coverage: claimsToAudit === 0 ? null : (evidenceAuditorRan ? 1 : 0),
     automation_conversion: ratio(
       executions.filter((e) => e.method === 'playwright-script' || e.method === 'generated-script').length,
@@ -227,6 +240,7 @@ export function compute({ declaredRequirements = [], highRiskBehaviours = [], au
     decision_assessment_rate: decisions.length,
     actionable_finding_rate: nonDuplicate.length,
     evidence_completeness: statusClaiming.length,
+    evidence_anchored_rate: evidenceItems.length,
     audit_coverage: claimsToAudit,
     automation_conversion: automationCandidates.length,
     unnecessary_test_rate: real.length,

@@ -144,6 +144,7 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
       evidence_id: e.evidence_id,
       kind: e.kind,
       summary: e.summary,
+      grade: e.grade ?? null,
       ...(e.artifact?.path ? { path: e.artifact.path } : {}),
       ...(e.artifact?.sha256 ? { sha256: e.artifact.sha256 } : {}),
     })),
@@ -507,8 +508,12 @@ export function render(r) {
     ], { level: 3 }),
 
     section('Evidence', table(
-      (r.evidence_index ?? []).map((e) => [e.evidence_id, e.kind, e.summary, e.path ?? e.sha256 ?? '—']),
-      ['ID', 'Kind', 'Summary', 'Artifact'],
+      (r.evidence_index ?? []).map((e) => [
+        e.evidence_id, e.kind, e.summary,
+        e.grade === 'anchored' ? 'yes' : e.grade === 'asserted' ? 'no' : '—',
+        e.path ?? e.sha256 ?? '—',
+      ]),
+      ['ID', 'Kind', 'Summary', 'Anchored?', 'Artifact'],
     ), { level: 3 }),
 
     section('External writes', [

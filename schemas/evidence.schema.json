@@ -23,6 +23,11 @@
     },
     "epistemic_class": { "$ref": "common.schema.json#/definitions/epistemicClass" },
     "summary": { "type": "string", "minLength": 3 },
+    "grade": {
+      "type": "string",
+      "enum": ["anchored", "asserted"],
+      "description": "Computed by the engine at write time, never agent-supplied. 'anchored' means the record carries a real artifact/URI, or an excerpt paired with a real command exit code -- something a reader could actually go check. 'asserted' means the record is the agent's own account with nothing to verify it against. Optional so evidence written before this field existed remains valid."
+    },
     "git": { "$ref": "common.schema.json#/definitions/gitRef" },
     "environment": {
       "type": "object",
