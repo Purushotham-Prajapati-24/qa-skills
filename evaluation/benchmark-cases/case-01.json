@@ -62,12 +62,13 @@
       "rag-evaluation",
       "localization"
     ],
-    "browser_method": "existing-tests"
+    "browser_method": { "escalates_to": ["existing-tests", "existing-other-tooling"] }
   },
   "reasoning_notes": [
     "A cosmetic change must not trigger deep testing. The correct answer is: run what already exists and stop.",
     "Selecting anything other than the existing suite here is over-testing, which the unnecessary_test_rate metric penalises.",
-    "Calibration note: this scores 0.14 -> negligible. The expectation originally said 'low'; the engine was right and the expectation was wrong. A cosmetic change with strong existing coverage genuinely carries negligible risk."
+    "Calibration note: this scores 0.14 -> negligible. The expectation originally said 'low'; the engine was right and the expectation was wrong. A cosmetic change with strong existing coverage genuinely carries negligible risk.",
+    "Calibration note: browser_factors names nothing that distinguishes 'the repo's own Playwright specs' from 'the repo's other browser-automation stack' -- that distinction lives in the repository profile, not in these factors -- so existing-tests and existing-other-tooling tie exactly. The engine now escalates instead of silently picking one by array order; escalates_to accepts either, matching the un-changed claim this case actually makes: existing coverage beats writing something new, regardless of which existing tool wins."
   ],
   "not_covered": [
     "Whether the agent correctly judged the change to be cosmetic in the first place."

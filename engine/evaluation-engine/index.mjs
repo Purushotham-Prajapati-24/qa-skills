@@ -40,6 +40,16 @@ function checkExpectation(actual, expectation, label) {
   if (typeof expectation === 'object' && expectation !== null && !Array.isArray(expectation)) {
     if ('equals' in expectation) return { label, pass: JSON.stringify(actual) === JSON.stringify(expectation.equals), actual, expected: expectation.equals };
     if ('one_of' in expectation) return { label, pass: expectation.one_of.includes(actual), actual, expected: `one of ${expectation.one_of.join('|')}` };
+    // A case whose given factors cannot distinguish two candidates (see browser_decision's
+    // ambiguity gate) is expected to escalate, not to guess. `actual` here is the
+    // `{escalated_to}` wrapper the browser_method call site builds -- never a bare id --
+    // so a case that escalates when a crisp `one_of`/`equals` expectation demanded a real
+    // pick still fails loudly, rather than this branch quietly accepting a tie nobody
+    // asked to tolerate.
+    if ('escalates_to' in expectation) {
+      const escalatedId = actual && typeof actual === 'object' ? actual.escalated_to : undefined;
+      return { label, pass: expectation.escalates_to.includes(escalatedId), actual, expected: `escalates to one of ${expectation.escalates_to.join('|')}` };
+    }
     if ('at_least' in expectation) return { label, pass: Number(actual) >= expectation.at_least, actual, expected: `>= ${expectation.at_least}` };
     if ('at_most' in expectation) return { label, pass: Number(actual) <= expectation.at_most, actual, expected: `<= ${expectation.at_most}` };
     if ('includes' in expectation) {
@@ -90,7 +100,13 @@ function runCase(c) {
       scenario: c.title,
     });
     outputs.browser = d;
-    checks.push(checkExpectation(d.selected, c.expect?.browser_method, 'browser_method'));
+    // While escalating, `selected` is always null by design (see browser-decision/index.mjs)
+    // -- comparing it directly against a crisp expectation would fail every escalating case
+    // even when escalation is exactly the correct, expected behaviour. Wrap it so an
+    // `escalates_to` expectation can see what was tied, while a bare/`one_of` expectation
+    // still correctly fails against the wrapper object rather than silently matching it.
+    const methodActual = d.escalate ? { escalated_to: d.top_candidate ?? null } : d.selected;
+    checks.push(checkExpectation(methodActual, c.expect?.browser_method, 'browser_method'));
     checks.push(checkExpectation(d.escalate, c.expect?.escalate, 'escalate'));
   }
 

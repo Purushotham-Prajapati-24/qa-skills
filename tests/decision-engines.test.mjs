@@ -175,7 +175,14 @@ test('strong existing coverage wins over writing anything new', () => {
     factors: { existing_automation: 0.9, ui_known: 0.8, repeatability: 0.8, determinism_required: 0.8, exploratory_value: 0.1 },
     capabilities: { 'shell.run': true },
   });
-  assert.ok(['existing-tests', 'existing-other-tooling'].includes(d.selected));
+  // This factor set does not distinguish *which* existing tool the repo has (a real session
+  // would supply that from repository-intelligence); "existing-tests" and "existing-other-
+  // tooling" are near-duplicate affinity profiles by design and legitimately tie here, which
+  // correctly escalates (see the dedicated escalation tests below). The property this test
+  // actually asserts -- Rule 1 beating "write something new" -- holds either way: the winner
+  // is one of the two existing-tooling flavours, resolved or tied.
+  const winner = d.selected ?? d.top_candidate;
+  assert.ok(['existing-tests', 'existing-other-tooling'].includes(winner));
   assert.match(d.reason.join(' '), /cheapest reliable evidence/);
 });
 

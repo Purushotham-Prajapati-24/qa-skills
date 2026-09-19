@@ -62,7 +62,13 @@ export function evaluate({
 } = {}) {
   const unknownSignals = signals.filter((s) => !CATALOG.signals[s]);
   if (unknownSignals.length) {
-    throw new Error(`Unknown repository signal(s): ${unknownSignals.join(', ')}. Declare them in applicability-engine/catalog.json.`);
+    // Never tell the caller to edit catalog.json: an unrecognised signal name here is
+    // almost always a typo against the fixed vocabulary, not a genuinely new signal that
+    // needs a new catalog entry.
+    throw new Error(
+      `Unknown repository signal(s): ${unknownSignals.join(', ')}. `
+      + 'Known signals: `ast applicability catalog`.',
+    );
   }
 
   const riskScore = riskAssessment?.risk_score ?? 0.5;

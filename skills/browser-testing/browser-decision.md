@@ -56,6 +56,15 @@ be asserted, and it will recur often enough to justify committing a script after
 `escalate: true` rather than committing. Guessing here produces confidently wrong browser
 strategy, which is expensive to unwind.
 
+**When `escalate: true`, `selected` is always `null`.** The engine will never hand you a
+usable answer at the same time as telling you not to trust it. The candidate it would have
+picked, had it been forced to, appears as `top_candidate` instead — read that name as a
+warning, not a fallback. Do not substitute `top_candidate` (or `candidates[0]`) for
+`selected` yourself; that is precisely the guess this gate exists to prevent. Either supply
+better factors and re-decide, or record a `decide` entry that names the ambiguity and your
+chosen tiebreak explicitly, so the choice is auditable as a decision rather than invisible
+as a default.
+
 ## Hard rules
 
 Applied before scoring; they remove methods entirely.

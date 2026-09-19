@@ -53,7 +53,13 @@ export function decide({
 } = {}) {
   const unknown = Object.keys(factors).filter((f) => !M.factors[f]);
   if (unknown.length) {
-    throw new Error(`Unknown browser-decision factor(s): ${unknown.join(', ')}. Declare them in browser-decision/matrix.json.`);
+    // Never tell the caller to edit matrix.json: an unrecognised name here is almost
+    // always a caller typo against the fixed factor vocabulary, not a genuinely new
+    // factor that needs a new matrix entry.
+    throw new Error(
+      `Unknown browser-decision factor(s): ${unknown.join(', ')}. `
+      + 'Known factors: `ast browser matrix`.',
+    );
   }
   for (const [k, v] of Object.entries(factors)) {
     if (M.factors[k]?.raw) continue;
@@ -177,9 +183,21 @@ export function decide({
       .toFixed(2),
   );
 
+  // Invariant: "selected" is a value an agent may act on without reading anything else.
+  // "escalate: true" exists specifically to say that no such value is safe yet -- so a
+  // field literally named "selected" must never carry a real id at the same time, or an
+  // agent under time pressure will read the field whose name promises an answer and skip
+  // the boolean next to it. (This is exactly what happened in the field: `escalate: true`
+  // fired correctly, and the agent used `selected` anyway because it was populated.) The
+  // tied-or-forced-by-elimination candidate is not lost -- it moves to `top_candidate`,
+  // a name that does not imply it is safe to use, for a human or a recorded decision to
+  // weigh deliberately.
+  const finalEscalate = escalate || !selected;
+
   return {
-    selected: selected?.id ?? null,
-    escalate: escalate || !selected,
+    selected: finalEscalate ? null : selected.id,
+    escalate: finalEscalate,
+    ...(finalEscalate && selected ? { top_candidate: selected.id } : {}),
     confidence,
     margin,
     reason,

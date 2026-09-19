@@ -59,7 +59,10 @@ The output contains every candidate with its score, its eligibility, and every h
 that fired. Read `blocked_because` before `score` — a method may have been removed
 entirely rather than out-scored.
 
-`escalate: true` means the top two were within 0.05 and the engine refused to guess.
+`escalate: true` means the top two were within 0.05 and the engine refused to guess —
+`selected` is `null` whenever this fires, on purpose. If you see a real value in `selected`,
+the engine did not escalate; do not treat `top_candidate` (present only while escalating) as
+an answer to use instead.
 
 If the decision was made in a past session:
 

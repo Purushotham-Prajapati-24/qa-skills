@@ -181,8 +181,21 @@ const COMMANDS = {
   'risk score': {
     help: 'Score risk: risk score --input factors.json [--profile balanced]',
     run: ({ flags }) => {
-      const body = payload(flags);
-      const assessment = risk.score({ profile: flags.profile ?? body.profile ?? 'balanced', factors: body.factors ?? body });
+      // shouldAlias=false: `factors` is a map of FACTOR NAMES to {value, basis} objects, not
+      // an options bag. Aliasing would twin every factor name that contains an underscore
+      // (which is most of them) with a camelCase duplicate, and a flat body -- one with no
+      // top-level "factors" key at all -- would then present every one of those twins to the
+      // engine as an "unknown factor", naming identifiers the caller never wrote. There is
+      // also deliberately no `?? body` fallback: a flat body is a shape error, not an
+      // alternate shape, and must fail as one rather than being silently reinterpreted.
+      const body = payload(flags, false);
+      if (!body.factors || typeof body.factors !== 'object' || Array.isArray(body.factors)) {
+        throw new Error(
+          'risk score requires a "factors" object: { "factors": { "<name>": { "value": 0-1, "basis": "..." } } }. '
+          + 'See: node bin/ast.mjs risk profiles, or skills/risk-analysis/SKILL.md for a worked example.',
+        );
+      }
+      const assessment = risk.score({ profile: flags.profile ?? body.profile ?? 'balanced', factors: body.factors });
       return flags.explain ? { ...assessment, explanation: risk.explain(assessment) } : assessment;
     },
   },

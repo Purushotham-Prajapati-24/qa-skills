@@ -39,7 +39,7 @@
   "expect": {
     "failure_class": "environment-defect",
     "browser_method": {
-      "one_of": [
+      "escalates_to": [
         "existing-tests",
         "existing-other-tooling"
       ]
@@ -48,7 +48,8 @@
   "reasoning_notes": [
     "A missing capability must degrade the plan honestly: browser categories become BLOCKED, never silently skipped and never simulated.",
     "The engine must not report a browser failure as a product defect.",
-    "Calibration note: the engine returns existing-other-tooling. The factor set contains nothing that names WHICH framework the repository uses, so the matrix cannot distinguish C from E -- that choice comes from the repository profile, not from these factors. The assertion that matters here is 'run what already exists, write nothing new', so both are accepted."
+    "Calibration note: the factor set contains nothing that names WHICH framework the repository uses, so the matrix cannot distinguish C from E -- that choice comes from the repository profile, not from these factors. The assertion that matters here is 'run what already exists, write nothing new', so both are accepted.",
+    "Calibration note: the engine previously resolved this tie silently (by array order) to existing-other-tooling and this case tolerated either result under one_of. Silently resolving a genuine tie is exactly the 'confidently wrong strategy' the ambiguity gate exists to prevent, so the engine now escalates (selected: null, top_candidate holds the tied guess) and escalates_to is the honest way to express 'this is expected to be unresolvable from these factors, and either candidate is an acceptable guess if one is needed.'"
   ],
   "not_covered": [
     "Which existing browser framework to invoke. That comes from the repository profile, not the decision matrix."

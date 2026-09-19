@@ -3,6 +3,54 @@
 Semantic versioning. See [docs/versioning.md](docs/versioning.md) for what is versioned
 independently — document schemas and policy files carry their own versions.
 
+## [Unreleased]
+
+Two field trials of the pack against real repositories surfaced defects in the CLI's own
+input handling and in one decision engine's output shape — not in the judgement content,
+which both trials independently praised, but in the bookkeeping layer that is supposed to
+make that judgement trustworthy. This entry closes the first of those (payload shapes);
+more follow under the same heading.
+
+### Fixed
+
+- **`risk score` no longer accepts a flat body, and no longer aliases factor names.**
+  Previously, a body with no top-level `"factors"` key fell back to treating the whole body
+  as the factors map (`factors: body.factors ?? body`); combined with the CLI's automatic
+  camelCase aliasing of top-level snake_case keys, this made every factor name in a flat
+  body acquire an unrecognised alias, producing an "Unknown risk factor(s)" error naming
+  identifiers the caller never wrote. The flat fallback is removed, aliasing is disabled for
+  this command's data payload (matching `profile save`), and the rejection now states the
+  required shape and points at a worked example instead of failing bare.
+  `bin/ast.mjs`, `engine/risk-engine/index.mjs`.
+- **`browser decide` no longer returns a usable-looking `selected` value while also setting
+  `escalate: true`.** The ambiguity gate already existed and already fired correctly when
+  the top two candidates tied — including on a fully empty or malformed factors payload,
+  where every candidate now legitimately ties at a score of 0 — but the `selected` field
+  stayed populated with the tied candidate regardless, and a field literally named
+  `selected` is exactly what an agent under time pressure will read instead of the
+  `escalate` boolean next to it. `selected` is now `null` whenever `escalate` is true; the
+  candidate that would have been picked is exposed as `top_candidate`, a name chosen to not
+  imply safety. `engine/browser-decision/index.mjs`.
+- **Three "unknown name" errors (risk factor, browser-decision factor, applicability
+  signal) no longer instruct the caller to edit the engine's own configuration file.**
+  `weights.json` / `matrix.json` / `catalog.json` are the model's source of truth; an
+  unrecognised name reaching one of these checks is a caller typo or shape error, never a
+  legitimately new factor or signal, and telling an autonomous agent to "fix" it by editing
+  that file invites exactly the kind of config drift the file exists to prevent. All three
+  now point at the corresponding discovery command (`ast risk profiles`,
+  `ast browser matrix`, `ast applicability catalog`) instead.
+  `engine/risk-engine/index.mjs`, `engine/browser-decision/index.mjs`,
+  `engine/applicability-engine/index.mjs`.
+- **The benchmark can now express "this case is expected to be ambiguous."** Two existing
+  cases (case-01, case-11) already tied between `existing-tests` and `existing-other-
+  tooling` — case-11's own reasoning notes already said so — and depended on the engine
+  silently resolving that tie by array order. The new `escalates_to` expectation checks that
+  the engine escalated *and* that the tied candidate it surfaced is one of the accepted
+  ones, replacing a `one_of` (case-11) or a bare string (case-01) that would otherwise fail
+  every time the ambiguity gate correctly refuses to guess. `engine/evaluation-engine/
+  index.mjs`, `evaluation/benchmark-cases/case-01.json`, `evaluation/benchmark-cases/
+  case-11.json`.
+
 ## [0.9.0] - 2026-09-18
 
 A round of fixes against a set of gaps this project had already named about itself in
