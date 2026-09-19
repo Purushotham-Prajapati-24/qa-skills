@@ -54,9 +54,10 @@ export const DEFINITIONS = {
     why: 'Guards the metric above: a 100% accuracy over 2 assessed decisions out of 40 means nothing.',
   },
   actionable_finding_rate: {
-    formula: 'findings triaged confirmed|reported|resolved / total findings excluding duplicates',
+    formula: '(triaged confirmed|reported|resolved OR carries a recommended_action backed by evidence) / total findings excluding duplicates',
     direction: 'higher-is-better',
     blind_spot: 'A low rate may mean noisy reporting OR a thorough agent surfacing genuine ambiguity.',
+    why: 'Triage has exactly one real writer in this codebase (the duplicate-confirmed path), which pinned this at 0 for every finding filed the normal way -- a recommended action backed by evidence is what "actionable" actually means for a freshly-filed finding, and is measurable the moment it is filed rather than depending on a triage step nothing currently exercises.',
   },
   evidence_completeness: {
     formula: 'executions with at least one execution-grade evidence item / executions that claim a status',
@@ -137,7 +138,19 @@ export function compute({ declaredRequirements = [], highRiskBehaviours = [], au
 
   /* findings */
   const nonDuplicate = findings.filter((f) => !f.duplicate_of);
-  const actionable = nonDuplicate.filter((f) => ['confirmed', 'reported', 'resolved'].includes(f.triage?.state));
+  // The triage-state check alone pins this at 0 for every finding filed the normal way:
+  // triage.state starts at 'new' and the ONLY code path that ever writes 'confirmed' (or
+  // any other non-'new' state) is defect-engine's duplicate-detection branch -- which sets
+  // duplicate_of at the same time, so those findings are exactly what nonDuplicate filters
+  // out above. A recommended action backed by real evidence is what "actionable" means for
+  // a finding an agent just filed, and is true or false the moment it exists rather than
+  // depending on a triage workflow nothing in this codebase currently advances. Kept the
+  // triage check too: a finding triaged through that one real path still counts, and a
+  // future triage-advancing command would be picked up for free rather than needing a
+  // second change here.
+  const actionable = nonDuplicate.filter((f) =>
+    ['confirmed', 'reported', 'resolved'].includes(f.triage?.state)
+    || (f.recommended_action && (f.evidence ?? []).length > 0));
 
   /* evidence completeness */
   const statusClaiming = executions.filter((e) => ['PASSED', 'FAILED', 'COMPLETED', 'PARTIAL'].includes(e.status) && e.method !== 'not-executed');
@@ -148,8 +161,18 @@ export function compute({ declaredRequirements = [], highRiskBehaviours = [], au
   const evidenceAuditorRan = evidenceItems.some((e) => e.kind === 'evidence-audit');
 
   /* unnecessary tests */
+  // An execution that produced real, hashed evidence (a typecheck, a build, an audit run
+  // captured via `evidence capture`) is not "unnecessary" just because it happened not to
+  // surface a finding -- a clean result IS the useful outcome for exactly the cheap, early
+  // checks a senior tester runs first. Without this, a Madhubala-shaped session (typecheck
+  // + build, each evidenced, neither turning up a defect) scored 40% of its own testing as
+  // wasted.
   const barren = executions.filter(
-    (e) => e.method !== 'not-executed' && (e.findings ?? []).length === 0 && !e.decision_id && (e.test_results ?? []).length === 0,
+    (e) => e.method !== 'not-executed'
+      && (e.findings ?? []).length === 0
+      && !e.decision_id
+      && (e.test_results ?? []).length === 0
+      && (e.evidence ?? []).length === 0,
   );
 
   /* flakiness quality */

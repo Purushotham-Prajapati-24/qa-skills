@@ -5,6 +5,35 @@ independently — document schemas and policy files carry their own versions.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`actionable_finding_rate` was mathematically pinned at 0 for every possible session.**
+  Its numerator counted findings with `triage.state` in `{confirmed, reported, resolved}`;
+  the only code path anywhere in the codebase that ever writes a non-`'new'` triage state
+  is the duplicate-detection branch, which sets `duplicate_of` at the same time — exactly
+  what the denominator (`nonDuplicate`) filters out. The numerator was therefore always
+  drawn from a set the denominator had already excluded. Now a freshly-filed (`triage.state:
+  'new'`) finding also counts as actionable when it carries a `recommended_action` backed
+  by real evidence — measurable the moment a finding is filed, rather than depending on a
+  triage workflow nothing in this codebase currently advances. The duplicate-confirmed path
+  still counts too, unchanged, so a future triage-advancing command would be picked up for
+  free. `engine/evaluation-engine/metrics.mjs`.
+- **`finding add --executionId` never back-linked the finding into the execution's own
+  `findings[]`**, only onto the finding record itself and the session's list — so
+  `unnecessary_test_rate`'s "barren" check (zero findings, zero decision, zero
+  test_results) counted an execution that had produced a real, filed, evidenced finding as
+  an unnecessary test. `defects.create()` now appends to `execution.findings[]` when
+  `executionId` is supplied, mirroring what it already did for `session.findings` three
+  lines away — no change to calling order or any skill's documented workflow (finish, then
+  analyse, then file — findings are identified after an execution finishes, and this
+  requires no change to that). Also added: an execution carrying real, hashed evidence
+  (from `evidence capture`) and a terminal status is no longer "barren" whatever else it
+  produced or didn't — a clean, evidenced typecheck or build is the useful outcome those
+  cheap early checks exist to produce, not a wasted test. A Madhubala-shaped session
+  (typecheck + build, both evidenced, neither turning up a defect) now scores
+  `unnecessary_test_rate: 0`, not `0.4`. `engine/defect-engine/index.mjs`,
+  `engine/evaluation-engine/metrics.mjs`.
+
 ### Added
 
 - **Git provenance is now captured automatically instead of being purely agent-suppliable

@@ -100,6 +100,21 @@ export function create({
       return s;
     }, now);
   }
+  // Back-link into the execution's OWN findings[], not just the session's. Findings are
+  // naturally identified after an execution finishes (finish, then analyse, then file),
+  // so this is the only point at which the link can be made without forcing the wrong
+  // order -- exec finish's own findings[] parameter exists for the (rarer) case where
+  // they are already known at finish time, and this appends to whatever it already set
+  // rather than requiring one path or the other. Silently does nothing if executionId
+  // names an execution that does not exist; this function has never validated that and
+  // adding the requirement now would be a second, unrelated change.
+  if (executionId) {
+    const exec = state.get('executions', executionId);
+    if (exec) {
+      exec.findings = [...(exec.findings ?? []), id];
+      state.put('executions', executionId, exec, 'execution');
+    }
+  }
   state.telemetry({ event: 'finding', finding_id: id, kind, severity, confidence, duplicate_of: rec.duplicate_of ?? null });
   return rec;
 }
