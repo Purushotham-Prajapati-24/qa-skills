@@ -92,13 +92,31 @@ export function finish(executionId, {
   }
 
   rec.finished_at = now.toISOString();
-  rec.duration_ms = Math.max(0, new Date(rec.finished_at) - new Date(rec.started_at));
+  // wall_clock_ms is the honest name for what this has always measured: the gap between
+  // two CLI calls, including everything the agent did in between (reasoning, tool calls,
+  // other commands) -- not the runtime of whatever was tested. duration_ms is kept,
+  // unchanged, as a deprecated alias so records and code written before this field existed
+  // keep reading the same number under the old name; nothing here removes it.
+  rec.wall_clock_ms = Math.max(0, new Date(rec.finished_at) - new Date(rec.started_at));
+  rec.duration_ms = rec.wall_clock_ms;
   rec.status = finalStatus;
   rec.status_reason = reason;
   rec.evidence = evidence;
   rec.findings = findings;
   rec.uncertainties = uncertainties;
   if (nextAction) rec.next_action = nextAction;
+
+  // The actual measured runtime of what was tested, when it is known -- summed rather than
+  // taken from a single item, since one execution can link more than one captured command
+  // (e.g. a build then a test run). Evidence not captured via `evidence capture` has no
+  // command.duration_ms at all, so this is absent (not zero) rather than understating a
+  // real duration as "0ms measured".
+  const commandDurations = evidence
+    .map((evId) => state.get('evidence', evId)?.command?.duration_ms)
+    .filter((d) => Number.isInteger(d));
+  if (commandDurations.length) {
+    rec.command_duration_ms = commandDurations.reduce((a, b) => a + b, 0);
+  }
 
   if (testResults.length) {
     rec.test_results = testResults;

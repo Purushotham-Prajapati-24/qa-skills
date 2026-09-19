@@ -5,6 +5,35 @@ independently — document schemas and policy files carry their own versions.
 
 ## [Unreleased]
 
+### Added
+
+- **`wall_clock_ms` and `command_duration_ms` on executions (remediation item 7).**
+  `duration_ms` has always measured the gap between two CLI calls (`exec start` ..
+  `exec finish`) -- the agent's own reasoning, tool calls and everything else in between,
+  never the runtime of whatever was actually tested. A field trial's report recorded a
+  Playwright suite at 100,488ms against a transcript stating the real run took 17.1s, a 6x
+  overstatement, rendered under a plain "Duration" header inviting exactly that reading.
+  `wall_clock_ms` gives the existing number its honest name; `duration_ms` stays, unchanged,
+  as a deprecated alias so nothing reading the old field name breaks (renaming outright would
+  be an incompatible schema change under this project's own versioning policy -- see
+  `docs/versioning.md` -- disproportionate to what this fix needs). `command_duration_ms` is
+  new: the real, captured runtime of what was tested, summed from linked evidence's
+  `command.duration_ms` (populated by `evidence capture`, item 1 on this branch) -- absent,
+  not zero, when nothing was captured that way. The rendered Executions table now has two
+  honestly-labelled columns, "Wall clock" and "Command time", replacing the single ambiguous
+  "Duration" — "—" for Command time when nothing was captured, never a wall-clock number
+  standing in for it. `runtime_efficiency_ms_per_case` (one of the three metrics this field
+  trial named as defective by construction) now sums `command_duration_ms` exclusively,
+  excluding — not zeroing — any execution with none; a session with nothing captured this
+  way now reports the metric as `null` rather than a wall-clock-derived figure that cannot
+  be right. Deliberately NOT touched: `execution_summary.total_duration_ms` (the
+  session-wide aggregate in the report's top summary, schema-locked and not the field
+  G-06's reproduction case was about) and `evidence.command.duration_ms` (already correctly
+  named — it always measured a real captured command). `engine/execution-engine/index.mjs`,
+  `engine/reporting-engine/index.mjs`, `engine/evaluation-engine/metrics.mjs`,
+  `schemas/execution.schema.json` (`wall_clock_ms`, `command_duration_ms`, both optional),
+  `examples/artifacts/*` (regenerated).
+
 ### Changed
 
 - **The Evaluation metrics table now renders only metrics with a real denominator; the

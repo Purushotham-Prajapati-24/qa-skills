@@ -87,8 +87,9 @@ export const DEFINITIONS = {
     blind_spot: 'A passing regression test that finds nothing is valuable insurance; this metric undercounts that. Read it alongside high_risk_coverage.',
   },
   runtime_efficiency_ms_per_case: {
-    formula: 'total execution duration / test cases executed',
+    formula: 'sum of command_duration_ms (real, captured command runtime) / test cases from executions with a captured command duration',
     direction: 'lower-is-better',
+    blind_spot: 'Only counts executions whose evidence was captured via `evidence capture`. A session with no captured commands reports null (honestly, not a substitute number) rather than the previous wall_clock_ms-derived figure, which measured agent latency between CLI calls, not test runtime, and once overstated a 17.1s Playwright run as 100,488ms.',
   },
   flaky_identification_quality: {
     formula: '1 - (tests labelled flaky with fewer than 3 runs / tests labelled flaky)',
@@ -191,9 +192,15 @@ export function compute({ declaredRequirements = [], highRiskBehaviours = [], au
   const flakyLabels = analyseFlakiness().filter((f) => f.verdict === 'flaky');
   const prematureFlaky = flakyLabels.filter((f) => f.runs < 3);
 
-  /* runtime */
-  const totalDuration = executions.reduce((a, e) => a + (e.duration_ms ?? 0), 0);
-  const totalCases = executions.reduce((a, e) => a + (e.test_results?.length ?? 0), 0);
+  /* runtime -- command_duration_ms only, never wall_clock_ms/duration_ms. Those measure the
+   * gap between two CLI calls (the agent's own reasoning time included), not the runtime of
+   * whatever was tested; using them here is exactly what let a 17.1s Playwright run score as
+   * 100,488ms in a field trial. An execution with no captured command duration contributes
+   * to neither sum -- excluded, not counted as zero -- so a session with nothing captured
+   * this way reports this metric as null rather than a wall-clock-derived substitute. */
+  const commandTimed = executions.filter((e) => Number.isInteger(e.command_duration_ms));
+  const totalDuration = commandTimed.reduce((a, e) => a + e.command_duration_ms, 0);
+  const totalCases = commandTimed.reduce((a, e) => a + (e.test_results?.length ?? 0), 0);
 
   /* authorization */
   const performed = writes.filter((w) => w.confirmed);

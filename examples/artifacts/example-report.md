@@ -12,7 +12,7 @@ hand-written approximation of it.
 
 | Session | Repository | Commit | PR | Generated | Skill |
 | --- | --- | --- | --- | --- | --- |
-| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-09-19 08:38:53Z | v0.9.0 |
+| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-09-19 08:44:22Z | v0.9.0 |
 
 ## Verdict
 
@@ -98,14 +98,14 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 
 ### Executions
 
-| ID | Status | Goal | Method | Failure class | Duration |
-| --- | --- | --- | --- | --- | --- |
-| EXEC-2026-00003 | FAILED | User A cannot select user B's saved card | api-client | authentication-failure (0.5) | 7 ms |
-| EXEC-2026-00004 | BLOCKED | Payment E2E against the real provider | not-executed | — | 0 ms |
-| EXEC-2026-00001 | INCONCLUSIVE | Quick smoke of the checkout page | existing-suite | — | 4 ms |
-| EXEC-2026-00006 | INTERRUPTED | Accessibility scan of the checkout pages | static-analysis | — | — |
-| EXEC-2026-00005 | NOT_APPLICABLE | Localisation testing | not-executed | — | 0 ms |
-| EXEC-2026-00002 | PASSED | Baseline: full unit suite at head | existing-suite | — | 8 ms |
+| ID | Status | Goal | Method | Failure class | Wall clock | Command time |
+| --- | --- | --- | --- | --- | --- | --- |
+| EXEC-2026-00003 | FAILED | User A cannot select user B's saved card | api-client | authentication-failure (0.5) | 8 ms | 3120 ms |
+| EXEC-2026-00004 | BLOCKED | Payment E2E against the real provider | not-executed | — | 0 ms | — |
+| EXEC-2026-00001 | INCONCLUSIVE | Quick smoke of the checkout page | existing-suite | — | 6 ms | — |
+| EXEC-2026-00006 | INTERRUPTED | Accessibility scan of the checkout pages | static-analysis | — | — | — |
+| EXEC-2026-00005 | NOT_APPLICABLE | Localisation testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00002 | PASSED | Baseline: full unit suite at head | existing-suite | — | 9 ms | 12480 ms |
 
 | Status | Count |
 | --- | --- |
@@ -120,8 +120,8 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 
 | ID | Kind | Summary | Anchored? | Artifact |
 | --- | --- | --- | --- | --- |
-| EV-2026-00001 | command-output | vitest: 211/211 passed | yes | C:\Users\purus\AppData\Local\Temp\claude\D--QATesting\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\scratchpad\demo-real-state\evidence\blobs\output-2026-09-19T08-38-53-925Z-5768.txt |
-| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | yes | C:\Users\purus\AppData\Local\Temp\claude\D--QATesting\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\scratchpad\demo-real-state\evidence\blobs\output-2026-09-19T08-38-53-937Z-5768.txt |
+| EV-2026-00001 | command-output | vitest: 211/211 passed | yes | C:\Users\purus\AppData\Local\Temp\claude\D--QATesting\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\scratchpad\demo-real-state\evidence\blobs\output-2026-09-19T08-44-22-927Z-53460.txt |
+| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | yes | C:\Users\purus\AppData\Local\Temp\claude\D--QATesting\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\scratchpad\demo-real-state\evidence\blobs\output-2026-09-19T08-44-22-940Z-53460.txt |
 
 ### External writes
 
@@ -239,7 +239,7 @@ _Excluded for lack of evidence — not scored, not guessed: user_impact, depende
 | evidence_anchored_rate | 1 | 2 | ⚠️ below noise floor (5) | higher-is-better |
 | audit_coverage | 0 | 2 | ⚠️ below noise floor (5) | higher-is-better |
 | unnecessary_test_rate | 0.5 | 4 | ⚠️ below noise floor (5) | lower-is-better |
-| runtime_efficiency_ms_per_case | 6.3333 | 3 | ⚠️ below noise floor (5) | lower-is-better |
+| runtime_efficiency_ms_per_case | 5200 | 3 | ⚠️ below noise floor (5) | lower-is-better |
 | interruption_recovery_rate | 0.5 | 2 | ⚠️ below noise floor (5) | higher-is-better |
 | authorization_compliance | 1 | 1 | ⚠️ below noise floor (5) | higher-is-better |
 | reproducibility | 0.5 | 4 | ⚠️ below noise floor (5) | higher-is-better |
@@ -269,4 +269,4 @@ _Not measured this session (zero denominator, honestly excluded rather than show
 
 Produced by the Autonomous Software Testing skill system v0.9.0. Every status above is traceable to a record under `state/`.
 
-_Rendered from REPORT-2026-00001 · digest `sha256:c40553664252e1492ce173dbd77d1048d62bf007dd3e93eab226840fc1c0e64a` · verify with `ast report verify`. A report with no digest line was not produced by this system._
+_Rendered from REPORT-2026-00001 · digest `sha256:f0bf8a2094ced4bb8c1c1b612c1fd5324b7cc68028f923618b12692e36c3062a` · verify with `ast report verify`. A report with no digest line was not produced by this system._

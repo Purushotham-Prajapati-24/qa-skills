@@ -1,7 +1,7 @@
 {
   "report_id": "REPORT-2026-00001",
   "report_version": "1.2.0",
-  "generated_at": "2026-09-19T08:38:53.990Z",
+  "generated_at": "2026-09-19T08:44:22.998Z",
   "session_id": "SESSION-0001",
   "executive_summary": {
     "headline": "**FAILED** — 4 executions run · 1 finding, worst critical · 2 planned items not run.",
@@ -60,7 +60,7 @@
       "NOT_APPLICABLE": 1,
       "INTERRUPTED": 1
     },
-    "total_duration_ms": 19,
+    "total_duration_ms": 23,
     "test_cases": 3
   },
   "detailed_results": [
@@ -71,7 +71,9 @@
       "method": "api-client",
       "status": "FAILED",
       "status_reason": "GET /api/payment-methods/:id returned another user's card with HTTP 200.",
-      "duration_ms": 7,
+      "duration_ms": 8,
+      "wall_clock_ms": 8,
+      "command_duration_ms": 3120,
       "evidence": [
         "EV-2026-00002"
       ],
@@ -99,6 +101,8 @@
       "status": "BLOCKED",
       "status_reason": "STRIPE_SECRET_KEY is unset; refusing to transact against a live key.",
       "duration_ms": 0,
+      "wall_clock_ms": 0,
+      "command_duration_ms": null,
       "evidence": [],
       "findings": [],
       "failure_classification": null,
@@ -111,7 +115,9 @@
       "method": "existing-suite",
       "status": "INCONCLUSIVE",
       "status_reason": "Checkout works. [DOWNGRADED from PASSED: \"[REDACTED]\" claims something was executed, but no evidence is attached. Absence of failure is not proof of correctness.]",
-      "duration_ms": 4,
+      "duration_ms": 6,
+      "wall_clock_ms": 6,
+      "command_duration_ms": null,
       "evidence": [],
       "findings": [],
       "failure_classification": {
@@ -130,6 +136,8 @@
       "status": "INTERRUPTED",
       "status_reason": "Session ended before this execution was finalised. No outcome may be inferred.",
       "duration_ms": null,
+      "wall_clock_ms": null,
+      "command_duration_ms": null,
       "evidence": [],
       "findings": [],
       "failure_classification": null,
@@ -143,6 +151,8 @@
       "status": "NOT_APPLICABLE",
       "status_reason": "No i18n resources exist in the repository; nothing is translated.",
       "duration_ms": 0,
+      "wall_clock_ms": 0,
+      "command_duration_ms": null,
       "evidence": [],
       "findings": [],
       "failure_classification": null,
@@ -155,7 +165,9 @@
       "method": "existing-suite",
       "status": "PASSED",
       "status_reason": "vitest suite executed against abc1234; 211 tests passed, 0 failed.",
-      "duration_ms": 8,
+      "duration_ms": 9,
+      "wall_clock_ms": 9,
+      "command_duration_ms": 12480,
       "evidence": [
         "EV-2026-00001"
       ],
@@ -170,7 +182,7 @@
       "kind": "command-output",
       "summary": "vitest: 211/211 passed",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\claude\\D--QATesting\\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\\scratchpad\\demo-real-state\\evidence\\blobs\\output-2026-09-19T08-38-53-925Z-5768.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\claude\\D--QATesting\\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\\scratchpad\\demo-real-state\\evidence\\blobs\\output-2026-09-19T08-44-22-927Z-53460.txt",
       "sha256": "sha256:08847719b18700defc4e5811a3e0be639fa4d8c92fcbdefd7cff7a429ac59e38"
     },
     {
@@ -178,7 +190,7 @@
       "kind": "command-output",
       "summary": "api: 11/12 passed, 1 failed",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\claude\\D--QATesting\\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\\scratchpad\\demo-real-state\\evidence\\blobs\\output-2026-09-19T08-38-53-937Z-5768.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\claude\\D--QATesting\\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\\scratchpad\\demo-real-state\\evidence\\blobs\\output-2026-09-19T08-44-22-940Z-53460.txt",
       "sha256": "sha256:6860525264278abb9c4fb263992a6bcbbfd9d5d8d074c9c5f1779db558c4b2b8"
     }
   ],
@@ -311,7 +323,7 @@
     }
   ],
   "metrics": {
-    "computed_at": "2026-09-19T08:38:54.000Z",
+    "computed_at": "2026-09-19T08:44:23.010Z",
     "sample_sizes": {
       "executions": 6,
       "decisions": 1,
@@ -331,7 +343,7 @@
       "audit_coverage": 0,
       "automation_conversion": null,
       "unnecessary_test_rate": 0.5,
-      "runtime_efficiency_ms_per_case": 6.3333,
+      "runtime_efficiency_ms_per_case": 5200,
       "flaky_identification_quality": null,
       "interruption_recovery_rate": 0.5,
       "authorization_compliance": 1,
@@ -438,8 +450,9 @@
         "blind_spot": "A passing regression test that finds nothing is valuable insurance; this metric undercounts that. Read it alongside high_risk_coverage."
       },
       "runtime_efficiency_ms_per_case": {
-        "formula": "total execution duration / test cases executed",
-        "direction": "lower-is-better"
+        "formula": "sum of command_duration_ms (real, captured command runtime) / test cases from executions with a captured command duration",
+        "direction": "lower-is-better",
+        "blind_spot": "Only counts executions whose evidence was captured via `evidence capture`. A session with no captured commands reports null (honestly, not a substitute number) rather than the previous wall_clock_ms-derived figure, which measured agent latency between CLI calls, not test runtime, and once overstated a 17.1s Playwright run as 100,488ms."
       },
       "flaky_identification_quality": {
         "formula": "1 - (tests labelled flaky with fewer than 3 runs / tests labelled flaky)",
@@ -481,7 +494,7 @@
     "skill_version": "0.9.0",
     "skill_name": "test-reporting",
     "engine_version": "0.9.0",
-    "created_at": "2026-09-19T08:38:53.990Z",
+    "created_at": "2026-09-19T08:44:22.998Z",
     "created_by": "agent",
     "session_id": "SESSION-0001"
   },
@@ -1587,5 +1600,5 @@
       ]
     }
   ],
-  "digest": "sha256:c40553664252e1492ce173dbd77d1048d62bf007dd3e93eab226840fc1c0e64a"
+  "digest": "sha256:f0bf8a2094ced4bb8c1c1b612c1fd5324b7cc68028f923618b12692e36c3062a"
 }

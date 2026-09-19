@@ -134,7 +134,13 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
         method: e.method,
         status: e.status,
         status_reason: e.status_reason,
+        // duration_ms kept for anything still reading the old name. wall_clock_ms is the
+        // same number under its honest name; command_duration_ms -- the actual measured
+        // runtime of what was tested -- is only present when at least one linked evidence
+        // item was captured via `evidence capture` (see execution-engine's finish()).
         duration_ms: e.duration_ms ?? null,
+        wall_clock_ms: e.wall_clock_ms ?? e.duration_ms ?? null,
+        command_duration_ms: e.command_duration_ms ?? null,
         evidence: e.evidence ?? [],
         findings: e.findings ?? [],
         failure_classification: e.failure_classification ?? null,
@@ -503,9 +509,17 @@ export function render(r) {
           (d.failure_classification && d.failure_classification.class !== 'unclassified-no-signals')
             ? `${d.failure_classification.class} (${d.failure_classification.confidence})`
             : '—',
-          d.duration_ms != null ? `${d.duration_ms} ms` : '—',
+          // Two different numbers, never conflated under one ambiguous "Duration" header:
+          // wall-clock is the gap between the two CLI calls (always known once an execution
+          // finishes; includes the agent's own reasoning time), command time is the actual
+          // measured runtime of what was tested (only known when linked evidence was
+          // captured via `evidence capture`). Printing wall-clock under a "Duration" header
+          // was read as the latter -- a Playwright run recorded at 100,488ms against a
+          // transcript stating the real run took 17.1s.
+          d.wall_clock_ms != null ? `${d.wall_clock_ms} ms` : '—',
+          d.command_duration_ms != null ? `${d.command_duration_ms} ms` : '—',
         ]),
-        ['ID', 'Status', 'Goal', 'Method', 'Failure class', 'Duration'],
+        ['ID', 'Status', 'Goal', 'Method', 'Failure class', 'Wall clock', 'Command time'],
       ),
       table(
         Object.entries(r.execution_summary?.by_status ?? {}).map(([s, n]) => [s, n]),
