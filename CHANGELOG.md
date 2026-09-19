@@ -5,8 +5,45 @@ independently — document schemas and policy files carry their own versions.
 
 ## [Unreleased]
 
+### Added
+
+- **A version-skew warning when persisted records were stamped under a different skill
+  version than the one running right now.** A field trial's rendered report cited
+  "AST v0.8.0" in one place while the skills it had just run under declared `system_version:
+  0.9.0` in another — nothing had ever checked that the package was not upgraded
+  mid-session. `provenance.skill_version` is already stamped from `SYSTEM_VERSION` at the
+  moment each record is created, so a new `process-completeness` check compares every
+  stamped value across the session, its decisions, executions, evidence and findings
+  against the current `SYSTEM_VERSION`; any mismatch — whether upgraded partway through a
+  session or only after it finished, before the report was generated — is now a named,
+  advisory (never blocking, even under `--final`; an upgrade mid-session is not a defect in
+  the work) finding, and flows automatically into the rendered report's integrity
+  violations alongside every other process-completeness gap.
+  `engine/evaluation-engine/process-completeness.mjs`.
+- **`ast evidence amend <id> --kind <kind>`, the missing recovery path for a mis-typed
+  evidence kind.** `evidence_auditor_run` is true only when some evidence record has `kind:
+  'evidence-audit'`; a field trial's agent recorded the audit as `kind: 'other'`, generated
+  the report, saw the metric read `false`, and had no way to correct the existing record —
+  only to add a second, correctly-typed one and ship both. The final report rendered the
+  same audit twice. `amend` corrects the stored record's `kind` in place (schema-validated,
+  same as any other write; every other field, including the `evidence_id` and `timestamp`,
+  is left untouched), and the orchestrator's own reporting workflow now names it directly
+  as the fix for this situation instead of leaving an agent to improvise a second record
+  the way the field trial's did. `engine/evidence-engine/index.mjs`, `bin/ast.mjs`,
+  `skills/testing-orchestrator/workflows/reporting.md`.
+
 ### Fixed
 
+- **`readJson` threw "Corrupt JSON" on a UTF-16 file instead of decoding it.** It already
+  stripped a UTF-8 BOM (`Out-File -Encoding utf8` writes one) but had no equivalent for
+  UTF-16, and UTF-16LE-with-BOM is exactly what PowerShell 5.1's `>` redirect writes —
+  `npx playwright test > results.json` on Windows produces one, and a field trial hit
+  precisely this, reading a real, uncorrupted file as unparseable with no clue why. Detects
+  a UTF-16LE or UTF-16BE BOM and decodes it (Node has no native UTF-16BE decoder, so BE goes
+  through `Buffer.swap16()` into LE first) rather than merely improving the error message —
+  the same judgment already made for the UTF-8 BOM case: the file is not lying about its
+  encoding, and rejecting a standard one is this tool's problem to route around, not the
+  caller's to work around. `engine/core/fsjson.mjs`.
 - **The failure classifier's no-signal fallback was named and scored like a verdict on
   the finding, not on the classifier's own inputs.** `classify()` returned
   `{class: 'insufficient-evidence', confidence: 0.9}` whenever `signals` was empty — the

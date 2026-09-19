@@ -273,6 +273,31 @@ export function verifyClaim({ status, evidenceIds = [], statement = '', executio
   return { permitted: true, reasons };
 }
 
+/** Every kind this engine recognises, regardless of which evidentiary bucket it falls into. */
+const ALL_KINDS = new Set([...EXECUTION_EVIDENCE, ...CORROBORATING_EVIDENCE, ...NON_EXECUTION]);
+
+/**
+ * Correct an evidence record's `kind` after the fact.
+ *
+ * The only recovery path once a record is mis-typed: with no way to fix `kind` in place, an
+ * agent that recorded an audit as `other` and later needed `evidence-audit` had exactly one
+ * option -- add a second, correct record and leave the first as litter. Both then render in
+ * the final report as if two audits happened.
+ */
+export function amend(id, { kind } = {}) {
+  const rec = state.get('evidence', id);
+  if (!rec) throw new Error(`No such evidence: ${id}`);
+  if (!kind) throw new Error('evidence amend requires --kind <new-kind>.');
+  if (!ALL_KINDS.has(kind)) {
+    throw new Error(`Unknown evidence kind "${kind}". Valid kinds: ${[...ALL_KINDS].sort().join(', ')}`);
+  }
+  if (kind === rec.kind) return rec;
+  const next = { ...rec, kind };
+  state.put('evidence', id, next, 'evidence');
+  state.telemetry({ event: 'evidence-amend', evidence_id: id, from_kind: rec.kind, to_kind: kind });
+  return next;
+}
+
 /** Bulk audit used by the reporting engine's integrity block. */
 export function auditClaims(claims) {
   const results = claims.map((c) => ({ ...c, verdict: verifyClaim(c) }));

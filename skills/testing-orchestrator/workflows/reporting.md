@@ -85,6 +85,11 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input '{
 }'
 ```
 
+Recorded the audit under the wrong `kind` (e.g. `other`) and only noticed after
+`evidence_auditor_run` came back `false`? Fix the existing record — `ast evidence amend
+<id> --kind evidence-audit` — rather than adding a second, correctly-typed one. Two records
+for one audit both render in the final report as if two audits happened.
+
 If the auditor flagged a claim, downgrade it (`ast exec update` / re-file the finding)
 **before** generating the report — the report renders from state, so a claim fixed after
 the report is generated does not retroactively fix the report.

@@ -177,7 +177,7 @@ quietly dropping the obligation.
 ## Verify the installation
 
 ```bash
-node --test "tests/*.test.mjs"     # 248 tests
+node --test "tests/*.test.mjs"     # 273 tests
 node bin/ast.mjs eval run          # 15 benchmark cases, 41 checks
 node scripts/validate-repo.mjs     # links, schemas, cross-references
 ```

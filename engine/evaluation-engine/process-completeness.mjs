@@ -28,6 +28,7 @@
  */
 import * as state from '../state-engine/index.mjs';
 import { open as openUncertainties } from '../uncertainty-register/index.mjs';
+import { SYSTEM_VERSION } from '../core/version.mjs';
 
 const BLOCKED_LIKE = new Set(['BLOCKED', 'NEEDS_USER_INPUT']);
 
@@ -71,6 +72,33 @@ export function check() {
       check: 'no-git-provenance',
       severity: 'advisory',
       message: 'No execution carries a commit. Nothing in this session is reproducible against a known tree.',
+    });
+  }
+
+  // A field trial's rendered report cited "AST v0.8.0" in one place while the skills it had
+  // just run under declared v0.9.0 in another -- nothing had checked that the package was
+  // not upgraded mid-session. `provenance.skill_version` is stamped from SYSTEM_VERSION at
+  // the moment each record is created, so any stamped value other than the version running
+  // right now IS that skew, whether it is the only version present (upgraded after the
+  // session finished, before the report was generated) or one of several (upgraded partway
+  // through). Advisory, like `no-git-provenance` above: an upgrade mid-session is not a
+  // defect in the work, only a fact the report should be honest about.
+  const session = state.loadSession();
+  const stampedVersions = new Set(
+    [session, ...decisions, ...real, ...state.list('evidence'), ...state.list('findings')]
+      .map((r) => r?.provenance?.skill_version)
+      .filter(Boolean),
+  );
+  const stale = [...stampedVersions].filter((v) => v !== SYSTEM_VERSION).sort();
+  if (stale.length > 0) {
+    findings.push({
+      check: 'version-skew',
+      severity: 'advisory',
+      message: `Records were stamped under skill version(s) ${stale.join(', ')}, but the CLI `
+        + `running right now is v${SYSTEM_VERSION}. The package was upgraded mid-session or `
+        + 'after it -- findings, decisions and evidence recorded under the older version '
+        + "reflect that version's behaviour, not this one's. Note the version(s) involved in "
+        + 'the final report if that difference matters to how a finding should be read.',
     });
   }
 

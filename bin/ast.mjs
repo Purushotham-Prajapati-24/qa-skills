@@ -339,6 +339,14 @@ const COMMANDS = {
     help: 'Check whether a status claim is supported: evidence verify --input {"status":"PASSED","evidenceIds":[...]}',
     run: ({ flags }) => evidence.verifyClaim(payload(flags)),
   },
+  'evidence amend': {
+    help: 'Correct a mis-typed evidence kind: evidence amend EV-2026-00001 --kind evidence-audit',
+    run: ({ flags, positional }) => {
+      const id = positional[2];
+      if (!id) throw new Error('evidence amend requires an evidence ID, e.g.: ast evidence amend EV-2026-00001 --kind evidence-audit');
+      return evidence.amend(id, { kind: flags.kind });
+    },
+  },
   'evidence list': { help: 'List evidence items.', run: () => state.list('evidence') },
 
   /* ---- execution ---- */
