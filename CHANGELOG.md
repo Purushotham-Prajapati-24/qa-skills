@@ -3,6 +3,386 @@
 Semantic versioning. See [docs/versioning.md](docs/versioning.md) for what is versioned
 independently — document schemas and policy files carry their own versions.
 
+## [0.10.0] - 2026-09-19
+
+### Fixed
+
+- **`ast adapter complete`'s own `--help` text was the one place in the CLI still leading
+  with `--json '<provider response>'`** instead of `--input`, the shell-agnostic path every
+  other command's help text already uses (G-08's fix #2: "keep `--json` in the CLI but
+  remove it from the documented path"). The flag itself still works unchanged
+  (`flags.json ? JSON.parse(flags.json) : payload(flags)`) -- only the shown example
+  changed, to `--input response.json`. `bin/ast.mjs`.
+
+### Added
+
+- **`ast <command> --example` (G-12, remediation item 15).** A field trial's agent hit
+  `session start --input goals.json` with no goals.json to point at and no example
+  anywhere in its reading path -- it read the session schema cold, then gave up and ran
+  with just `--request`. `risk score`'s payload WAS documented with a worked example, but
+  only in a sibling skill (`risk-analysis/SKILL.md`) the agent had not loaded at the moment
+  it needed it: correct and unreachable. "Payload contracts belong to the CLI, not to
+  prose in a sibling skill." `--example` prints a valid, realistic payload directly from
+  the command that needs it, for any command that declares one, without executing it --
+  the four commands the field trial named as needing this most now have one:
+  `session start` (a `goals.json` shape), `risk score` (the exact worked example already
+  in `risk-analysis/SKILL.md`, now reachable from the CLI itself), `browser decide` (a
+  `factors.json` shape), and `report generate` (a minimal `context.json`). Each is verified
+  by a test that round-trips the printed example straight back through the real command,
+  not merely that the flag prints something. Left for later, not silently dropped: the
+  other ~20 `--input`-taking commands have no declared example yet -- the flag mechanism
+  supports adding one to any of them at any time, it is just unpopulated. `bin/ast.mjs`,
+  `skills/testing-orchestrator/SKILL.md`, `skills/risk-analysis/SKILL.md`.
+
+- **An "Unblock these" report section (G-16, remediation item 11).** A field trial's admin
+  had to interrogate the agent turn by turn ("why didnt you do it? do you have any
+  boundation from the .claude skills?") to learn that three untested features were blocked
+  by legitimate, well-reasoned policy, not laziness or a bug. Even on the compliant path --
+  a report that already states "BLOCKED: no explicit authorisation for load traffic" -- the
+  reader was never told THEY were the one who could clear it: the system knew what
+  authorisation or capability would unblock the item and never offered. This section lists
+  every open, currently-blocking uncertainty (status `blocked`, `user-input-required`,
+  `environment-unavailable` or `external-dependency` -- see
+  `uncertainty-register`'s exported `BLOCKING_STATUSES`) whose `owner` is `user` or
+  `external`, phrased as a direct offer: "**{what's blocked}** — blocked: {impact}.
+  {next action}." Deliberately excludes `owner: 'agent'` uncertainties -- those are the
+  agent's own job to resolve, and mixing them in would bury the ones that are actually
+  waiting on the reader -- and non-blocking statuses like `future-case`, which do not stall
+  anything right now. Reuses fields the uncertainty register already required
+  (`next_action`, `impact`, `owner`, `raised_by_execution`); no new capability-registry
+  threading needed. `engine/reporting-engine/index.mjs`, `engine/uncertainty-register/index.mjs`
+  (`BLOCKING_STATUSES` now exported), `schemas/report.schema.json`
+  (`uncertainty_details[].impact`/`.blocking`/`.raised_by_execution`, all optional; report
+  schema stays at 1.2.0 -- see `engine/core/version.mjs`'s comment), `examples/artifacts/*`
+  (regenerated).
+
+- **`wall_clock_ms` and `command_duration_ms` on executions (remediation item 7).**
+  `duration_ms` has always measured the gap between two CLI calls (`exec start` ..
+  `exec finish`) -- the agent's own reasoning, tool calls and everything else in between,
+  never the runtime of whatever was actually tested. A field trial's report recorded a
+  Playwright suite at 100,488ms against a transcript stating the real run took 17.1s, a 6x
+  overstatement, rendered under a plain "Duration" header inviting exactly that reading.
+  `wall_clock_ms` gives the existing number its honest name; `duration_ms` stays, unchanged,
+  as a deprecated alias so nothing reading the old field name breaks (renaming outright would
+  be an incompatible schema change under this project's own versioning policy -- see
+  `docs/versioning.md` -- disproportionate to what this fix needs). `command_duration_ms` is
+  new: the real, captured runtime of what was tested, summed from linked evidence's
+  `command.duration_ms` (populated by `evidence capture`, item 1 on this branch) -- absent,
+  not zero, when nothing was captured that way. The rendered Executions table now has two
+  honestly-labelled columns, "Wall clock" and "Command time", replacing the single ambiguous
+  "Duration" — "—" for Command time when nothing was captured, never a wall-clock number
+  standing in for it. `runtime_efficiency_ms_per_case` (one of the three metrics this field
+  trial named as defective by construction) now sums `command_duration_ms` exclusively,
+  excluding — not zeroing — any execution with none; a session with nothing captured this
+  way now reports the metric as `null` rather than a wall-clock-derived figure that cannot
+  be right. Deliberately NOT touched: `execution_summary.total_duration_ms` (the
+  session-wide aggregate in the report's top summary, schema-locked and not the field
+  G-06's reproduction case was about) and `evidence.command.duration_ms` (already correctly
+  named — it always measured a real captured command). `engine/execution-engine/index.mjs`,
+  `engine/reporting-engine/index.mjs`, `engine/evaluation-engine/metrics.mjs`,
+  `schemas/execution.schema.json` (`wall_clock_ms`, `command_duration_ms`, both optional),
+  `examples/artifacts/*` (regenerated).
+
+### Changed
+
+- **The Evaluation metrics table now renders only metrics with a real denominator; the
+  rest collapse into one named line instead of sitting inline as `_n/a (zero
+  denominator)_`.** A field trial's own report had three defective-by-construction metrics
+  (G-04, G-06, G-10) rendered in the same table as its honest ones, with nothing about the
+  table's presentation marking a difference in kind — a reader had to check each row by
+  hand to tell a real measurement from a zero-denominator artifact. The table's own
+  reviewer recommendation: "render only metrics with a real, non-defective denominator;
+  move the rest to a collapsed 'not measured this session' list. A short honest table beats
+  a long one with three broken rows." Found and fixed along the way: `false_confidence_rate`
+  itself returned a real-looking `0`, not `null`, whenever there were zero PASSED/COMPLETED
+  claims to audit — the one metric in this file that did not follow its own "null means
+  zero denominator" convention, so it would have sat in the "real" table with `n: 0` under
+  this exact change had it gone untouched. `report.integrity.false_confidence_rate`
+  (schema-locked to `type: number`) is deliberately left returning `0` in that unrelated
+  location — fixing it there would require a schema version bump disproportionate to this
+  change, and it was not what the field trial's own recommendation was about.
+  `engine/reporting-engine/index.mjs`, `engine/evaluation-engine/metrics.mjs`,
+  `examples/artifacts/*` (regenerated).
+
+### Added
+
+- **A version-skew warning when persisted records were stamped under a different skill
+  version than the one running right now.** A field trial's rendered report cited
+  "AST v0.8.0" in one place while the skills it had just run under declared `system_version:
+  0.9.0` in another — nothing had ever checked that the package was not upgraded
+  mid-session. `provenance.skill_version` is already stamped from `SYSTEM_VERSION` at the
+  moment each record is created, so a new `process-completeness` check compares every
+  stamped value across the session, its decisions, executions, evidence and findings
+  against the current `SYSTEM_VERSION`; any mismatch — whether upgraded partway through a
+  session or only after it finished, before the report was generated — is now a named,
+  advisory (never blocking, even under `--final`; an upgrade mid-session is not a defect in
+  the work) finding, and flows automatically into the rendered report's integrity
+  violations alongside every other process-completeness gap.
+  `engine/evaluation-engine/process-completeness.mjs`.
+- **`ast evidence amend <id> --kind <kind>`, the missing recovery path for a mis-typed
+  evidence kind.** `evidence_auditor_run` is true only when some evidence record has `kind:
+  'evidence-audit'`; a field trial's agent recorded the audit as `kind: 'other'`, generated
+  the report, saw the metric read `false`, and had no way to correct the existing record —
+  only to add a second, correctly-typed one and ship both. The final report rendered the
+  same audit twice. `amend` corrects the stored record's `kind` in place (schema-validated,
+  same as any other write; every other field, including the `evidence_id` and `timestamp`,
+  is left untouched), and the orchestrator's own reporting workflow now names it directly
+  as the fix for this situation instead of leaving an agent to improvise a second record
+  the way the field trial's did. `engine/evidence-engine/index.mjs`, `bin/ast.mjs`,
+  `skills/testing-orchestrator/workflows/reporting.md`.
+
+### Fixed
+
+- **`readJson` threw "Corrupt JSON" on a UTF-16 file instead of decoding it.** It already
+  stripped a UTF-8 BOM (`Out-File -Encoding utf8` writes one) but had no equivalent for
+  UTF-16, and UTF-16LE-with-BOM is exactly what PowerShell 5.1's `>` redirect writes —
+  `npx playwright test > results.json` on Windows produces one, and a field trial hit
+  precisely this, reading a real, uncorrupted file as unparseable with no clue why. Detects
+  a UTF-16LE or UTF-16BE BOM and decodes it (Node has no native UTF-16BE decoder, so BE goes
+  through `Buffer.swap16()` into LE first) rather than merely improving the error message —
+  the same judgment already made for the UTF-8 BOM case: the file is not lying about its
+  encoding, and rejecting a standard one is this tool's problem to route around, not the
+  caller's to work around. `engine/core/fsjson.mjs`.
+- **The failure classifier's no-signal fallback was named and scored like a verdict on
+  the finding, not on the classifier's own inputs.** `classify()` returned
+  `{class: 'insufficient-evidence', confidence: 0.9}` whenever `signals` was empty — the
+  single highest confidence the function could ever return, on its weakest possible input.
+  Worse, the entire signal vocabulary (`econnrefused`, `http-500`, `timeout`, ...) is
+  runtime-shaped: a static review or a dependency scan has no such signal to supply and was
+  routed to this fallback by construction, however solid the underlying finding was. In one
+  field trial, a confirmed critical CVE and a hardcoded JWT secret both rendered as
+  `insufficient-evidence (0.9)`, reading as "the findings are unsupported" when the opposite
+  was true. Renamed to `unclassified-no-signals` at confidence `0.2` (consistent with this
+  file's other low-certainty cases), and the report renderer now suppresses the Failure
+  class cell entirely for it — `—`, the same as no classification at all — rather than
+  printing a confident-looking label for an absence. Four static-analysis-shaped signals
+  (`advisory-in-range`, `missing-auth-check`, `hardcoded-secret`, `policy-violation`) join
+  the existing `product-defect` rule, so a static finding can be classified at all instead
+  of defaulting to the fallback. `engine/failure-classifier/index.mjs`,
+  `engine/reporting-engine/index.mjs`, `schemas/execution.schema.json`,
+  `skills/testing-orchestrator/workflows/execution.md`.
+  (Not touched: `insufficient-evidence` as an *uncertainty* status in
+  `schemas/uncertainty.schema.json` — an unrelated enum with a name collision, not the
+  same field.)
+- Regenerated `examples/artifacts/*` via `node scripts/demo-session.mjs`, per
+  `CONTRIBUTING.md`'s own instruction to run it after touching the pipeline — found stale
+  (`report_version: 1.1.0`, missing this session's `digest`/`grade` fields) from several
+  commits earlier in this same effort that should have triggered a regeneration and did
+  not. Caught the schema/rename mismatch above in the same run, before it shipped.
+
+### Added
+
+- **Every evidence item is now graded `anchored` or `asserted`, computed by the engine and
+  never agent-supplied.** `evidence add` has always treated `artifactPath` as optional, and
+  the false-confidence gate checks the *kind* of evidence, not whether anything was
+  actually captured — so a hand-typed sentence with no artifact has always passed as
+  execution-grade evidence exactly like a hashed command output. One field trial shipped a
+  report where 4 of 5 evidence records had no artifact at all, with `evidence_completeness:
+  1` giving no hint of it. `grade` does not change what the gate accepts (that stays a
+  separate, deliberate design question, recorded as open in the implementation plan) — it
+  makes the previously invisible split visible: `anchored` means a real artifact, a real
+  URI, or an excerpt paired with a real command exit code exists; `asserted` means the
+  record is the agent's own account with nothing behind it. Surfaced in a new
+  `evidence_anchored_rate` metric (distinct from `evidence_completeness`, which only asks
+  whether *something* was attached) and an `Anchored?` column in the report's Evidence
+  table. Evidence written before this field existed has no `grade` and is correctly
+  excluded from the numerator rather than coerced into either bucket.
+  `engine/evidence-engine/index.mjs`, `engine/evaluation-engine/metrics.mjs`,
+  `engine/reporting-engine/index.mjs`, `schemas/evidence.schema.json` (`grade`, optional),
+  `schemas/report.schema.json` (`evidence_index[].grade`, optional; report schema stays at
+  1.2.0 — see `engine/core/version.mjs`'s comment on why this didn't need a further bump),
+  `skills/testing-orchestrator/policies/evidence-policy.md`.
+
+### Fixed
+
+- **`actionable_finding_rate` was mathematically pinned at 0 for every possible session.**
+  Its numerator counted findings with `triage.state` in `{confirmed, reported, resolved}`;
+  the only code path anywhere in the codebase that ever writes a non-`'new'` triage state
+  is the duplicate-detection branch, which sets `duplicate_of` at the same time — exactly
+  what the denominator (`nonDuplicate`) filters out. The numerator was therefore always
+  drawn from a set the denominator had already excluded. Now a freshly-filed (`triage.state:
+  'new'`) finding also counts as actionable when it carries a `recommended_action` backed
+  by real evidence — measurable the moment a finding is filed, rather than depending on a
+  triage workflow nothing in this codebase currently advances. The duplicate-confirmed path
+  still counts too, unchanged, so a future triage-advancing command would be picked up for
+  free. `engine/evaluation-engine/metrics.mjs`.
+- **`finding add --executionId` never back-linked the finding into the execution's own
+  `findings[]`**, only onto the finding record itself and the session's list — so
+  `unnecessary_test_rate`'s "barren" check (zero findings, zero decision, zero
+  test_results) counted an execution that had produced a real, filed, evidenced finding as
+  an unnecessary test. `defects.create()` now appends to `execution.findings[]` when
+  `executionId` is supplied, mirroring what it already did for `session.findings` three
+  lines away — no change to calling order or any skill's documented workflow (finish, then
+  analyse, then file — findings are identified after an execution finishes, and this
+  requires no change to that). Also added: an execution carrying real, hashed evidence
+  (from `evidence capture`) and a terminal status is no longer "barren" whatever else it
+  produced or didn't — a clean, evidenced typecheck or build is the useful outcome those
+  cheap early checks exist to produce, not a wasted test. A Madhubala-shaped session
+  (typecheck + build, both evidenced, neither turning up a defect) now scores
+  `unnecessary_test_rate: 0`, not `0.4`. `engine/defect-engine/index.mjs`,
+  `engine/evaluation-engine/metrics.mjs`.
+
+### Added
+
+- **Git provenance is now captured automatically instead of being purely agent-suppliable
+  input nothing ever supplied.** `session start` detects the repository under test's
+  commit, branch, dirty-tree state and (best-effort) `owner/repo` name via a new
+  `engine/core/git.mjs`, failing closed to `null` — never throwing — when the target isn't
+  a git repository at all. `exec start`, `evidence add` and `finding add` each inherit the
+  session's captured value unless a caller explicitly supplies its own, including an
+  explicit `git: null` to say "no git context for this specific record" — which now stays
+  distinguishable from simply omitting the field (the three call sites destructure `git`
+  with no default of their own, specifically so `undefined` and an explicit `null` are not
+  conflated before `inheritedGit()` ever sees them). The `session start` CLI wrapper
+  previously forced `git: body.git ?? null` regardless of whether the agent supplied one,
+  which made auto-detection unreachable through the real CLI path even after it existed as
+  the engine's own default — fixed alongside it.
+  `engine/core/git.mjs` (new), `bin/ast.mjs`, `engine/state-engine/index.mjs`,
+  `engine/execution-engine/index.mjs`, `engine/evidence-engine/index.mjs`,
+  `engine/defect-engine/index.mjs`, `skills/testing-orchestrator/policies/evidence-policy.md`.
+
+### Fixed
+
+- **The report footer no longer asserts traceability to a commit it cannot name.**
+  Previously unconditional ("every row above executed against the commit named at the
+  top"), even when no commit was ever recorded. Now states one of three honest facts:
+  the commit, the same sentence qualified with "uncommitted changes in the working tree"
+  when the session's git info says the tree was dirty at capture time, or a plain
+  statement that no commit was recorded at all. `engine/reporting-engine/index.mjs`.
+- **The `reproducibility` metric was structurally 0 in every session, regardless of what
+  was actually reproducible**, because its formula (`git.commit && environment &&
+  command`) could never be satisfied while nothing captured `git`. Fixed as a direct
+  consequence of git auto-capture above — no change to the metric's own formula was
+  needed once the data existed to satisfy it.
+
+Two field trials of the pack against real repositories surfaced defects in the CLI's own
+input handling and in one decision engine's output shape — not in the judgement content,
+which both trials independently praised, but in the bookkeeping layer that is supposed to
+make that judgement trustworthy. This entry closes the first of those (payload shapes);
+more follow under the same heading.
+
+### Fixed
+
+- **`risk score` no longer accepts a flat body, and no longer aliases factor names.**
+  Previously, a body with no top-level `"factors"` key fell back to treating the whole body
+  as the factors map (`factors: body.factors ?? body`); combined with the CLI's automatic
+  camelCase aliasing of top-level snake_case keys, this made every factor name in a flat
+  body acquire an unrecognised alias, producing an "Unknown risk factor(s)" error naming
+  identifiers the caller never wrote. The flat fallback is removed, aliasing is disabled for
+  this command's data payload (matching `profile save`), and the rejection now states the
+  required shape and points at a worked example instead of failing bare.
+  `bin/ast.mjs`, `engine/risk-engine/index.mjs`.
+- **`browser decide` no longer returns a usable-looking `selected` value while also setting
+  `escalate: true`.** The ambiguity gate already existed and already fired correctly when
+  the top two candidates tied — including on a fully empty or malformed factors payload,
+  where every candidate now legitimately ties at a score of 0 — but the `selected` field
+  stayed populated with the tied candidate regardless, and a field literally named
+  `selected` is exactly what an agent under time pressure will read instead of the
+  `escalate` boolean next to it. `selected` is now `null` whenever `escalate` is true; the
+  candidate that would have been picked is exposed as `top_candidate`, a name chosen to not
+  imply safety. `engine/browser-decision/index.mjs`.
+- **Three "unknown name" errors (risk factor, browser-decision factor, applicability
+  signal) no longer instruct the caller to edit the engine's own configuration file.**
+  `weights.json` / `matrix.json` / `catalog.json` are the model's source of truth; an
+  unrecognised name reaching one of these checks is a caller typo or shape error, never a
+  legitimately new factor or signal, and telling an autonomous agent to "fix" it by editing
+  that file invites exactly the kind of config drift the file exists to prevent. All three
+  now point at the corresponding discovery command (`ast risk profiles`,
+  `ast browser matrix`, `ast applicability catalog`) instead.
+  `engine/risk-engine/index.mjs`, `engine/browser-decision/index.mjs`,
+  `engine/applicability-engine/index.mjs`.
+- **The benchmark can now express "this case is expected to be ambiguous."** Two existing
+  cases (case-01, case-11) already tied between `existing-tests` and `existing-other-
+  tooling` — case-11's own reasoning notes already said so — and depended on the engine
+  silently resolving that tie by array order. The new `escalates_to` expectation checks that
+  the engine escalated *and* that the tied candidate it surfaced is one of the accepted
+  ones, replacing a `one_of` (case-11) or a bare string (case-01) that would otherwise fail
+  every time the ambiguity gate correctly refuses to guess. `engine/evaluation-engine/
+  index.mjs`, `evaluation/benchmark-cases/case-01.json`, `evaluation/benchmark-cases/
+  case-11.json`.
+
+### Added
+
+- **`ast evidence capture` — run a command and register its real output as evidence, so
+  the false-confidence gate has something honest to check.** `evidence add` accepts a
+  hand-typed summary with no artifact behind it: nothing stops a `PASSED` claim from being
+  built on a sentence the agent wrote rather than proof it has. `evidence capture` spawns
+  the given command, hashes its real stdout/stderr to a redacted blob, and records its
+  real exit code and wall-clock duration — closing exactly that gap, using the existing,
+  unchanged evidence gate (`a non-zero exit code contradicts a PASSED claim` was already
+  correct; it simply had nothing real to check before). A command's own non-zero exit is
+  treated as a normal, correctly-captured result (e.g. `npm audit` finding vulnerabilities)
+  and never sets the CLI's own exit code — only a genuine capture-mechanism failure
+  (command not found, or a timeout that killed the process before it produced an exit
+  code) does that, alongside the evidence record it still honestly stores.
+  `bin/ast.mjs`, `skills/testing-orchestrator/workflows/execution.md`,
+  `skills/testing-orchestrator/policies/evidence-policy.md`,
+  `skills/security-testing/SKILL.md`, `skills/api-testing/SKILL.md`.
+- **`bin/ast.mjs` now supports a `--` argument terminator.** Everything after a literal
+  `--` is handed to a spawned subcommand verbatim, including tokens shaped like the CLI's
+  own flags (`--input`, `--state`) — required for `evidence capture` to pass an arbitrary
+  command through untouched. Inert for every command that predates it.
+
+### Fixed
+
+- **On Windows, spawning a command whose own path contains a space (`shell: true`
+  requires this) previously mis-parsed the path at the first space and reported a
+  real-looking exit code that never came from the intended program.** Affects any
+  absolute path with a space — most commonly `process.execPath` itself, wherever Node is
+  installed under `Program Files`. Every argv element containing whitespace is now quoted
+  before being handed to a Windows shell spawn. `bin/ast.mjs` (`evidence capture`).
+- **`redact()` was silently corrupting `metrics.denominators.authorization_compliance`
+  into `"[REDACTED]"` on every write, in every report, since `denominators` shipped in
+  0.9.0.** `KEY_HINTS` matches `authorization` as an unanchored substring — the same class
+  of bug the file's own comment says `token` was deliberately anchored to avoid, just never
+  applied to this term. Nothing caught it because nothing compared a stored, reloaded
+  record against a fresh render until `report verify` (below) did, on its first real run.
+  `authorization_compliance` added to `SAFE_KEYS`; confirmed the only field name in the
+  entire schema + metric vocabulary that collided. `engine/core/redact.mjs`.
+
+### Added
+
+- **`ast validate [--final]` now checks whether the orchestrator's own process actually
+  happened, not just whether the records left behind are well-formed.** `validate` already
+  checked schemas and referential integrity; it said nothing about a session that ran real
+  executions, recorded zero decisions, and left blocked work never raised as an
+  uncertainty — exactly what a field trial did, with its own report's integrity block
+  still saying "No integrity violations detected." Two new checks (`no-decisions`,
+  `blocked-without-uncertainty`) surface as warnings by default — correct at any point
+  mid-session — and are promoted to failures only under `--final`, the orchestrator's own
+  "before you tell the user you are done" gate; promoting them unconditionally would fail
+  the exact, correct, mid-session moment the orchestrator's own workflow calls `validate`.
+  A third check (`no-git-provenance`) stays advisory even under `--final`: nothing in this
+  system yet captures git provenance automatically, so failing every session on a gap it
+  cannot close itself would be a bug, not a gate. All three also appear in every report's
+  `integrity.violations`, where the mid-session/advisory distinction no longer applies —
+  by report time the session is over. `engine/evaluation-engine/process-completeness.mjs`
+  (new), `bin/ast.mjs`, `engine/reporting-engine/index.mjs`.
+- **`ast report verify` proves a rendered report was actually produced by this system.**
+  The orchestrator's rule that the report handed to the user is the one the CLI rendered
+  was stated twice in its skills and enforced nowhere; one field trial hand-wrote a report,
+  back-filled state afterwards, and `ast validate` returned `valid: true` over it. Every
+  report now carries a `digest` (SHA-256 over its own content, excluding itself) printed in
+  the rendered footer; `report verify <path.md | REPORT-ID>` recomputes it, re-renders the
+  stored record, and compares the result byte for byte (CRLF-normalised, so an incidental
+  line-ending conversion is not mistaken for a content edit). Distinguishes three failure
+  reasons: no title line at all (not this system's output), a report_id with no stored
+  record or a digest that does not match its own content (altered on disk), or a
+  byte-for-byte mismatch with a named first differing line (hand-written or edited after
+  rendering). Verified against real field-trial artifacts: the renderer-produced report
+  verifies clean; the hand-written one is correctly rejected (no matching title line at
+  all). Added as **Rule 4** to the orchestrator's three overriding rules — the only one an
+  agent could otherwise route around by paraphrasing instead of pasting.
+  `engine/reporting-engine/index.mjs`, `schemas/report.schema.json` (`digest`, optional;
+  report schema 1.1.0 → 1.2.0), `bin/ast.mjs`, `skills/testing-orchestrator/SKILL.md`,
+  `skills/testing-orchestrator/workflows/reporting.md`, `skills/test-reporting/SKILL.md`,
+  `docs/debugging.md`, `docs/versioning.md`.
+- **`ast validate` also derives `integrity.checks_run`'s counts from what actually ran**,
+  instead of printing the same four lines regardless of whether there was anything to
+  check — e.g. "external writes checked for provider confirmation (0 write(s) — nothing to
+  check)" rather than a bare claim indistinguishable from an audited zero.
+  `engine/reporting-engine/index.mjs`.
+
 ## [0.9.0] - 2026-09-18
 
 A round of fixes against a set of gaps this project had already named about itself in

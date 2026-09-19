@@ -19,7 +19,16 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --json '{
   "git":{"repository":"shop","branch":"feat/checkout","commit":"abc1234"}
 }'
 
-# 2. Do the work, then register what it produced
+# 2a. Preferred: let the CLI run the command and record what actually happened --
+#     real exit code, real duration, a hashed artifact on disk. Nothing here can
+#     become an unevidenced sentence, because there is no sentence: the CLI ran it.
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence capture --exec EXEC-2026-00003 \
+  --summary "Playwright checkout suite" -- npx playwright test checkout --reporter=json
+
+# 2b. Only when the evidence is a file a DIFFERENT process already produced (a CI job's
+#     artifact, a report written by a run you invoked some other way) -- register that
+#     file directly. This is the fallback, not the default: prefer 2a whenever you are
+#     the one about to run the command.
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input evidence.json
 
 # 3. Close the record with the claimed status
@@ -41,8 +50,29 @@ attach the evidence or accept the downgrade.
 
 A screenshot shows what a page looked like. It does not show that an assertion held.
 
-Capture output as evidence rather than pasting it into prose — it gets hashed, redacted
-and indexed:
+**Never type a command's output from memory into `evidence add`.** A hand-typed summary
+with no artifact behind it is exactly what it looks like — an assertion you made, not proof
+you have. Run the command through the CLI instead, so what gets hashed and stored is the
+command's real output, not your recollection of it:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence capture --exec EXEC-2026-00003 \
+  --summary "typecheck" -- npm run lint
+```
+
+This spawns the command, hashes its real stdout/stderr to a redacted blob on disk, and
+records the real exit code and wall-clock duration — the exact three things a hand-typed
+summary cannot honestly provide. A non-zero exit code recorded this way will correctly
+block a `PASSED` claim later; there is no way to accidentally omit it.
+
+Windows note: a command containing its own quoting (embedded spaces, quotes) should be
+passed as separate argv words after `--`, e.g. `-- npx playwright test "checkout flow"`
+rather than one pre-built string — the CLI spawns each word directly rather than asking a
+shell to re-split a single string, which is where most quoting mistakes come from.
+
+If a test runner already wrote its own structured report to disk (Playwright's
+`results.json`, a coverage summary) and you did not just invoke it yourself, register that
+file directly instead:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --json '{
@@ -81,9 +111,13 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" decision next --json '{"status":"FAILED
 ```
 
 Signal tokens come from real output — `http-500`, `econnrefused`, `timeout`,
-`missing-env-var`, `brittle-selector`, `passed-on-retry`, `stale-test-data`. The
-classifier deliberately lets non-product causes outrank `product-defect` on a tie:
-filing a false defect costs more than investigating one more environment issue.
+`missing-env-var`, `brittle-selector`, `passed-on-retry`, `stale-test-data`. A static
+review or a dependency scan has no runtime output to draw a signal from — use
+`advisory-in-range`, `missing-auth-check`, `hardcoded-secret` or `policy-violation`
+instead of leaving `signals` empty, which routes to `unclassified-no-signals` regardless
+of how solid the underlying finding is. The classifier deliberately lets non-product
+causes outrank `product-defect` on a tie: filing a false defect costs more than
+investigating one more environment issue.
 
 Then act on the classification:
 
@@ -96,7 +130,7 @@ Then act on the classification:
 | authentication-failure | Product defect or missing credentials? Opposite conclusions — get evidence. |
 | timeout | Time a known-good path in the same run to separate slow env from regression. |
 | ambiguous-requirement | Raise an uncertainty. Do not invent the expected behaviour. |
-| insufficient-evidence | Gather more. Do not report a status. |
+| unclassified-no-signals | You gave the classifier nothing to work with — supply real signal tokens from the actual output, or a static-analysis signal (`advisory-in-range`, `missing-auth-check`, `hardcoded-secret`, `policy-violation`) if this is a security-testing/dependency-scan finding rather than a runtime failure. Not a verdict on the finding itself. |
 
 ## When something blocks
 

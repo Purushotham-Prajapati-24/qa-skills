@@ -10,7 +10,7 @@ import { nextId } from '../core/ids.mjs';
 import { provenance } from '../core/version.mjs';
 import * as state from '../state-engine/index.mjs';
 
-const BLOCKING_STATUSES = new Set([
+export const BLOCKING_STATUSES = new Set([
   'blocked', 'user-input-required', 'environment-unavailable', 'external-dependency',
 ]);
 

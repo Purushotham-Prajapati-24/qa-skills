@@ -18,6 +18,7 @@ import { sha256File, ensureDir } from '../core/fsjson.mjs';
 import { redactText, containsSecret } from '../core/redact.mjs';
 import { dir } from '../core/paths.mjs';
 import * as state from '../state-engine/index.mjs';
+import { inheritedGit } from '../core/git.mjs';
 
 /** Evidence kinds that can, on their own, support a PASSED/FAILED claim. */
 export const EXECUTION_EVIDENCE = new Set([
@@ -47,7 +48,9 @@ export function add({
   summary,
   epistemicClass = 'observed',
   executionId = null,
-  git = null,
+  // No default: see core/git.mjs -- an omitted key inherits the session's git info; an
+  // explicit `git: null` must stay distinguishable from "not supplied".
+  git,
   environment = null,
   command = null,
   artifactPath = null,
@@ -72,7 +75,8 @@ export function add({
   };
   if (session) rec.session_id = session.session_id;
   if (executionId) rec.execution_id = executionId;
-  if (git) rec.git = git;
+  const gitInfo = inheritedGit(git, session);
+  if (gitInfo) rec.git = gitInfo;
   if (environment) rec.environment = environment;
   if (command) rec.command = { ...command, argv: redactText(command.argv ?? '') };
 
@@ -98,6 +102,18 @@ export function add({
     rec.excerpt = clean;
     rec.redacted = clean !== trimmed || containsSecret(trimmed);
   }
+
+  // Never agent-supplied -- an agent grading its own evidence "anchored" defeats the
+  // point. "Anchored" means there is something on disk (or a real exit code alongside a
+  // captured excerpt) a reader could actually go check; everything else is the agent's own
+  // word for what happened. This does not change what the gate above accepts -- a typed
+  // summary with no artifact still passes verifyClaim if its kind is execution-grade -- it
+  // makes the previously invisible difference visible: "3 of 5 claims are anchored to disk;
+  // 2 are the agent's assertion" is now a fact the report and the evidence_anchored_rate
+  // metric can state, where before it could not be seen at all.
+  rec.grade = (rec.artifact?.path || rec.artifact?.uri || (rec.excerpt && Number.isInteger(rec.command?.exit_code)))
+    ? 'anchored'
+    : 'asserted';
 
   state.put('evidence', id, rec, 'evidence');
   state.telemetry({ event: 'evidence', evidence_id: id, kind, execution_id: executionId });
@@ -255,6 +271,31 @@ export function verifyClaim({ status, evidenceIds = [], statement = '', executio
     reasons.push('WARNING: the statement is vague ("works"/"fine"). Rewrite it to name the scenario, the commit and the assertions that held.');
   }
   return { permitted: true, reasons };
+}
+
+/** Every kind this engine recognises, regardless of which evidentiary bucket it falls into. */
+const ALL_KINDS = new Set([...EXECUTION_EVIDENCE, ...CORROBORATING_EVIDENCE, ...NON_EXECUTION]);
+
+/**
+ * Correct an evidence record's `kind` after the fact.
+ *
+ * The only recovery path once a record is mis-typed: with no way to fix `kind` in place, an
+ * agent that recorded an audit as `other` and later needed `evidence-audit` had exactly one
+ * option -- add a second, correct record and leave the first as litter. Both then render in
+ * the final report as if two audits happened.
+ */
+export function amend(id, { kind } = {}) {
+  const rec = state.get('evidence', id);
+  if (!rec) throw new Error(`No such evidence: ${id}`);
+  if (!kind) throw new Error('evidence amend requires --kind <new-kind>.');
+  if (!ALL_KINDS.has(kind)) {
+    throw new Error(`Unknown evidence kind "${kind}". Valid kinds: ${[...ALL_KINDS].sort().join(', ')}`);
+  }
+  if (kind === rec.kind) return rec;
+  const next = { ...rec, kind };
+  state.put('evidence', id, next, 'evidence');
+  state.telemetry({ event: 'evidence-amend', evidence_id: id, from_kind: rec.kind, to_kind: kind });
+  return next;
 }
 
 /** Bulk audit used by the reporting engine's integrity block. */

@@ -17,6 +17,7 @@ import { provenance } from '../core/version.mjs';
 import { sha256String } from '../core/fsjson.mjs';
 import * as state from '../state-engine/index.mjs';
 import * as auth from '../authorization/index.mjs';
+import { inheritedGit } from '../core/git.mjs';
 
 /** Below this, a finding is an observation to discuss, not an issue to file. */
 export const REPORTING_CONFIDENCE_THRESHOLD = 0.6;
@@ -43,7 +44,9 @@ export function create({
   environment = '',
   reproduction = null,
   impact = '',
-  git = null,
+  // No default: see core/git.mjs -- an omitted key inherits the session's git info; an
+  // explicit `git: null` must stay distinguishable from "not supplied".
+  git,
   evidence = [],
   relatedRequirements = [],
   recommendedAction = '',
@@ -81,7 +84,8 @@ export function create({
   };
   if (session) rec.session_id = session.session_id;
   if (executionId) rec.execution_id = executionId;
-  if (git) rec.git = git;
+  const gitInfo = inheritedGit(git, session);
+  if (gitInfo) rec.git = gitInfo;
   if (reproduction) rec.reproduction = reproduction;
   if (existing) {
     rec.duplicate_of = existing.finding_id;
@@ -95,6 +99,21 @@ export function create({
       s.findings.push(id);
       return s;
     }, now);
+  }
+  // Back-link into the execution's OWN findings[], not just the session's. Findings are
+  // naturally identified after an execution finishes (finish, then analyse, then file),
+  // so this is the only point at which the link can be made without forcing the wrong
+  // order -- exec finish's own findings[] parameter exists for the (rarer) case where
+  // they are already known at finish time, and this appends to whatever it already set
+  // rather than requiring one path or the other. Silently does nothing if executionId
+  // names an execution that does not exist; this function has never validated that and
+  // adding the requirement now would be a second, unrelated change.
+  if (executionId) {
+    const exec = state.get('executions', executionId);
+    if (exec) {
+      exec.findings = [...(exec.findings ?? []), id];
+      state.put('executions', executionId, exec, 'execution');
+    }
   }
   state.telemetry({ event: 'finding', finding_id: id, kind, severity, confidence, duplicate_of: rec.duplicate_of ?? null });
   return rec;

@@ -11,11 +11,12 @@
     }
   },
   "expect": {
-    "failure_class": "insufficient-evidence",
+    "failure_class": "unclassified-no-signals",
     "authorization_allowed": false
   },
   "reasoning_notes": [
     "An interrupted execution must come back INTERRUPTED with no inferred outcome -- covered directly by tests/lifecycle.test.mjs.",
-    "Authorisation from the interrupted session does not carry into the resumed one."
+    "Authorisation from the interrupted session does not carry into the resumed one.",
+    "Calibration note: renamed from 'insufficient-evidence' -- that name and its 0.9 confidence described 'nothing was given to classify', but read as a verdict on the finding's own evidence. Renamed to unclassified-no-signals at confidence 0.2, consistent with this file's other low-certainty fallbacks."
   ]
 }

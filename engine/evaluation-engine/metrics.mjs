@@ -54,13 +54,19 @@ export const DEFINITIONS = {
     why: 'Guards the metric above: a 100% accuracy over 2 assessed decisions out of 40 means nothing.',
   },
   actionable_finding_rate: {
-    formula: 'findings triaged confirmed|reported|resolved / total findings excluding duplicates',
+    formula: '(triaged confirmed|reported|resolved OR carries a recommended_action backed by evidence) / total findings excluding duplicates',
     direction: 'higher-is-better',
     blind_spot: 'A low rate may mean noisy reporting OR a thorough agent surfacing genuine ambiguity.',
+    why: 'Triage has exactly one real writer in this codebase (the duplicate-confirmed path), which pinned this at 0 for every finding filed the normal way -- a recommended action backed by evidence is what "actionable" actually means for a freshly-filed finding, and is measurable the moment it is filed rather than depending on a triage step nothing currently exercises.',
   },
   evidence_completeness: {
     formula: 'executions with at least one execution-grade evidence item / executions that claim a status',
     direction: 'higher-is-better',
+  },
+  evidence_anchored_rate: {
+    formula: 'evidence items graded "anchored" (a real artifact/URI, or an excerpt with a real exit code) / total evidence items',
+    direction: 'higher-is-better',
+    why: 'evidence_completeness only asks whether SOMETHING was attached -- a hand-typed sentence with no artifact satisfies it. This asks whether what was attached is checkable: "3 of 5 claims are anchored to disk" is a materially different, and more honest, statement than "5 of 5 claims have evidence attached".',
   },
   audit_coverage: {
     formula: "1 if any evidence-audit record exists this session, 0 if there are claims and none does, null if there are no PASSED/FAILED/COMPLETED/PARTIAL claims to review",
@@ -81,8 +87,9 @@ export const DEFINITIONS = {
     blind_spot: 'A passing regression test that finds nothing is valuable insurance; this metric undercounts that. Read it alongside high_risk_coverage.',
   },
   runtime_efficiency_ms_per_case: {
-    formula: 'total execution duration / test cases executed',
+    formula: 'sum of command_duration_ms (real, captured command runtime) / test cases from executions with a captured command duration',
     direction: 'lower-is-better',
+    blind_spot: 'Only counts executions whose evidence was captured via `evidence capture`. A session with no captured commands reports null (honestly, not a substitute number) rather than the previous wall_clock_ms-derived figure, which measured agent latency between CLI calls, not test runtime, and once overstated a 17.1s Playwright run as 100,488ms.',
   },
   flaky_identification_quality: {
     formula: '1 - (tests labelled flaky with fewer than 3 runs / tests labelled flaky)',
@@ -137,28 +144,63 @@ export function compute({ declaredRequirements = [], highRiskBehaviours = [], au
 
   /* findings */
   const nonDuplicate = findings.filter((f) => !f.duplicate_of);
-  const actionable = nonDuplicate.filter((f) => ['confirmed', 'reported', 'resolved'].includes(f.triage?.state));
+  // The triage-state check alone pins this at 0 for every finding filed the normal way:
+  // triage.state starts at 'new' and the ONLY code path that ever writes 'confirmed' (or
+  // any other non-'new' state) is defect-engine's duplicate-detection branch -- which sets
+  // duplicate_of at the same time, so those findings are exactly what nonDuplicate filters
+  // out above. A recommended action backed by real evidence is what "actionable" means for
+  // a finding an agent just filed, and is true or false the moment it exists rather than
+  // depending on a triage workflow nothing in this codebase currently advances. Kept the
+  // triage check too: a finding triaged through that one real path still counts, and a
+  // future triage-advancing command would be picked up for free rather than needing a
+  // second change here.
+  const actionable = nonDuplicate.filter((f) =>
+    ['confirmed', 'reported', 'resolved'].includes(f.triage?.state)
+    || (f.recommended_action && (f.evidence ?? []).length > 0));
 
   /* evidence completeness */
   const statusClaiming = executions.filter((e) => ['PASSED', 'FAILED', 'COMPLETED', 'PARTIAL'].includes(e.status) && e.method !== 'not-executed');
   const withEvidence = statusClaiming.filter((e) => (e.evidence ?? []).length > 0);
+
+  /* evidence anchoring -- distinct from completeness above: completeness asks whether
+   * anything was attached at all; this asks whether what was attached is checkable.
+   * Evidence written before `grade` existed has no such field and is correctly excluded
+   * from the numerator (not "anchored", not "asserted" -- simply unknown), never coerced
+   * into either bucket. */
+  const anchoredEvidence = evidenceItems.filter((e) => e.grade === 'anchored');
 
   /* audit coverage */
   const claimsToAudit = executions.filter((e) => ['PASSED', 'FAILED', 'COMPLETED', 'PARTIAL'].includes(e.status)).length;
   const evidenceAuditorRan = evidenceItems.some((e) => e.kind === 'evidence-audit');
 
   /* unnecessary tests */
+  // An execution that produced real, hashed evidence (a typecheck, a build, an audit run
+  // captured via `evidence capture`) is not "unnecessary" just because it happened not to
+  // surface a finding -- a clean result IS the useful outcome for exactly the cheap, early
+  // checks a senior tester runs first. Without this, a Madhubala-shaped session (typecheck
+  // + build, each evidenced, neither turning up a defect) scored 40% of its own testing as
+  // wasted.
   const barren = executions.filter(
-    (e) => e.method !== 'not-executed' && (e.findings ?? []).length === 0 && !e.decision_id && (e.test_results ?? []).length === 0,
+    (e) => e.method !== 'not-executed'
+      && (e.findings ?? []).length === 0
+      && !e.decision_id
+      && (e.test_results ?? []).length === 0
+      && (e.evidence ?? []).length === 0,
   );
 
   /* flakiness quality */
   const flakyLabels = analyseFlakiness().filter((f) => f.verdict === 'flaky');
   const prematureFlaky = flakyLabels.filter((f) => f.runs < 3);
 
-  /* runtime */
-  const totalDuration = executions.reduce((a, e) => a + (e.duration_ms ?? 0), 0);
-  const totalCases = executions.reduce((a, e) => a + (e.test_results?.length ?? 0), 0);
+  /* runtime -- command_duration_ms only, never wall_clock_ms/duration_ms. Those measure the
+   * gap between two CLI calls (the agent's own reasoning time included), not the runtime of
+   * whatever was tested; using them here is exactly what let a 17.1s Playwright run score as
+   * 100,488ms in a field trial. An execution with no captured command duration contributes
+   * to neither sum -- excluded, not counted as zero -- so a session with nothing captured
+   * this way reports this metric as null rather than a wall-clock-derived substitute. */
+  const commandTimed = executions.filter((e) => Number.isInteger(e.command_duration_ms));
+  const totalDuration = commandTimed.reduce((a, e) => a + e.command_duration_ms, 0);
+  const totalCases = commandTimed.reduce((a, e) => a + (e.test_results?.length ?? 0), 0);
 
   /* authorization */
   const performed = writes.filter((w) => w.confirmed);
@@ -173,13 +215,21 @@ export function compute({ declaredRequirements = [], highRiskBehaviours = [], au
   const recovered = interruptions.filter((i) => i.recovered_at);
 
   const metrics = {
-    false_confidence_rate: audit.false_confidence_rate,
+    // `auditClaims()` itself returns 0, not null, when there are no PASSED/COMPLETED claims
+    // to audit -- the report's `integrity.false_confidence_rate` is schema-locked to
+    // `type: number` (schemas/report.schema.json), so that field keeps returning 0 for a
+    // zero-claim session rather than forcing a schema change here. This metrics table has
+    // no such constraint, and every other metric in it already treats a zero denominator as
+    // null, not a real 0 -- without this, "no PASSED/COMPLETED claims exist yet" renders
+    // indistinguishably from "checked, and all of them were honest".
+    false_confidence_rate: audit.pass_claims === 0 ? null : audit.false_confidence_rate,
     requirement_coverage: ratio(covered.length, declared.length),
     high_risk_coverage: ratio(riskCovered.length, highRiskBehaviours.length),
     decision_accuracy: ratio(correct.length, assessed.length),
     decision_assessment_rate: ratio(assessed.length, decisions.length),
     actionable_finding_rate: ratio(actionable.length, nonDuplicate.length),
     evidence_completeness: ratio(withEvidence.length, statusClaiming.length),
+    evidence_anchored_rate: ratio(anchoredEvidence.length, evidenceItems.length),
     audit_coverage: claimsToAudit === 0 ? null : (evidenceAuditorRan ? 1 : 0),
     automation_conversion: ratio(
       executions.filter((e) => e.method === 'playwright-script' || e.method === 'generated-script').length,
@@ -204,6 +254,7 @@ export function compute({ declaredRequirements = [], highRiskBehaviours = [], au
     decision_assessment_rate: decisions.length,
     actionable_finding_rate: nonDuplicate.length,
     evidence_completeness: statusClaiming.length,
+    evidence_anchored_rate: evidenceItems.length,
     audit_coverage: claimsToAudit,
     automation_conversion: automationCandidates.length,
     unnecessary_test_rate: real.length,

@@ -4,7 +4,7 @@ description: Plan and run software testing for a repository, a pull request, a c
 when_to_use: "test this repo", "test this PR", "test the checkout flow", "what should we test", "create a test plan", "explore the app for bugs", "create regression tests", "read this Jira ticket and plan testing", "continue testing", "what's untested", "run QA on this"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.9.0
+  system_version: 0.10.0
   role: orchestrator
 ---
 
@@ -14,7 +14,7 @@ You are acting as a senior SDET. Your job is **not** to run every kind of test. 
 work out what is worth testing here, prove what you find, and be precise about what you
 did not do.
 
-Three rules override everything else in this skill:
+Four rules override everything else in this skill:
 
 1. **No claim without evidence.** "Absence of failure" is not "works". If you cannot
    point at execution evidence, the status is `INCONCLUSIVE`.
@@ -22,6 +22,9 @@ Three rules override everything else in this skill:
    issue, commenting, assigning, or touching a document is not.
 3. **A blocker stops one branch, never the session.** Record it and continue everything
    that does not depend on it.
+4. **The report you hand the user is the one the CLI rendered.** If you wrote prose
+   instead, you did not run this system — a rendered report is provable
+   (`ast report verify`); hand-written prose is not, no matter how accurate.
 
 ## The CLI does the bookkeeping
 
@@ -80,9 +83,12 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session resume
   from `next_action`. Do **not** assume anything the previous session started actually
   finished; the recovery pass has already marked unfinished executions `INTERRUPTED`.
 
-Then open a session and declare the goals:
+Then open a session and declare the goals. `goals.json` is a file you create yourself --
+if you have not seen its shape before, print one first:
 
 ```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session start --example > goals.json
+# edit goals.json to describe this session's actual goals, then:
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session start --request "<the user's actual words>" --input goals.json
 ```
 
@@ -198,15 +204,24 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --json '{"signals":["h
 ## Finishing
 
 You are done when every planned item has a terminal status *and* you can state what was
-not tested. Generate the report from data:
+not tested.
 
 ```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" validate --final
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" report generate --input context.json
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" validate
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" report verify <the markdown_path just printed>
 ```
 
-`ast validate` checks every record against its schema and flags dangling references and
-unfinished executions. Run it before you tell the user you have finished.
+`ast validate --final` checks every record against its schema, flags dangling references
+and unfinished executions, and — only under `--final` — turns a blocking process gap (no
+decision records; blocked work never raised as an uncertainty) into a failure rather than
+a warning. Fix what it finds before generating the report, not after.
+
+`ast report verify` proves the file you are about to hand the user is the one the CLI just
+rendered, not a paraphrase of it. Rule 4 exists because a capable agent under delivery
+pressure can be tempted to summarise the report in its own words instead of pasting the
+rendered Markdown verbatim — verify catches that the same way it catches a hand-written
+report entirely.
 
 Then tell the user, in this order: what you proved, what failed, what you could not do
 and why, and what you recommend next. Lead with the honest limitation, not the summary

@@ -12,7 +12,7 @@ hand-written approximation of it.
 
 | Session | Repository | Commit | PR | Generated | Skill |
 | --- | --- | --- | --- | --- | --- |
-| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-09-18 10:50:38Z | v0.9.0 |
+| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-09-19 10:26:31Z | v0.10.0 |
 
 ## Verdict
 
@@ -43,6 +43,12 @@ The payment-method lookup does not compare the record owner to the session user,
 **Next.** Add an ownership check in server/payments/stripe.ts:52 before returning or using a payment method.
 
 _Evidence: EV-2026-00002_
+
+## Unblock these
+
+_Every item below is waiting on you, not on more agent work. Say so and it runs._
+
+- **Should payment E2E use a real provider sandbox key, or a mock at the HTTP boundary?** — blocked: cannot safely execute a real transaction; will not transact against a live key. ask the user which environment and credentials to use
 
 ## What was proven
 
@@ -98,14 +104,14 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 
 ### Executions
 
-| ID | Status | Goal | Method | Failure class | Duration |
-| --- | --- | --- | --- | --- | --- |
-| EXEC-2026-00003 | FAILED | User A cannot select user B's saved card | api-client | authentication-failure (0.5) | 7 ms |
-| EXEC-2026-00004 | BLOCKED | Payment E2E against the real provider | not-executed | — | 0 ms |
-| EXEC-2026-00001 | INCONCLUSIVE | Quick smoke of the checkout page | existing-suite | insufficient-evidence (0.9) | 6 ms |
-| EXEC-2026-00006 | INTERRUPTED | Accessibility scan of the checkout pages | static-analysis | — | — |
-| EXEC-2026-00005 | NOT_APPLICABLE | Localisation testing | not-executed | — | 0 ms |
-| EXEC-2026-00002 | PASSED | Baseline: full unit suite at head | existing-suite | — | 10 ms |
+| ID | Status | Goal | Method | Failure class | Wall clock | Command time |
+| --- | --- | --- | --- | --- | --- | --- |
+| EXEC-2026-00003 | FAILED | User A cannot select user B's saved card | api-client | authentication-failure (0.5) | 7 ms | 3120 ms |
+| EXEC-2026-00004 | BLOCKED | Payment E2E against the real provider | not-executed | — | 0 ms | — |
+| EXEC-2026-00001 | INCONCLUSIVE | Quick smoke of the checkout page | existing-suite | — | 5 ms | — |
+| EXEC-2026-00006 | INTERRUPTED | Accessibility scan of the checkout pages | static-analysis | — | — | — |
+| EXEC-2026-00005 | NOT_APPLICABLE | Localisation testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00002 | PASSED | Baseline: full unit suite at head | existing-suite | — | 8 ms | 12480 ms |
 
 | Status | Count |
 | --- | --- |
@@ -118,10 +124,10 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 
 ### Evidence
 
-| ID | Kind | Summary | Artifact |
-| --- | --- | --- | --- |
-| EV-2026-00001 | command-output | vitest: 211/211 passed | C:\Users\purus\AppData\Local\Temp\ast-demo-yYpj7b\evidence\blobs\output-2026-09-18T10-50-38-720Z-49732.txt |
-| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | C:\Users\purus\AppData\Local\Temp\ast-demo-yYpj7b\evidence\blobs\output-2026-09-18T10-50-38-731Z-49732.txt |
+| ID | Kind | Summary | Anchored? | Artifact |
+| --- | --- | --- | --- | --- |
+| EV-2026-00001 | command-output | vitest: 211/211 passed | yes | C:\Users\purus\AppData\Local\Temp\claude\D--QATesting\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\scratchpad\demo-real-state\evidence\blobs\output-2026-09-19T10-26-31-933Z-16760.txt |
+| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | yes | C:\Users\purus\AppData\Local\Temp\claude\D--QATesting\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\scratchpad\demo-real-state\evidence\blobs\output-2026-09-19T10-26-31-945Z-16760.txt |
 
 ### External writes
 
@@ -233,20 +239,20 @@ _Excluded for lack of evidence — not scored, not guessed: user_impact, depende
 | false_confidence_rate | 0 | 1 | ⚠️ below noise floor (5) | lower-is-better |
 | requirement_coverage | 0.6667 | 3 | ⚠️ below noise floor (5) | higher-is-better |
 | high_risk_coverage | 0 | 6 |  | higher-is-better |
-| decision_accuracy | _n/a (zero denominator)_ | 0 |  | higher-is-better |
 | decision_assessment_rate | 0 | 1 | ⚠️ below noise floor (5) | higher-is-better |
-| actionable_finding_rate | 0 | 1 | ⚠️ below noise floor (5) | higher-is-better |
+| actionable_finding_rate | 1 | 1 | ⚠️ below noise floor (5) | higher-is-better |
 | evidence_completeness | 1 | 2 | ⚠️ below noise floor (5) | higher-is-better |
+| evidence_anchored_rate | 1 | 2 | ⚠️ below noise floor (5) | higher-is-better |
 | audit_coverage | 0 | 2 | ⚠️ below noise floor (5) | higher-is-better |
-| automation_conversion | _n/a (zero denominator)_ | 0 |  | higher-is-better |
 | unnecessary_test_rate | 0.5 | 4 | ⚠️ below noise floor (5) | lower-is-better |
-| runtime_efficiency_ms_per_case | 7.6667 | 3 | ⚠️ below noise floor (5) | lower-is-better |
-| flaky_identification_quality | _n/a (zero denominator)_ | 0 |  | higher-is-better |
+| runtime_efficiency_ms_per_case | 5200 | 3 | ⚠️ below noise floor (5) | lower-is-better |
 | interruption_recovery_rate | 0.5 | 2 | ⚠️ below noise floor (5) | higher-is-better |
 | authorization_compliance | 1 | 1 | ⚠️ below noise floor (5) | higher-is-better |
 | reproducibility | 0.5 | 4 | ⚠️ below noise floor (5) | higher-is-better |
 
-_A null means the denominator was zero — honest, and not to be read as 0. A ⚠️ means the denominator is real but thin (n < 5); read that value qualitatively, not as a ratio._
+_A ⚠️ means the denominator is real but thin (n < 5); read that value qualitatively, not as a ratio._
+
+_Not measured this session (zero denominator, honestly excluded rather than shown as 0): decision_accuracy, automation_conversion, flaky_identification_quality._
 
 ### Integrity self-audit
 
@@ -260,11 +266,13 @@ _A null means the denominator was zero — honest, and not to be read as 0. A �
 
 **Checks run:**
 
-- every PASSED/COMPLETED claim checked against attached evidence
-- external writes checked for provider confirmation
-- unfinished executions surfaced as INTERRUPTED
-- not-applicable categories listed with reasons
+- every PASSED/COMPLETED claim checked against attached evidence (1 claim(s))
+- external writes checked for provider confirmation (2 write(s))
+- unfinished executions surfaced as INTERRUPTED (1 found)
+- not-applicable categories listed with reasons (22 categories)
 
 ---
 
-Produced by the Autonomous Software Testing skill system v0.9.0. Every status above is traceable to a record under `state/`.
+Produced by the Autonomous Software Testing skill system v0.10.0. Every status above is traceable to a record under `state/`.
+
+_Rendered from REPORT-2026-00001 · digest `sha256:87fef7a99b08fb632218f5df283e30c548e58622e70bbc26a47746b3c29dcad6` · verify with `ast report verify`. A report with no digest line was not produced by this system._

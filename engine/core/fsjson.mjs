@@ -23,14 +23,38 @@ export function readJson(file, fallback = undefined) {
     if (fallback !== undefined) return fallback;
     throw new Error(`Missing file: ${file}`);
   }
-  // Strip a UTF-8 BOM. Windows PowerShell's `Out-File -Encoding utf8` writes one
-  // by default, so hand-authored fixtures on Windows routinely carry it.
-  const raw = fs.readFileSync(file, 'utf8').replace(/^﻿/, '');
+  const raw = decodeText(fs.readFileSync(file));
   try {
     return JSON.parse(raw);
   } catch (err) {
     throw new Error(`Corrupt JSON at ${file}: ${err.message}`);
   }
+}
+
+/**
+ * Decode a file's bytes, working around the encodings Windows tooling actually produces
+ * rather than the one everything here writes (UTF-8, no BOM).
+ *
+ * This is not this tool's own output -- `writeJson`/`writeText` always write plain UTF-8 --
+ * it is what a hand-authored fixture or a captured command's redirected output arrives in.
+ * PowerShell 5.1's `>` redirect (unlike `Out-File -Encoding utf8`) writes UTF-16LE with a
+ * BOM, which is exactly what turned `npx playwright test > results.json` into "Corrupt
+ * JSON" instead of a readable file. Decoding it is the same judgment call already made for
+ * the UTF-8 BOM below: this file did not lie about its encoding, it is not this tool's job
+ * to reject a file merely for spelling text a different, equally standard way.
+ */
+function decodeText(buf) {
+  if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xfe) {
+    return buf.toString('utf16le').replace(/^﻿/, '');
+  }
+  if (buf.length >= 2 && buf[0] === 0xfe && buf[1] === 0xff) {
+    // Node has no native UTF-16BE decoder; byte-swap into UTF-16LE first. swap16() requires
+    // an even length, true of any file that actually starts with a 2-byte BOM.
+    return Buffer.from(buf).swap16().toString('utf16le').replace(/^﻿/, '');
+  }
+  // Strip a UTF-8 BOM. Windows PowerShell's `Out-File -Encoding utf8` writes one
+  // by default, so hand-authored fixtures on Windows routinely carry it.
+  return buf.toString('utf8').replace(/^﻿/, '');
 }
 
 export function writeJson(file, value) {

@@ -4,7 +4,7 @@ description: Produce the testing report and maintain the versioned testing log â
 when_to_use: "write the test report", "summarise the testing", "what did you test", "update the testing log", "what remains untested"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write
 metadata:
-  system_version: 0.9.0
+  system_version: 0.10.0
   role: specialist
 ---
 
@@ -16,8 +16,15 @@ in the document.
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" report generate --input report-context.json
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" validate
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" validate --final
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" report verify <the markdown_path just printed>
 ```
+
+**Deliver the rendered Markdown verbatim, never a paraphrase of it.** Every report carries
+a digest in its footer; `report verify` recomputes it and re-renders the stored record to
+prove the file matches, byte for byte, what this system actually produced. A report that
+fails verification was hand-written, edited after rendering, or generated from state that
+no longer matches â€” run it before the report reaches the user, not after a complaint.
 
 ## Structure
 

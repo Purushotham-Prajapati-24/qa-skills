@@ -88,14 +88,24 @@ const RULES = [
   },
   {
     class: 'product-defect',
-    any: ['assertion-mismatch', 'http-500', 'unhandled-exception', 'console-error', 'wrong-value-rendered', 'data-not-persisted', 'broken-redirect'],
+    // The last four (advisory-in-range, missing-auth-check, hardcoded-secret,
+    // policy-violation) are static-analysis-shaped: a dependency scan or a manual security
+    // review (skills/security-testing) has no RUNTIME signal to supply -- econnrefused,
+    // http-500 and the rest all describe something that happened while a program ran --
+    // so without these, a static finding was always routed to the no-signal fallback by
+    // construction, which read as "the evidence is insufficient" for exactly the findings
+    // most likely to be the report's most important ones.
+    any: [
+      'assertion-mismatch', 'http-500', 'unhandled-exception', 'console-error', 'wrong-value-rendered', 'data-not-persisted', 'broken-redirect',
+      'advisory-in-range', 'missing-auth-check', 'hardcoded-secret', 'policy-violation',
+    ],
     weight: 0.7,
     note: 'Consistent with a real defect -- but only once environment, data and test-quality causes have been excluded.',
     requiresExclusion: ['infrastructure-failure', 'environment-defect', 'data-failure', 'configuration-failure', 'test-defect'],
   },
 ];
 
-export const CLASSES = [...new Set(RULES.map((r) => r.class))].concat(['insufficient-evidence', 'unclassified']);
+export const CLASSES = [...new Set(RULES.map((r) => r.class))].concat(['unclassified-no-signals', 'unclassified']);
 
 /**
  * @param {object} input
@@ -107,9 +117,18 @@ export function classify({ signals = [], evidenceIds = [], history = [], status 
   const normalised = signals.map((s) => String(s).toLowerCase().trim());
 
   if (normalised.length === 0) {
+    // Renamed from 'insufficient-evidence' at confidence 0.9: that name and confidence
+    // described "the caller gave me nothing to work with" but read, to anyone skimming a
+    // report, as a verdict on the FINDING's evidence -- exactly backwards for a static
+    // review or a dependency scan, which has no runtime signal to supply and was routed
+    // here by construction regardless of how solid the underlying finding was. 0.9 was
+    // also the single highest confidence this function could ever return, on its weakest
+    // possible input. Confidence now reads as absence, consistent with this file's other
+    // low-certainty cases (requiresHistory/requiresDisambiguation/requiresExclusion below
+    // all cap out well under this).
     return {
-      class: 'insufficient-evidence',
-      confidence: 0.9,
+      class: 'unclassified-no-signals',
+      confidence: 0.2,
       signals: [],
       evidence_refs: evidenceIds,
     };

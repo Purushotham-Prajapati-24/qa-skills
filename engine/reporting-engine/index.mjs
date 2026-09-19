@@ -12,16 +12,28 @@
 import path from 'node:path';
 import { nextId } from '../core/ids.mjs';
 import { provenance, DOC_VERSIONS, SYSTEM_VERSION } from '../core/version.mjs';
-import { writeText } from '../core/fsjson.mjs';
+import { writeText, sha256String } from '../core/fsjson.mjs';
 import { dir } from '../core/paths.mjs';
 import * as state from '../state-engine/index.mjs';
 import { auditClaims } from '../evidence-engine/index.mjs';
 import { summarise } from '../execution-engine/index.mjs';
 import { listWrites } from '../authorization/index.mjs';
 import { compute } from '../evaluation-engine/metrics.mjs';
-import { open as openUncertainties } from '../uncertainty-register/index.mjs';
+import { open as openUncertainties, BLOCKING_STATUSES } from '../uncertainty-register/index.mjs';
+import { check as checkProcessCompleteness } from '../evaluation-engine/process-completeness.mjs';
 
 const STATUS_ORDER = ['FAILED', 'BLOCKED', 'NEEDS_USER_INPUT', 'INCONCLUSIVE', 'INTERRUPTED', 'PARTIAL', 'DEFERRED', 'SKIPPED', 'NOT_APPLICABLE', 'PASSED', 'COMPLETED'];
+
+/**
+ * Hash a report record's content, excluding its own digest field (which does not exist
+ * yet when this is first called, and must not be part of what it certifies). Used
+ * identically when SETTING the digest in `generate` and when RECOMPUTING it in `verify`,
+ * so the two can never drift out of sync with each other.
+ */
+function digestOf(reportLike) {
+  const { digest, ...rest } = reportLike;
+  return sha256String(JSON.stringify(rest)); // already "sha256:<hex>" -- do not re-wrap it
+}
 
 export function generate({ plan = null, riskAssessment = null, applicability = [], recommendations = [], now = new Date() } = {}) {
   const session = state.requireSession();
@@ -122,7 +134,13 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
         method: e.method,
         status: e.status,
         status_reason: e.status_reason,
+        // duration_ms kept for anything still reading the old name. wall_clock_ms is the
+        // same number under its honest name; command_duration_ms -- the actual measured
+        // runtime of what was tested -- is only present when at least one linked evidence
+        // item was captured via `evidence capture` (see execution-engine's finish()).
         duration_ms: e.duration_ms ?? null,
+        wall_clock_ms: e.wall_clock_ms ?? e.duration_ms ?? null,
+        command_duration_ms: e.command_duration_ms ?? null,
         evidence: e.evidence ?? [],
         findings: e.findings ?? [],
         failure_classification: e.failure_classification ?? null,
@@ -132,6 +150,7 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
       evidence_id: e.evidence_id,
       kind: e.kind,
       summary: e.summary,
+      grade: e.grade ?? null,
       ...(e.artifact?.path ? { path: e.artifact.path } : {}),
       ...(e.artifact?.sha256 ? { sha256: e.artifact.sha256 } : {}),
     })),
@@ -178,10 +197,13 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
       id: u.id,
       status: u.status,
       question: u.question,
+      impact: u.impact,
       next_action: u.next_action,
       owner: u.owner ?? 'agent',
       affected_scope: u.affected_scope ?? [],
       resolved: u.status === 'resolved',
+      blocking: BLOCKING_STATUSES.has(u.status),
+      raised_by_execution: u.raised_by_execution ?? null,
     })),
     coverage_gaps: (plan?.change_summary?.coverage_gaps ?? []).concat(
       applicability.filter((a) => a.applicable && a.existing_coverage === 'none').map((a) => `${a.category}: no existing coverage`),
@@ -202,16 +224,25 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
     integrity: {
       unevidenced_pass_claims: audit.unevidenced_pass_claims,
       false_confidence_rate: audit.false_confidence_rate,
+      // Counted, not asserted: a check over an empty set ("0 writes -- nothing to
+      // check") is not the same claim as a check that found nothing wrong, and printing
+      // the same four lines regardless of what ran made every report look equally
+      // audited whether or not there was anything to audit.
       checks_run: [
-        'every PASSED/COMPLETED claim checked against attached evidence',
-        'external writes checked for provider confirmation',
-        'unfinished executions surfaced as INTERRUPTED',
-        'not-applicable categories listed with reasons',
+        `every PASSED/COMPLETED claim checked against attached evidence (${audit.pass_claims} claim(s))`,
+        `external writes checked for provider confirmation (${writes.length} write(s)${writes.length === 0 ? ' -- nothing to check' : ''})`,
+        `unfinished executions surfaced as INTERRUPTED (${interrupted.length} found)`,
+        `not-applicable categories listed with reasons (${notApplicable.length} categor${notApplicable.length === 1 ? 'y' : 'ies'})`,
       ],
       violations: audit.violations.concat(metrics.violations).concat(
         claimsToAudit && !evidenceAuditorRun
           ? ['No evidence-auditor record for this session (kind: evidence-audit). Claims here have only passed the mechanical evidence gate, not independent adversarial review.']
           : [],
+      ).concat(
+        // Process-completeness gaps are advisory mid-session (see process-completeness.mjs)
+        // but by the time a report exists, the session is over -- there is no "still in
+        // progress" excuse left, so every gap found is stated here regardless of severity.
+        checkProcessCompleteness().map((f) => `[process:${f.severity}] ${f.message}`),
       ),
       evidence_auditor_run: evidenceAuditorRun,
     },
@@ -223,6 +254,12 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
   if (riskAssessment) report.risk_assessment = riskAssessment;
   if (applicability.length) report.applicable_categories = applicability;
   if (session.goals?.length) report.goals = session.goals;
+
+  // The digest is computed over everything above -- including every field just
+  // conditionally added -- and must be the LAST thing set before this record is stored or
+  // rendered, or a conditional field added after it would go uncovered. See digestOf's own
+  // comment for why it excludes itself and why generate/verify share it.
+  report.digest = digestOf(report);
 
   state.put('reports', id, report, 'report');
   state.update((s) => {
@@ -398,16 +435,48 @@ export function render(r) {
     add(section('Needs attention', body));
   }
 
+  /* -------------------------------------------------------- 2b. unblock these */
+
+  // A field trial's admin had to interrogate the agent turn by turn to learn that three
+  // untested features were blocked by legitimate policy, not laziness or a bug -- and even
+  // on the compliant path (a report that DOES say "BLOCKED: no explicit authorisation for
+  // load traffic"), that sentence never tells the reader THEY are the one who can clear it.
+  // Scoped to owner user/external specifically: an agent-owned open question is the
+  // agent's own job to resolve, not something to phrase as an offer to the reader, and
+  // mixing the two here would bury the ones that are.
+  const unblockable = (r.uncertainty_details ?? []).filter((u) => !u.resolved && u.blocking && ['user', 'external'].includes(u.owner));
+  if (unblockable.length) {
+    add(section('Unblock these', [
+      '_Every item below is waiting on you, not on more agent work. Say so and it runs._',
+      bullets(unblockable, (u) => {
+        const exec = u.raised_by_execution ? (r.detailed_results ?? []).find((d) => d.execution_id === u.raised_by_execution) : null;
+        const what = exec?.goal ?? u.question;
+        return `**${what}** — blocked: ${u.impact}. ${u.next_action}`;
+      }),
+    ]));
+  }
+
   /* ------------------------------------------------------ 3. what was proven */
 
   const proven = (r.detailed_results ?? []).filter((d) => ['PASSED', 'COMPLETED'].includes(d.status));
   if (proven.length) {
+    // This sentence must never assert a commit the report cannot actually name -- it did,
+    // unconditionally, before git provenance was ever auto-captured (see core/git.mjs),
+    // and a report with no commit still claimed traceability to one. Three honest states:
+    // a real, clean commit; a real commit with the qualification that the tree had
+    // uncommitted changes at capture time (which materially qualifies every result); or
+    // no commit at all, stated plainly instead of asserted.
+    const traceability = r.git?.commit
+      ? r.git.dirty
+        ? `_Every row above executed against commit \`${r.git.commit.slice(0, 7)}\` **with uncommitted changes in the working tree** at the time -- these results are not fixed against a stable, committed point -- and is backed by the evidence cited. Nothing else in this report is a claim that something works._`
+        : '_Every row above executed against the commit named at the top and is backed by the evidence cited. Nothing else in this report is a claim that something works._'
+      : '_No commit was recorded for this session, so these results are not traceable to a fixed point in the codebase -- only to the evidence cited. Nothing else in this report is a claim that something works._';
     add(section('What was proven', [
       table(
         proven.map((d) => [d.execution_id, d.goal, d.category ?? '—', d.method, (d.evidence ?? []).join(', ') || '—']),
         ['Execution', 'What was checked', 'Category', 'Method', 'Evidence'],
       ),
-      '_Every row above executed against the commit named at the top and is backed by the evidence cited. Nothing else in this report is a claim that something works._',
+      traceability,
     ]));
   }
 
@@ -457,10 +526,24 @@ export function render(r) {
       table(
         (r.detailed_results ?? []).map((d) => [
           d.execution_id, d.status, d.goal, d.method,
-          d.failure_classification ? `${d.failure_classification.class} (${d.failure_classification.confidence})` : '—',
-          d.duration_ms != null ? `${d.duration_ms} ms` : '—',
+          // "unclassified-no-signals" means the caller supplied nothing to classify from
+          // -- it is not a verdict on the finding, and printing it with a confidence
+          // number invites reading it as one anyway. Suppressed to the same "—" as no
+          // classification at all, rather than a confident-looking label for an absence.
+          (d.failure_classification && d.failure_classification.class !== 'unclassified-no-signals')
+            ? `${d.failure_classification.class} (${d.failure_classification.confidence})`
+            : '—',
+          // Two different numbers, never conflated under one ambiguous "Duration" header:
+          // wall-clock is the gap between the two CLI calls (always known once an execution
+          // finishes; includes the agent's own reasoning time), command time is the actual
+          // measured runtime of what was tested (only known when linked evidence was
+          // captured via `evidence capture`). Printing wall-clock under a "Duration" header
+          // was read as the latter -- a Playwright run recorded at 100,488ms against a
+          // transcript stating the real run took 17.1s.
+          d.wall_clock_ms != null ? `${d.wall_clock_ms} ms` : '—',
+          d.command_duration_ms != null ? `${d.command_duration_ms} ms` : '—',
         ]),
-        ['ID', 'Status', 'Goal', 'Method', 'Failure class', 'Duration'],
+        ['ID', 'Status', 'Goal', 'Method', 'Failure class', 'Wall clock', 'Command time'],
       ),
       table(
         Object.entries(r.execution_summary?.by_status ?? {}).map(([s, n]) => [s, n]),
@@ -469,8 +552,12 @@ export function render(r) {
     ], { level: 3 }),
 
     section('Evidence', table(
-      (r.evidence_index ?? []).map((e) => [e.evidence_id, e.kind, e.summary, e.path ?? e.sha256 ?? '—']),
-      ['ID', 'Kind', 'Summary', 'Artifact'],
+      (r.evidence_index ?? []).map((e) => [
+        e.evidence_id, e.kind, e.summary,
+        e.grade === 'anchored' ? 'yes' : e.grade === 'asserted' ? 'no' : '—',
+        e.path ?? e.sha256 ?? '—',
+      ]),
+      ['ID', 'Kind', 'Summary', 'Anchored?', 'Artifact'],
     ), { level: 3 }),
 
     section('External writes', [
@@ -539,19 +626,39 @@ export function render(r) {
       ['Goal', 'Description', 'Success criterion', 'Status', 'Evidence'],
     ), { level: 3 }),
 
-    section('Evaluation metrics', [
-      table(
-        Object.entries(r.metrics?.metrics ?? {}).map(([k, v]) => [
-          k,
-          v === null ? '_n/a (zero denominator)_' : v,
-          r.metrics?.denominators?.[k] ?? '—',
-          r.metrics?.noisy_metrics?.includes(k) ? `⚠️ below noise floor (${r.metrics.noise_floor})` : '',
-          r.metrics.definitions?.[k]?.direction ?? '',
-        ]),
-        ['Metric', 'Value', 'n', 'Noise', 'Direction'],
-      ),
-      `_A null means the denominator was zero — honest, and not to be read as 0. A ⚠️ means the denominator is real but thin (n < ${r.metrics?.noise_floor ?? 5}); read that value qualitatively, not as a ratio._`,
-    ], { level: 3 }),
+    // A metrics table is the most quantitative-looking part of a report, and the least
+    // trustworthy if a zero-denominator row sits next to real ones. Nulls used to render
+    // inline as "_n/a (zero denominator)_", indistinguishable at a glance from a real
+    // measurement -- a field trial's own report carried three defective rows this way, with
+    // nothing about their PRESENTATION setting them apart from the twelve honest ones next
+    // to them. A short table of what was actually measured, plus one collapsed line naming
+    // what wasn't, beats a long table where a reader has to check each row to tell which is
+    // which.
+    section('Evaluation metrics', (() => {
+      const entries = Object.entries(r.metrics?.metrics ?? {});
+      const measured = entries.filter(([, v]) => v !== null);
+      const notMeasured = entries.filter(([, v]) => v === null);
+      return [
+        measured.length
+          ? table(
+            measured.map(([k, v]) => [
+              k,
+              v,
+              r.metrics?.denominators?.[k] ?? '—',
+              r.metrics?.noisy_metrics?.includes(k) ? `⚠️ below noise floor (${r.metrics.noise_floor})` : '',
+              r.metrics.definitions?.[k]?.direction ?? '',
+            ]),
+            ['Metric', 'Value', 'n', 'Noise', 'Direction'],
+          )
+          : '_No metric had a real denominator this session._',
+        measured.length
+          ? `_A ⚠️ means the denominator is real but thin (n < ${r.metrics?.noise_floor ?? 5}); read that value qualitatively, not as a ratio._`
+          : '',
+        notMeasured.length
+          ? `_Not measured this session (zero denominator, honestly excluded rather than shown as 0): ${notMeasured.map(([k]) => k).join(', ')}._`
+          : '',
+      ];
+    })(), { level: 3 }),
 
     section('Integrity self-audit', [
       table(
@@ -569,5 +676,98 @@ export function render(r) {
 
   add(`---\n\nProduced by the Autonomous Software Testing skill system v${SYSTEM_VERSION}. Every status above is traceable to a record under \`state/\`.`);
 
+  // Absent only for a record generated before this field existed -- a report generated by
+  // this build always carries one. See digestOf's comment and `verify` below: this line is
+  // the entire mechanism by which a hand-written or hand-edited report is distinguishable
+  // from one this system actually rendered.
+  if (r.digest) {
+    add(`_Rendered from ${r.report_id} · digest \`${r.digest}\` · verify with \`ast report verify\`. A report with no digest line was not produced by this system._`);
+  }
+
   return `${out.join('\n\n')}\n`;
+}
+
+/**
+ * Prove that a rendered report was actually produced by this system's own renderer, not
+ * hand-written, hand-edited after rendering, or copied from a state directory that no
+ * longer has the record it claims. This is the mechanism behind the orchestrator's rule
+ * that the report handed to a user is the one the CLI rendered -- a rule that a field
+ * trial's session violated (a hand-written report, back-filled into state afterwards)
+ * with nothing anywhere able to say so.
+ *
+ * Three ways this can fail, checked in the order a reader would actually hit them:
+ *
+ *  1. No title line in the expected shape at all -- does not look like this system's
+ *     output (a hand-written report with different headings, for instance).
+ *  2. The title names a report_id with no matching stored record, or a stored record
+ *     with no digest, or a stored digest that does not match the record's own content
+ *     (the record was altered on disk after being written).
+ *  3. Re-rendering the stored record does not reproduce the given text byte for byte --
+ *     the actual threat: the text was hand-written, or edited after being rendered.
+ *
+ * Deliberately NOT a signature: there is no secret to hold and no adversary this defends
+ * against, only a capable agent under delivery pressure taking a convenient shortcut. A
+ * hash the agent itself could recompute is exactly the right amount of ceremony for that.
+ *
+ * @param {string} text  The rendered Markdown, exactly as it would be delivered.
+ * @returns {{rendered: boolean, report_id?: string, reason?: string, first_diff_line?: number, digest?: string}}
+ */
+export function verify(text) {
+  const titleMatch = /^# Testing Report · (REPORT-\d{4}-\d{5,})/m.exec(text);
+  if (!titleMatch) {
+    return {
+      rendered: false,
+      reason: 'No report title line found (expected "# Testing Report · REPORT-...") -- this does not look like a report this system produced.',
+    };
+  }
+  const reportId = titleMatch[1];
+
+  const stored = state.get('reports', reportId);
+  if (!stored) {
+    return {
+      rendered: false,
+      report_id: reportId,
+      reason: `No stored record for ${reportId} under state/reports/ -- it cannot be verified against state it does not exist in.`,
+    };
+  }
+
+  if (!stored.digest) {
+    return {
+      rendered: false,
+      report_id: reportId,
+      reason: `Stored record for ${reportId} carries no digest -- it predates this check, or was written by something other than this renderer.`,
+    };
+  }
+
+  const recomputed = digestOf(stored);
+  if (recomputed !== stored.digest) {
+    return {
+      rendered: false,
+      report_id: reportId,
+      reason: `Stored record's digest does not match its own content (stored ${stored.digest}, recomputed ${recomputed}). The stored record was altered after being written.`,
+    };
+  }
+
+  const rerendered = render(stored);
+  // Normalise CRLF to LF before comparing text, never before hashing (the digest above
+  // covers the JSON record, not rendered text, so line endings never touch it). writeText
+  // always writes LF-only; a CRLF-converted file most often means an incidental tool
+  // (an editor, a checkout with autocrlf) touched line endings, not that anyone edited the
+  // content -- normalising here keeps that distinct from an actual edit, which this must
+  // still catch.
+  const normalise = (s) => s.replace(/\r\n/g, '\n');
+  if (normalise(rerendered) !== normalise(text)) {
+    const given = normalise(text).split('\n');
+    const fresh = normalise(rerendered).split('\n');
+    let firstDiff = 0;
+    while (firstDiff < Math.min(given.length, fresh.length) && given[firstDiff] === fresh[firstDiff]) firstDiff += 1;
+    return {
+      rendered: false,
+      report_id: reportId,
+      reason: 'Re-rendering the stored record does not reproduce this text byte for byte. Either this file was not produced by the renderer, or it was edited after being rendered.',
+      first_diff_line: firstDiff + 1,
+    };
+  }
+
+  return { rendered: true, report_id: reportId, digest: stored.digest };
 }

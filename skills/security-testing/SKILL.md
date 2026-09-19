@@ -4,7 +4,7 @@ description: Test authentication, authorisation, session management, input valid
 when_to_use: "security testing", "test the auth", "can user A access user B's data", "dependency scan", "check for injection", "session handling test"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.9.0
+  system_version: 0.10.0
   role: specialist
 ---
 
@@ -104,9 +104,19 @@ location and say what kind it is.
 
 ## 6. Dependencies
 
+Run the scanner through the CLI so its real output — not your summary of it — becomes the
+evidence, and its real exit code is what the gate checks:
+
 ```bash
-npm audit --json    # or pip-audit, cargo audit, govulncheck
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence capture --exec EXEC-2026-00003 \
+  --summary "dependency scan" -- npm audit --json    # or pip-audit, cargo audit, govulncheck
 ```
+
+A scanner finding vulnerabilities exits non-zero. That is a normal, correctly-captured
+result, not a capture failure — `evidence capture` never treats the target command's own
+exit code as its problem to interpret. Whether that exit code means the execution's goal
+("no critical/high vulns") FAILED is your judgement to make and record via `exec finish`,
+using the failure it surfaces as evidence, not a reason to avoid capturing it.
 
 Triage before reporting. A critical CVE in a dev-only dependency on a code path you never
 call is not a critical finding. State exploitability, not just severity.

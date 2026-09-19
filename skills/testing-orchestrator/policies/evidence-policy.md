@@ -35,6 +35,34 @@ user statements. Testimony, not verification.
 
 A screenshot shows what a page looked like. It does not show that an assertion held.
 
+**Every evidence item is also graded `anchored` or `asserted`, computed by the engine —
+never something you set.** `anchored` means the record carries a real artifact, a real
+URI, or an excerpt paired with a real command exit code: something a reader could actually
+go check. `asserted` means it is your account with nothing behind it. Grading does not
+change what the gate accepts — an execution-grade kind still passes on its own — it exists
+so the report and `evidence_anchored_rate` can say, honestly, how much of what you claimed
+is checkable versus how much is your word. Prefer driving that ratio up by capturing real
+output (below), not by arguing the gate should accept less.
+
+## Prefer captured evidence over typed evidence
+
+`evidence add` will accept a hand-typed summary with no artifact behind it — a sentence
+you wrote is not a lie, but it is not proof either, and the gate below can only check the
+content it is given. When the evidence is a command's output, run it through the CLI so
+the real exit code, real duration and real stdout/stderr become the record, instead of
+your account of them:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence capture --exec EXEC-2026-00003 \
+  --summary "typecheck" -- npm run lint
+```
+
+This is the difference between "I ran `npm audit` and it found no criticals" as a sentence,
+and the same claim backed by a hashed transcript with a real exit code the gate itself
+verified. Use `evidence add` for a report a *different* process already wrote to disk (a
+test runner's own JSON output, a coverage file) — never as a substitute for running a
+command you could have run yourself.
+
 ## The gate
 
 `exec finish` runs this automatically; you can run it directly:
@@ -60,7 +88,12 @@ excerpt. Registering an artefact that does not exist is an error — the engine 
 ## Reproducibility
 
 A result nobody can re-run is an anecdote. The `reproducibility` metric counts executions
-carrying commit **and** environment **and** command. Supply all three.
+carrying commit **and** environment **and** command. The commit is captured automatically
+— `session start` detects it from the repository under test, and every execution,
+evidence and finding record inherits it unless you explicitly override with your own
+`git` object (or `git: null`, if this specific record genuinely has none — testing a
+target outside the session's own repository, for instance). You still have to supply
+`environment` and `command` yourself; nothing can infer those.
 
 ## Writing the claim
 

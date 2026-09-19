@@ -4,7 +4,7 @@ description: Test a user interface for accessibility — automated WCAG scanning
 when_to_use: "accessibility testing", "a11y", "WCAG", "is this screen reader friendly", "keyboard navigation test", "contrast check"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.9.0
+  system_version: 0.10.0
   role: specialist
 ---
 

@@ -80,7 +80,18 @@ export function score({ profile = 'balanced', factors = {}, overrides = {} } = {
 
   const unknown = Object.keys(factors).filter((f) => !CONFIG.factors[f]);
   if (unknown.length) {
-    throw new Error(`Unknown risk factor(s): ${unknown.join(', ')}. Add them to engine/risk-engine/weights.json first.`);
+    // Never tell the caller to edit weights.json: an unrecognised name here is a caller
+    // typo or shape error, not a missing entry in the risk model's configuration. The
+    // most common real cause: factor names were passed at the top level instead of nested
+    // under "factors", so each one collected a camelCase alias (see aliasKeys in
+    // bin/ast.mjs) that this engine then correctly does not recognise.
+    throw new Error(
+      `Unknown risk factor(s): ${unknown.join(', ')}. `
+      + 'Factors must be nested under "factors" as {value, basis} objects: '
+      + '{ "factors": { "security_sensitivity": { "value": 0.9, "basis": "..." } } }. '
+      + 'If you passed them at the top level, that is almost certainly the cause of these exact '
+      + 'names. Known factors: `ast risk profiles`. Worked example: skills/risk-analysis/SKILL.md.',
+    );
   }
 
   const weightSum = scored.reduce((a, f) => a + f.weight, 0);

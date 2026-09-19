@@ -4,7 +4,7 @@ description: Build a structured, evidence-backed profile of a repository — lan
 when_to_use: "what does this repo do", "analyse this codebase", "profile the repository", "what testing exists here", "what stack is this"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell
 metadata:
-  system_version: 0.9.0
+  system_version: 0.10.0
   role: specialist
 ---
 

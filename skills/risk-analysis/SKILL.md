@@ -4,7 +4,7 @@ description: Score the risk of a change or component from evidence — business 
 when_to_use: "how risky is this change", "what should we test first", "is this worth deep testing", "prioritise the testing"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell
 metadata:
-  system_version: 0.9.0
+  system_version: 0.10.0
   role: specialist
 ---
 
@@ -15,8 +15,13 @@ not need visual regression testing.
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" risk profiles
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" risk score --example        # a valid factors.json, printed directly
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" risk score --input factors.json --profile security-critical --explain
 ```
+
+`risk score --example` prints the exact shape below directly from the CLI -- worth
+knowing even from inside this skill, since the command itself does not require this file
+to have been read first.
 
 ## Pick the profile deliberately
 

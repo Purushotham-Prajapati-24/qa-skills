@@ -15,7 +15,9 @@
  */
 import process from 'node:process';
 import fs from 'node:fs';
-import { setStateRoot, stateRoot } from '../engine/core/paths.mjs';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { setStateRoot, stateRoot, dir } from '../engine/core/paths.mjs';
 import { readJson } from '../engine/core/fsjson.mjs';
 import { SYSTEM_VERSION } from '../engine/core/version.mjs';
 import * as state from '../engine/state-engine/index.mjs';
@@ -33,6 +35,7 @@ import * as flakiness from '../engine/flakiness/index.mjs';
 import * as trace from '../engine/traceability/index.mjs';
 import * as reporting from '../engine/reporting-engine/index.mjs';
 import * as evaluation from '../engine/evaluation-engine/index.mjs';
+import * as processCompleteness from '../engine/evaluation-engine/process-completeness.mjs';
 import * as adapters from '../engine/adapters/index.mjs';
 import { compute as computeMetrics } from '../engine/evaluation-engine/metrics.mjs';
 import { validate as validateSchema } from '../engine/schema/validate.mjs';
@@ -43,8 +46,14 @@ import { classify } from '../engine/failure-classifier/index.mjs';
 function parseArgs(argv) {
   const positional = [];
   const flags = {};
+  // Everything after a bare "--" is a literal command line for a subcommand to spawn (see
+  // "evidence capture"), never flags of this CLI's own. Without this terminator, a token
+  // like "--input" inside the spawned command would be consumed as ast's own --input flag
+  // instead of being handed to the child process verbatim.
+  let rest = [];
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
+    if (a === '--') { rest = argv.slice(i + 1); break; }
     if (a.startsWith('--')) {
       const [k, inlineValue] = a.slice(2).split('=');
       if (inlineValue !== undefined) flags[k] = inlineValue;
@@ -52,7 +61,7 @@ function parseArgs(argv) {
       else flags[k] = true;
     } else positional.push(a);
   }
-  return { positional, flags };
+  return { positional, flags, rest };
 }
 
 /**
@@ -136,13 +145,31 @@ const COMMANDS = {
 
   /* ---- session ---- */
   'session start': {
-    help: 'Start a session: session start --request "..." [--trigger ...] [--input goals.json]',
+    help: 'Start a session: session start --request "..." [--trigger ...] [--input goals.json]. '
+      + 'See "session start --example" for a valid goals.json shape.',
+    example: {
+      request: 'Test the saved-card checkout change on branch feat/SHOP-412-saved-card',
+      goals: [
+        {
+          goal: 'Confirm a saved card cannot be used to charge another user',
+          success_criteria: [
+            'API rejects a payment-method ID that does not belong to the session user',
+            'No regression in the existing single-user checkout path',
+          ],
+        },
+        'Baseline: the existing unit and integration suites still pass at head',
+      ],
+    },
     run: ({ flags }) => {
       const body = payload(flags);
       return state.startSession({
         request: flags.request ?? body.request,
         trigger: flags.trigger ?? body.trigger ?? 'user-request',
-        git: body.git ?? null,
+        // No "?? null" here: an explicit git object still wins, but the absent case must
+        // stay `undefined` so startSession's own default (auto-detect from the working
+        // directory) actually runs. Forcing null here was the reason auto-detection was
+        // unreachable through the real CLI path even after it existed as a default.
+        git: body.git,
         goals: body.goals ?? [],
       });
     },
@@ -179,10 +206,38 @@ const COMMANDS = {
 
   /* ---- risk ---- */
   'risk score': {
-    help: 'Score risk: risk score --input factors.json [--profile balanced]',
+    help: 'Score risk: risk score --input factors.json [--profile balanced]. '
+      + 'See "risk score --example" for a valid factors.json shape, or `risk profiles` for the full factor catalog.',
+    // Reused verbatim from skills/risk-analysis/SKILL.md's own worked example -- the exact
+    // shape a field trial's agent found only after invoking this command blind, because
+    // that skill had not been loaded. The contract belongs here, not only in a sibling
+    // skill's prose.
+    example: {
+      profile: 'security-critical',
+      factors: {
+        business_criticality: { value: 1.0, basis: 'checkout is the only revenue path', epistemic_class: 'observed' },
+        security_sensitivity: { value: 0.9, basis: 'diff modifies auth/session.ts middleware', epistemic_class: 'observed' },
+        change_magnitude: { value: 0.6, basis: '312 changed lines across 7 files in a ~2k-line module', epistemic_class: 'observed' },
+        coverage_deficit: { value: 0.8, basis: 'no test exercises the saved-card branch (grep across test/ found none)', epistemic_class: 'observed' },
+        irreversibility: { value: 0.9, basis: 'captures a real payment; refunds are manual', epistemic_class: 'inferred' },
+      },
+    },
     run: ({ flags }) => {
-      const body = payload(flags);
-      const assessment = risk.score({ profile: flags.profile ?? body.profile ?? 'balanced', factors: body.factors ?? body });
+      // shouldAlias=false: `factors` is a map of FACTOR NAMES to {value, basis} objects, not
+      // an options bag. Aliasing would twin every factor name that contains an underscore
+      // (which is most of them) with a camelCase duplicate, and a flat body -- one with no
+      // top-level "factors" key at all -- would then present every one of those twins to the
+      // engine as an "unknown factor", naming identifiers the caller never wrote. There is
+      // also deliberately no `?? body` fallback: a flat body is a shape error, not an
+      // alternate shape, and must fail as one rather than being silently reinterpreted.
+      const body = payload(flags, false);
+      if (!body.factors || typeof body.factors !== 'object' || Array.isArray(body.factors)) {
+        throw new Error(
+          'risk score requires a "factors" object: { "factors": { "<name>": { "value": 0-1, "basis": "..." } } }. '
+          + 'See: node bin/ast.mjs risk profiles, or skills/risk-analysis/SKILL.md for a worked example.',
+        );
+      }
+      const assessment = risk.score({ profile: flags.profile ?? body.profile ?? 'balanced', factors: body.factors });
       return flags.explain ? { ...assessment, explanation: risk.explain(assessment) } : assessment;
     },
   },
@@ -200,7 +255,21 @@ const COMMANDS = {
 
   /* ---- browser method ---- */
   'browser decide': {
-    help: 'Choose a browser testing method: browser decide --input factors.json',
+    help: 'Choose a browser testing method: browser decide --input factors.json. '
+      + 'See "browser decide --example" for a valid factors.json shape, or `browser matrix` for the full factor catalog.',
+    // A flat body, not { factors: {...} } -- unlike risk score. See G-07's fix (the two
+    // adjacent commands with opposite payload shapes and opposite failure modes): this
+    // command discards anything outside a top-level "factors" key silently rather than
+    // erroring, so this example exists precisely to show the shape it actually needs.
+    example: {
+      factors: {
+        ui_known: 0.2,
+        exploratory_value: 0.8,
+        repeatability: 0.85,
+        business_criticality: 0.9,
+        existing_automation: 0.3,
+      },
+    },
     run: ({ flags }) => {
       const body = payload(flags);
       return browser.decide({ ...body, capabilities: withResolvedCapabilities(body.capabilities) });
@@ -229,9 +298,97 @@ const COMMANDS = {
 
   /* ---- evidence ---- */
   'evidence add': { help: 'Register evidence: evidence add --input evidence.json', run: ({ flags }) => evidence.add(payload(flags)) },
+  'evidence capture': {
+    help: 'Run a command and register its real output as evidence: '
+      + 'evidence capture --exec EXEC-2026-00001 [--summary "..."] [--cwd dir] [--timeout ms] -- <command> [args...]',
+    run: ({ flags, rest }) => {
+      if (!rest.length) {
+        throw new Error(
+          'evidence capture requires a command after "--", e.g.: '
+          + 'ast evidence capture --exec EXEC-2026-00001 -- npm run lint',
+        );
+      }
+      if (!flags.exec) {
+        throw new Error('evidence capture requires --exec <EXECUTION_ID> naming the execution this evidence supports.');
+      }
+      if (!state.get('executions', flags.exec)) {
+        throw new Error(`No such execution: ${flags.exec}. Open one first with "exec start" -- never capture evidence for an execution that does not exist.`);
+      }
+
+      const cwd = flags.cwd ?? process.cwd();
+      const timeout = Number(flags.timeout ?? 600_000);
+      const argvString = rest.join(' ');
+      const isWin = process.platform === 'win32';
+      // shell: true on Windows matches the existing precedent in capability-registry/
+      // index.mjs -- it is what lets "npm" resolve to "npm.cmd". But per Node's own
+      // documentation, shell:true on Windows makes QUOTING the caller's job: cmd.exe
+      // splits on whitespace before spawnSync ever sees the string, so an unquoted
+      // absolute path containing a space (e.g. `process.execPath` itself, wherever Node
+      // is installed under "Program Files") silently mis-parses into "the command is
+      // 'C:\Program'", fails, and reports a real-looking exit code that never came from
+      // the intended program at all. Quote every element that contains whitespace;
+      // leave everything else untouched so the common case (bare names, unspaced paths)
+      // is not needlessly rewritten.
+      const winShellQuote = (a) => (/\s/.test(a) ? `"${a.replace(/"/g, '""')}"` : a);
+      const spawnCommand = isWin ? winShellQuote(rest[0]) : rest[0];
+      const spawnArgs = isWin ? rest.slice(1).map(winShellQuote) : rest.slice(1);
+      const started = Date.now();
+      const r = spawnSync(spawnCommand, spawnArgs, {
+        encoding: 'utf8',
+        cwd,
+        timeout,
+        maxBuffer: 32 * 1024 * 1024,
+        shell: isWin,
+      });
+      const durationMs = Date.now() - started;
+
+      // The capture MECHANISM failing (command not found, timed out, killed by signal
+      // before producing an exit code) is not the same thing as the CAPTURED command
+      // failing (a real, meaningful non-zero exit, e.g. `npm audit` finding
+      // vulnerabilities). Only the former is this command's own problem to report --
+      // whether the latter is good or bad news is the calling skill's judgement to make
+      // from the recorded exit code, never this CLI's to decide.
+      const mechanismFailed = Boolean(r.error) || r.status === null;
+      if (mechanismFailed) {
+        const detail = r.error
+          ? r.error.message
+          : `terminated by signal ${r.signal ?? 'unknown'} (likely the ${timeout}ms timeout)`;
+        const ev = evidence.captureOutput({
+          argv: argvString,
+          cwd,
+          durationMs,
+          stdout: r.stdout ?? '',
+          stderr: `${r.stderr ?? ''}\n[ast evidence capture] did not complete: ${detail}`.trim(),
+          summary: flags.summary ?? `Command did not complete: ${detail}`,
+          executionId: flags.exec,
+        });
+        process.exitCode = 1;
+        return { ...ev, ok: false, run_error: detail };
+      }
+
+      return evidence.captureOutput({
+        argv: argvString,
+        cwd,
+        exitCode: r.status,
+        durationMs,
+        stdout: r.stdout ?? '',
+        stderr: r.stderr ?? '',
+        summary: flags.summary,
+        executionId: flags.exec,
+      });
+    },
+  },
   'evidence verify': {
     help: 'Check whether a status claim is supported: evidence verify --input {"status":"PASSED","evidenceIds":[...]}',
     run: ({ flags }) => evidence.verifyClaim(payload(flags)),
+  },
+  'evidence amend': {
+    help: 'Correct a mis-typed evidence kind: evidence amend EV-2026-00001 --kind evidence-audit',
+    run: ({ flags, positional }) => {
+      const id = positional[2];
+      if (!id) throw new Error('evidence amend requires an evidence ID, e.g.: ast evidence amend EV-2026-00001 --kind evidence-audit');
+      return evidence.amend(id, { kind: flags.kind });
+    },
   },
   'evidence list': { help: 'List evidence items.', run: () => state.list('evidence') },
 
@@ -311,7 +468,18 @@ const COMMANDS = {
 
   /* ---- reporting ---- */
   'report generate': {
-    help: 'Generate the report: report generate [--input context.json] [--format md]',
+    help: 'Generate the report: report generate [--input context.json] [--format md]. '
+      + 'context.json is entirely optional -- see "report generate --example".',
+    // `plan`, `riskAssessment` and `applicability` are normally the literal output of
+    // `plan compute` / `risk score` / `applicability eval` piped straight through, not
+    // hand-typed -- this example shows the one field worth hand-authoring directly:
+    // recommendations, prose a human or agent adds on top of what state already proves.
+    example: {
+      recommendations: [
+        'Prioritise adding an owner check on the payment-methods endpoint before the next release.',
+        'Re-run the accessibility scan once the interrupted session resumes.',
+      ],
+    },
     run: ({ flags }) => {
       const body = payload(flags);
       const result = reporting.generate(body);
@@ -320,6 +488,28 @@ const COMMANDS = {
     raw: (flags) => flags.format === 'md',
   },
   'report show': { help: 'Print a stored report: report show REPORT-2026-00001', run: ({ positional }) => state.get('reports', positional[2]) },
+  'report verify': {
+    help: 'Prove a rendered report was actually produced by this system, not hand-written or '
+      + 'edited after the fact: report verify <path/to/report.md | REPORT-2026-00001>',
+    run: ({ positional }) => {
+      const target = positional[2];
+      if (!target) {
+        throw new Error('report verify requires a path to a rendered .md file, or a bare REPORT-ID (e.g. REPORT-2026-00002) to check the stored copy under state/reports/.');
+      }
+      let text;
+      if (/^REPORT-\d{4}-\d{5,}$/.test(target)) {
+        const storedPath = path.join(dir('reports'), `${target}.md`);
+        if (!fs.existsSync(storedPath)) throw new Error(`No stored report file at ${storedPath}.`);
+        text = fs.readFileSync(storedPath, 'utf8');
+      } else {
+        if (!fs.existsSync(target)) throw new Error(`No such file: ${target}`);
+        text = fs.readFileSync(target, 'utf8');
+      }
+      const result = reporting.verify(text);
+      if (!result.rendered) process.exitCode = 1;
+      return result;
+    },
+  },
 
   /* ---- metrics + evaluation ---- */
   'metrics': { help: 'Compute evaluation metrics for the current state.', run: ({ flags }) => computeMetrics(payload(flags)) },
@@ -370,7 +560,7 @@ const COMMANDS = {
     }),
   },
   'adapter complete': {
-    help: 'Finish a delegated (MCP) write: adapter complete --ticket WT-... --json \'<provider response>\'',
+    help: 'Finish a delegated (MCP) write: adapter complete --ticket WT-... --input response.json',
     run: ({ flags }) => {
       const ticket = adapters.readTicket(flags.ticket);
       if (!ticket) throw new Error(`No such ticket: ${flags.ticket}. Run \`ast adapter pending\` to list open ones.`);
@@ -391,8 +581,11 @@ const COMMANDS = {
 
   /* ---- integrity ---- */
   'validate': {
-    help: 'Validate every stored record against its schema and check referential integrity.',
-    run: () => validateAll(),
+    help: 'Validate schemas + referential integrity, plus process-completeness warnings. '
+      + 'Add --final (the orchestrator\'s "before you tell the user you are done" gate) to '
+      + 'promote blocking process gaps (no decisions; blocked work never raised as an '
+      + 'uncertainty) into failures.',
+    run: ({ flags }) => validateAll({ final: Boolean(flags.final) }),
   },
 };
 
@@ -415,8 +608,9 @@ const COLLECTION_SCHEMAS = {
   reports: { schema: 'report', idField: 'report_id' },
 };
 
-function validateAll() {
+function validateAll({ final = false } = {}) {
   const problems = [];
+  const warnings = [];
   const counts = {};
 
   const session = state.loadSession();
@@ -477,7 +671,17 @@ function validateAll() {
     }
   }
 
-  return { valid: problems.length === 0, counts, problems, state_root: stateRoot() };
+  // Schema and referential-integrity problems above are always fatal. Process-completeness
+  // findings are advisory by default -- correct at any point mid-session -- and a
+  // "blocking"-severity one is promoted into `problems` only under --final, the
+  // orchestrator's own finishing gate. See process-completeness.mjs for why the split
+  // exists and why "no git provenance" never promotes today.
+  for (const f of processCompleteness.check()) {
+    if (f.severity === 'blocking' && final) problems.push(`process: ${f.message}`);
+    else warnings.push(`process (${f.severity}): ${f.message}`);
+  }
+
+  return { valid: problems.length === 0, counts, problems, warnings, state_root: stateRoot() };
 }
 
 /* --------------------------------------------------------------------- main */
@@ -508,7 +712,7 @@ function printHelp() {
 
 async function main() {
   const argv = process.argv.slice(2);
-  const { positional, flags } = parseArgs(argv);
+  const { positional, flags, rest } = parseArgs(argv);
 
   if (flags.state) setStateRoot(flags.state);
   if (positional.length === 0 || positional[0] === 'help' || flags.help) { printHelp(); return; }
@@ -521,11 +725,27 @@ async function main() {
     return;
   }
 
+  // A field trial's agent hit `session start --input goals.json` with no goals.json to
+  // point at, read the session schema cold, then gave up and ran with just --request.
+  // The four commands that need this most (session start, risk score, browser decide,
+  // report generate) had no worked example anywhere the agent's own reading path reached
+  // -- risk score's WAS documented, but only in a sibling skill the agent had not loaded.
+  // Payload contracts belong to the CLI itself: `--example` prints one directly, on any
+  // command that has declared one, so an agent never has to guess a shape or go find it.
+  if (flags.example) {
+    if (!COMMANDS[key].example) {
+      fail(`no example payload is defined yet for "${key}"`, 'run with --input pointing at a real payload, or check the command\'s own --help text');
+      return;
+    }
+    process.stdout.write(`${JSON.stringify(COMMANDS[key].example, null, 2)}\n`);
+    return;
+  }
+
   try {
     // Adapter commands talk to providers and are async. Awaiting unconditionally keeps
     // the synchronous commands working unchanged -- and without it a promise serialises
     // as "{}", which looks exactly like a successful empty result.
-    const result = await COMMANDS[key].run({ positional, flags });
+    const result = await COMMANDS[key].run({ positional, flags, rest });
     if (COMMANDS[key].raw?.(flags)) process.stdout.write(`${result}\n`);
     else out(result, flags);
 
