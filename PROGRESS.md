@@ -6,7 +6,7 @@ completeness.
 
 **Current phase:** core complete and exercised end to end; integrations specified, bound where
 a provider exists.
-**Version:** 0.9.0 · **Last validated:** 2026-09-18
+**Version:** 0.10.0 · **Last validated:** 2026-09-19
 
 ## Validation status
 

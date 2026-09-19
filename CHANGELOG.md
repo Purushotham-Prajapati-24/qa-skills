@@ -3,7 +3,7 @@
 Semantic versioning. See [docs/versioning.md](docs/versioning.md) for what is versioned
 independently — document schemas and policy files carry their own versions.
 
-## [Unreleased]
+## [0.10.0] - 2026-09-19
 
 ### Fixed
 

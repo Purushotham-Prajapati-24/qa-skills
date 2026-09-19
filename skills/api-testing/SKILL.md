@@ -4,7 +4,7 @@ description: Test HTTP, GraphQL and gRPC APIs — status codes, response shapes,
 when_to_use: "test the API", "test these endpoints", "did the schema change break anything", "test the GraphQL API", "validate the OpenAPI contract"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.9.0
+  system_version: 0.10.0
   role: specialist
 ---
 

@@ -1,7 +1,7 @@
 {
   "report_id": "REPORT-2026-00001",
   "report_version": "1.2.0",
-  "generated_at": "2026-09-19T10:07:44.893Z",
+  "generated_at": "2026-09-19T10:26:31.997Z",
   "session_id": "SESSION-0001",
   "executive_summary": {
     "headline": "**FAILED** — 4 executions run · 1 finding, worst critical · 2 planned items not run.",
@@ -60,7 +60,7 @@
       "NOT_APPLICABLE": 1,
       "INTERRUPTED": 1
     },
-    "total_duration_ms": 18,
+    "total_duration_ms": 20,
     "test_cases": 3
   },
   "detailed_results": [
@@ -115,8 +115,8 @@
       "method": "existing-suite",
       "status": "INCONCLUSIVE",
       "status_reason": "Checkout works. [DOWNGRADED from PASSED: \"[REDACTED]\" claims something was executed, but no evidence is attached. Absence of failure is not proof of correctness.]",
-      "duration_ms": 4,
-      "wall_clock_ms": 4,
+      "duration_ms": 5,
+      "wall_clock_ms": 5,
       "command_duration_ms": null,
       "evidence": [],
       "findings": [],
@@ -165,8 +165,8 @@
       "method": "existing-suite",
       "status": "PASSED",
       "status_reason": "vitest suite executed against abc1234; 211 tests passed, 0 failed.",
-      "duration_ms": 7,
-      "wall_clock_ms": 7,
+      "duration_ms": 8,
+      "wall_clock_ms": 8,
       "command_duration_ms": 12480,
       "evidence": [
         "EV-2026-00001"
@@ -182,7 +182,7 @@
       "kind": "command-output",
       "summary": "vitest: 211/211 passed",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\claude\\D--QATesting\\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\\scratchpad\\demo-real-state\\evidence\\blobs\\output-2026-09-19T10-07-44-836Z-45508.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\claude\\D--QATesting\\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\\scratchpad\\demo-real-state\\evidence\\blobs\\output-2026-09-19T10-26-31-933Z-16760.txt",
       "sha256": "sha256:08847719b18700defc4e5811a3e0be639fa4d8c92fcbdefd7cff7a429ac59e38"
     },
     {
@@ -190,7 +190,7 @@
       "kind": "command-output",
       "summary": "api: 11/12 passed, 1 failed",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\claude\\D--QATesting\\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\\scratchpad\\demo-real-state\\evidence\\blobs\\output-2026-09-19T10-07-44-847Z-45508.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\claude\\D--QATesting\\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\\scratchpad\\demo-real-state\\evidence\\blobs\\output-2026-09-19T10-26-31-945Z-16760.txt",
       "sha256": "sha256:6860525264278abb9c4fb263992a6bcbbfd9d5d8d074c9c5f1779db558c4b2b8"
     }
   ],
@@ -326,7 +326,7 @@
     }
   ],
   "metrics": {
-    "computed_at": "2026-09-19T10:07:44.904Z",
+    "computed_at": "2026-09-19T10:26:32.008Z",
     "sample_sizes": {
       "executions": 6,
       "decisions": 1,
@@ -494,10 +494,10 @@
     "evidence_auditor_run": false
   },
   "provenance": {
-    "skill_version": "0.9.0",
+    "skill_version": "0.10.0",
     "skill_name": "test-reporting",
-    "engine_version": "0.9.0",
-    "created_at": "2026-09-19T10:07:44.893Z",
+    "engine_version": "0.10.0",
+    "created_at": "2026-09-19T10:26:31.997Z",
     "created_by": "agent",
     "session_id": "SESSION-0001"
   },
@@ -1603,5 +1603,5 @@
       ]
     }
   ],
-  "digest": "sha256:100622ff53a700ff371a94958937e6b4341d140d937f28ff4ebced685fdb511e"
+  "digest": "sha256:87fef7a99b08fb632218f5df283e30c548e58622e70bbc26a47746b3c29dcad6"
 }

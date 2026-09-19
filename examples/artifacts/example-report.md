@@ -12,7 +12,7 @@ hand-written approximation of it.
 
 | Session | Repository | Commit | PR | Generated | Skill |
 | --- | --- | --- | --- | --- | --- |
-| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-09-19 10:07:44Z | v0.9.0 |
+| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-09-19 10:26:31Z | v0.10.0 |
 
 ## Verdict
 
@@ -108,10 +108,10 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 | --- | --- | --- | --- | --- | --- | --- |
 | EXEC-2026-00003 | FAILED | User A cannot select user B's saved card | api-client | authentication-failure (0.5) | 7 ms | 3120 ms |
 | EXEC-2026-00004 | BLOCKED | Payment E2E against the real provider | not-executed | — | 0 ms | — |
-| EXEC-2026-00001 | INCONCLUSIVE | Quick smoke of the checkout page | existing-suite | — | 4 ms | — |
+| EXEC-2026-00001 | INCONCLUSIVE | Quick smoke of the checkout page | existing-suite | — | 5 ms | — |
 | EXEC-2026-00006 | INTERRUPTED | Accessibility scan of the checkout pages | static-analysis | — | — | — |
 | EXEC-2026-00005 | NOT_APPLICABLE | Localisation testing | not-executed | — | 0 ms | — |
-| EXEC-2026-00002 | PASSED | Baseline: full unit suite at head | existing-suite | — | 7 ms | 12480 ms |
+| EXEC-2026-00002 | PASSED | Baseline: full unit suite at head | existing-suite | — | 8 ms | 12480 ms |
 
 | Status | Count |
 | --- | --- |
@@ -126,8 +126,8 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 
 | ID | Kind | Summary | Anchored? | Artifact |
 | --- | --- | --- | --- | --- |
-| EV-2026-00001 | command-output | vitest: 211/211 passed | yes | C:\Users\purus\AppData\Local\Temp\claude\D--QATesting\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\scratchpad\demo-real-state\evidence\blobs\output-2026-09-19T10-07-44-836Z-45508.txt |
-| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | yes | C:\Users\purus\AppData\Local\Temp\claude\D--QATesting\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\scratchpad\demo-real-state\evidence\blobs\output-2026-09-19T10-07-44-847Z-45508.txt |
+| EV-2026-00001 | command-output | vitest: 211/211 passed | yes | C:\Users\purus\AppData\Local\Temp\claude\D--QATesting\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\scratchpad\demo-real-state\evidence\blobs\output-2026-09-19T10-26-31-933Z-16760.txt |
+| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | yes | C:\Users\purus\AppData\Local\Temp\claude\D--QATesting\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\scratchpad\demo-real-state\evidence\blobs\output-2026-09-19T10-26-31-945Z-16760.txt |
 
 ### External writes
 
@@ -273,6 +273,6 @@ _Not measured this session (zero denominator, honestly excluded rather than show
 
 ---
 
-Produced by the Autonomous Software Testing skill system v0.9.0. Every status above is traceable to a record under `state/`.
+Produced by the Autonomous Software Testing skill system v0.10.0. Every status above is traceable to a record under `state/`.
 
-_Rendered from REPORT-2026-00001 · digest `sha256:100622ff53a700ff371a94958937e6b4341d140d937f28ff4ebced685fdb511e` · verify with `ast report verify`. A report with no digest line was not produced by this system._
+_Rendered from REPORT-2026-00001 · digest `sha256:87fef7a99b08fb632218f5df283e30c548e58622e70bbc26a47746b3c29dcad6` · verify with `ast report verify`. A report with no digest line was not produced by this system._
