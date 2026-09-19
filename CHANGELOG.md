@@ -51,6 +51,37 @@ more follow under the same heading.
   index.mjs`, `evaluation/benchmark-cases/case-01.json`, `evaluation/benchmark-cases/
   case-11.json`.
 
+### Added
+
+- **`ast evidence capture` — run a command and register its real output as evidence, so
+  the false-confidence gate has something honest to check.** `evidence add` accepts a
+  hand-typed summary with no artifact behind it: nothing stops a `PASSED` claim from being
+  built on a sentence the agent wrote rather than proof it has. `evidence capture` spawns
+  the given command, hashes its real stdout/stderr to a redacted blob, and records its
+  real exit code and wall-clock duration — closing exactly that gap, using the existing,
+  unchanged evidence gate (`a non-zero exit code contradicts a PASSED claim` was already
+  correct; it simply had nothing real to check before). A command's own non-zero exit is
+  treated as a normal, correctly-captured result (e.g. `npm audit` finding vulnerabilities)
+  and never sets the CLI's own exit code — only a genuine capture-mechanism failure
+  (command not found, or a timeout that killed the process before it produced an exit
+  code) does that, alongside the evidence record it still honestly stores.
+  `bin/ast.mjs`, `skills/testing-orchestrator/workflows/execution.md`,
+  `skills/testing-orchestrator/policies/evidence-policy.md`,
+  `skills/security-testing/SKILL.md`, `skills/api-testing/SKILL.md`.
+- **`bin/ast.mjs` now supports a `--` argument terminator.** Everything after a literal
+  `--` is handed to a spawned subcommand verbatim, including tokens shaped like the CLI's
+  own flags (`--input`, `--state`) — required for `evidence capture` to pass an arbitrary
+  command through untouched. Inert for every command that predates it.
+
+### Fixed
+
+- **On Windows, spawning a command whose own path contains a space (`shell: true`
+  requires this) previously mis-parsed the path at the first space and reported a
+  real-looking exit code that never came from the intended program.** Affects any
+  absolute path with a space — most commonly `process.execPath` itself, wherever Node is
+  installed under `Program Files`. Every argv element containing whitespace is now quoted
+  before being handed to a Windows shell spawn. `bin/ast.mjs` (`evidence capture`).
+
 ## [0.9.0] - 2026-09-18
 
 A round of fixes against a set of gaps this project had already named about itself in

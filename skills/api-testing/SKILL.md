@@ -90,6 +90,14 @@ Capture full request/response pairs as evidence. **Redact headers** — an `Auth
 header in a report is a leaked credential. The redaction pass masks known shapes, but do
 not deliberately capture them.
 
+Run the test command through the CLI rather than summarising its result by hand — the
+real exit code is what lets a later `PASSED` claim be checked, not trusted:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence capture --exec EXEC-2026-00003 \
+  --summary "checkout API contract + authz suite" -- npm run test:api
+```
+
 ## A read-only request is not always read-only
 
 `GET /export?send=true` has side effects. Before calling any endpoint, ask whether it

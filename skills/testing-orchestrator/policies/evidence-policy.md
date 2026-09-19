@@ -35,6 +35,25 @@ user statements. Testimony, not verification.
 
 A screenshot shows what a page looked like. It does not show that an assertion held.
 
+## Prefer captured evidence over typed evidence
+
+`evidence add` will accept a hand-typed summary with no artifact behind it — a sentence
+you wrote is not a lie, but it is not proof either, and the gate below can only check the
+content it is given. When the evidence is a command's output, run it through the CLI so
+the real exit code, real duration and real stdout/stderr become the record, instead of
+your account of them:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence capture --exec EXEC-2026-00003 \
+  --summary "typecheck" -- npm run lint
+```
+
+This is the difference between "I ran `npm audit` and it found no criticals" as a sentence,
+and the same claim backed by a hashed transcript with a real exit code the gate itself
+verified. Use `evidence add` for a report a *different* process already wrote to disk (a
+test runner's own JSON output, a coverage file) — never as a substitute for running a
+command you could have run yourself.
+
 ## The gate
 
 `exec finish` runs this automatically; you can run it directly:

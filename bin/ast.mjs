@@ -15,6 +15,7 @@
  */
 import process from 'node:process';
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { setStateRoot, stateRoot } from '../engine/core/paths.mjs';
 import { readJson } from '../engine/core/fsjson.mjs';
 import { SYSTEM_VERSION } from '../engine/core/version.mjs';
@@ -43,8 +44,14 @@ import { classify } from '../engine/failure-classifier/index.mjs';
 function parseArgs(argv) {
   const positional = [];
   const flags = {};
+  // Everything after a bare "--" is a literal command line for a subcommand to spawn (see
+  // "evidence capture"), never flags of this CLI's own. Without this terminator, a token
+  // like "--input" inside the spawned command would be consumed as ast's own --input flag
+  // instead of being handed to the child process verbatim.
+  let rest = [];
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
+    if (a === '--') { rest = argv.slice(i + 1); break; }
     if (a.startsWith('--')) {
       const [k, inlineValue] = a.slice(2).split('=');
       if (inlineValue !== undefined) flags[k] = inlineValue;
@@ -52,7 +59,7 @@ function parseArgs(argv) {
       else flags[k] = true;
     } else positional.push(a);
   }
-  return { positional, flags };
+  return { positional, flags, rest };
 }
 
 /**
@@ -242,6 +249,86 @@ const COMMANDS = {
 
   /* ---- evidence ---- */
   'evidence add': { help: 'Register evidence: evidence add --input evidence.json', run: ({ flags }) => evidence.add(payload(flags)) },
+  'evidence capture': {
+    help: 'Run a command and register its real output as evidence: '
+      + 'evidence capture --exec EXEC-2026-00001 [--summary "..."] [--cwd dir] [--timeout ms] -- <command> [args...]',
+    run: ({ flags, rest }) => {
+      if (!rest.length) {
+        throw new Error(
+          'evidence capture requires a command after "--", e.g.: '
+          + 'ast evidence capture --exec EXEC-2026-00001 -- npm run lint',
+        );
+      }
+      if (!flags.exec) {
+        throw new Error('evidence capture requires --exec <EXECUTION_ID> naming the execution this evidence supports.');
+      }
+      if (!state.get('executions', flags.exec)) {
+        throw new Error(`No such execution: ${flags.exec}. Open one first with "exec start" -- never capture evidence for an execution that does not exist.`);
+      }
+
+      const cwd = flags.cwd ?? process.cwd();
+      const timeout = Number(flags.timeout ?? 600_000);
+      const argvString = rest.join(' ');
+      const isWin = process.platform === 'win32';
+      // shell: true on Windows matches the existing precedent in capability-registry/
+      // index.mjs -- it is what lets "npm" resolve to "npm.cmd". But per Node's own
+      // documentation, shell:true on Windows makes QUOTING the caller's job: cmd.exe
+      // splits on whitespace before spawnSync ever sees the string, so an unquoted
+      // absolute path containing a space (e.g. `process.execPath` itself, wherever Node
+      // is installed under "Program Files") silently mis-parses into "the command is
+      // 'C:\Program'", fails, and reports a real-looking exit code that never came from
+      // the intended program at all. Quote every element that contains whitespace;
+      // leave everything else untouched so the common case (bare names, unspaced paths)
+      // is not needlessly rewritten.
+      const winShellQuote = (a) => (/\s/.test(a) ? `"${a.replace(/"/g, '""')}"` : a);
+      const spawnCommand = isWin ? winShellQuote(rest[0]) : rest[0];
+      const spawnArgs = isWin ? rest.slice(1).map(winShellQuote) : rest.slice(1);
+      const started = Date.now();
+      const r = spawnSync(spawnCommand, spawnArgs, {
+        encoding: 'utf8',
+        cwd,
+        timeout,
+        maxBuffer: 32 * 1024 * 1024,
+        shell: isWin,
+      });
+      const durationMs = Date.now() - started;
+
+      // The capture MECHANISM failing (command not found, timed out, killed by signal
+      // before producing an exit code) is not the same thing as the CAPTURED command
+      // failing (a real, meaningful non-zero exit, e.g. `npm audit` finding
+      // vulnerabilities). Only the former is this command's own problem to report --
+      // whether the latter is good or bad news is the calling skill's judgement to make
+      // from the recorded exit code, never this CLI's to decide.
+      const mechanismFailed = Boolean(r.error) || r.status === null;
+      if (mechanismFailed) {
+        const detail = r.error
+          ? r.error.message
+          : `terminated by signal ${r.signal ?? 'unknown'} (likely the ${timeout}ms timeout)`;
+        const ev = evidence.captureOutput({
+          argv: argvString,
+          cwd,
+          durationMs,
+          stdout: r.stdout ?? '',
+          stderr: `${r.stderr ?? ''}\n[ast evidence capture] did not complete: ${detail}`.trim(),
+          summary: flags.summary ?? `Command did not complete: ${detail}`,
+          executionId: flags.exec,
+        });
+        process.exitCode = 1;
+        return { ...ev, ok: false, run_error: detail };
+      }
+
+      return evidence.captureOutput({
+        argv: argvString,
+        cwd,
+        exitCode: r.status,
+        durationMs,
+        stdout: r.stdout ?? '',
+        stderr: r.stderr ?? '',
+        summary: flags.summary,
+        executionId: flags.exec,
+      });
+    },
+  },
   'evidence verify': {
     help: 'Check whether a status claim is supported: evidence verify --input {"status":"PASSED","evidenceIds":[...]}',
     run: ({ flags }) => evidence.verifyClaim(payload(flags)),
@@ -521,7 +608,7 @@ function printHelp() {
 
 async function main() {
   const argv = process.argv.slice(2);
-  const { positional, flags } = parseArgs(argv);
+  const { positional, flags, rest } = parseArgs(argv);
 
   if (flags.state) setStateRoot(flags.state);
   if (positional.length === 0 || positional[0] === 'help' || flags.help) { printHelp(); return; }
@@ -538,7 +625,7 @@ async function main() {
     // Adapter commands talk to providers and are async. Awaiting unconditionally keeps
     // the synchronous commands working unchanged -- and without it a promise serialises
     // as "{}", which looks exactly like a successful empty result.
-    const result = await COMMANDS[key].run({ positional, flags });
+    const result = await COMMANDS[key].run({ positional, flags, rest });
     if (COMMANDS[key].raw?.(flags)) process.stdout.write(`${result}\n`);
     else out(result, flags);
 

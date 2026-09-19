@@ -11,7 +11,7 @@
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node.js-%3E%3D20.6.0-43853D?style=for-the-badge&logo=node.js&logoColor=white" alt="Node version"></a>
   <a href="#as-a-claude-code-plugin"><img src="https://img.shields.io/badge/Claude%20Code-Plugin%20Ready-6B4FBB?style=for-the-badge&logo=anthropic&logoColor=white" alt="Claude Code Plugin"></a>
   <a href="https://playwright.dev"><img src="https://img.shields.io/badge/Playwright-Automated-2EAD33?style=for-the-badge&logo=playwright&logoColor=white" alt="Playwright"></a>
-  <a href="https://github.com/Purushotham-Prajapati-24/qa-skills/actions"><img src="https://img.shields.io/badge/Tests-164%20Passing-success?style=for-the-badge&logo=github-actions&logoColor=white" alt="Tests"></a>
+  <a href="https://github.com/Purushotham-Prajapati-24/qa-skills/actions"><img src="https://img.shields.io/badge/Tests-176%20Passing-success?style=for-the-badge&logo=github-actions&logoColor=white" alt="Tests"></a>
   <a href="evaluation/README.md"><img src="https://img.shields.io/badge/Benchmark-41%2F41%20Passed-blue?style=for-the-badge&logo=checkmarx&logoColor=white" alt="Benchmark"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="License"></a>
 </p>
@@ -359,7 +359,7 @@ node bin/ast.mjs metrics
 Run the entire verification suite locally in seconds:
 
 ```bash
-node --test "tests/*.test.mjs"     # 164 tests
+node --test "tests/*.test.mjs"     # 176 tests
 node bin/ast.mjs eval run          # 41 checks across 15 benchmark cases
 node scripts/validate-repo.mjs     # Links, schemas, and catalog cross-references
 ```
