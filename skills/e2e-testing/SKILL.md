@@ -86,8 +86,14 @@ created**. That negative is where payment bugs live.
 
 ## Running and evidence
 
+`exec.json`:
+
+```json
+{"goal":"Guest checkout, card payment","method":"playwright-script","testCategory":"e2e","decisionId":"DEC-00007","command":"npx playwright test checkout --trace=on --reporter=json","environment":"local-docker"}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --json '{"goal":"Guest checkout, card payment","method":"playwright-script","testCategory":"e2e","decisionId":"DEC-00007","command":"npx playwright test checkout --trace=on --reporter=json","environment":"local-docker"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --input exec.json
 npx playwright test checkout --trace=on --reporter=json
 ```
 
@@ -100,8 +106,14 @@ makes a CI failure diagnosable without reproducing it.
 E2E failures are the least trustworthy signal in the stack — there are many ways to fail
 that have nothing to do with the product. Classify before concluding:
 
+`signals.json`:
+
+```json
+{"signals":["timeout","element-not-found-after-wait"],"evidenceIds":["EV-2026-00021"]}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --json '{"signals":["timeout","element-not-found-after-wait"],"evidenceIds":["EV-2026-00021"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --input signals.json
 ```
 
 Then reproduce at a lower level. If an E2E failure can be reproduced by an API or

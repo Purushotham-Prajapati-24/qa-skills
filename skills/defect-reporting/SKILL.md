@@ -15,8 +15,14 @@ an hour and costs you their trust in every future report.
 
 ## Before writing anything: is it a defect?
 
+`signals.json`:
+
+```json
+{"signals":["assertion-mismatch","http-500"],"evidenceIds":["EV-2026-00021"]}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --json '{"signals":["assertion-mismatch","http-500"],"evidenceIds":["EV-2026-00021"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --input signals.json
 ```
 
 The classifier deliberately ranks non-product causes above `product-defect` on a tie. Rule
@@ -156,7 +162,16 @@ ticket and the rendered content, and you finish it:
 
 ```bash
 # perform the call with your own GitHub MCP tools, then:
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" adapter complete --ticket WT-… --json '<the provider response>'
+```
+
+`response.json`:
+
+```json
+<the provider response>
+```
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" adapter complete --ticket WT-… --input response.json
 ```
 
 Nothing is recorded until you do. `ast adapter pending` lists tickets left open.

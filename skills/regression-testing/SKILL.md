@@ -111,8 +111,14 @@ resolved:
 
 ## Evidence
 
+`exec.json`:
+
+```json
+{"goal":"Regression: suites touching checkout and auth","method":"existing-suite","testCategory":"regression","command":"npm test -- checkout auth","environment":"local"}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --json '{"goal":"Regression: suites touching checkout and auth","method":"existing-suite","testCategory":"regression","command":"npm test -- checkout auth","environment":"local"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --input exec.json
 ```
 
 Attach the run report and per-test results. Recording results over time is what makes

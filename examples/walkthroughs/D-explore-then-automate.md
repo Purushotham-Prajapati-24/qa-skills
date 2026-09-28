@@ -104,8 +104,14 @@ node bin/ast.mjs decide --input decision.json      # -> DEC-00007
 
 ## 4. Explore (DISCOVER)
 
+`exec.json`:
+
+```json
+{"goal":"Explore the changed checkout flow","method":"playwright-mcp","testCategory":"exploratory","decisionId":"DEC-00007","environment":"local-docker"}
+```
+
 ```bash
-node bin/ast.mjs exec start --json '{"goal":"Explore the changed checkout flow","method":"playwright-mcp","testCategory":"exploratory","decisionId":"DEC-00007","environment":"local-docker"}'
+node bin/ast.mjs exec start --input exec.json
 ```
 → `EXEC-2026-00004`
 
@@ -126,19 +132,49 @@ What the session surfaced:
 Items 3 and 4 are the reason exploration was worth doing. Neither is visible from the code
 diff, and neither would have been asserted by a test written blind.
 
-```bash
-node bin/ast.mjs evidence add --json '{"kind":"network-request","summary":"Two POST /api/orders fired from one double-click on Pay now","epistemicClass":"observed","executionId":"EXEC-2026-00004","artifactPath":".playwright-mcp/double-submit.har"}'
-node bin/ast.mjs evidence add --json '{"kind":"screenshot","summary":"Declined card shows generic error, no decline reason","epistemicClass":"observed","executionId":"EXEC-2026-00004","artifactPath":".playwright-mcp/declined-generic.png"}'
+`evidence.json`:
 
-node bin/ast.mjs exec finish EXEC-2026-00004 --json '{"status":"COMPLETED","statusReason":"Mapped 4 states of the changed checkout flow; 2 candidate defects observed.","evidence":["EV-2026-00014","EV-2026-00015"]}'
+```json
+{"kind":"network-request","summary":"Two POST /api/orders fired from one double-click on Pay now","epistemicClass":"observed","executionId":"EXEC-2026-00004","artifactPath":".playwright-mcp/double-submit.har"}
+```
+
+```bash
+node bin/ast.mjs evidence add --input evidence.json
+```
+
+`evidence-2.json`:
+
+```json
+{"kind":"screenshot","summary":"Declined card shows generic error, no decline reason","epistemicClass":"observed","executionId":"EXEC-2026-00004","artifactPath":".playwright-mcp/declined-generic.png"}
+```
+
+```bash
+node bin/ast.mjs evidence add --input evidence-2.json
+
+```
+
+`result.json`:
+
+```json
+{"status":"COMPLETED","statusReason":"Mapped 4 states of the changed checkout flow; 2 candidate defects observed.","evidence":["EV-2026-00014","EV-2026-00015"]}
+```
+
+```bash
+node bin/ast.mjs exec finish EXEC-2026-00004 --input result.json
 ```
 
 Status is `COMPLETED`, not `PASSED`. The exploration happened; it asserted nothing.
 
 ## 5. Decide what is worth keeping (STABILIZE)
 
+`automate.json`:
+
+```json
+{"factors":{"repeatability":0.9,"business_criticality":0.95,"environment_stability":0.7,"expected_runtime_minutes":4}}
+```
+
 ```bash
-node bin/ast.mjs browser should-automate --json '{"factors":{"repeatability":0.9,"business_criticality":0.95,"environment_stability":0.7,"expected_runtime_minutes":4}}'
+node bin/ast.mjs browser should-automate --input automate.json
 ```
 
 ```json
@@ -177,8 +213,14 @@ test('double-clicking Pay now creates exactly one order', async ({ page, testCar
 
 ## 7. Run it (REGRESS)
 
+`exec-2.json`:
+
+```json
+{"goal":"Double-click on Pay now creates exactly one order","method":"playwright-script","testCategory":"e2e","decisionId":"DEC-00007","command":"npx playwright test checkout-double-submit --trace=on --reporter=json","environment":"local-docker"}
+```
+
 ```bash
-node bin/ast.mjs exec start --json '{"goal":"Double-click on Pay now creates exactly one order","method":"playwright-script","testCategory":"e2e","decisionId":"DEC-00007","command":"npx playwright test checkout-double-submit --trace=on --reporter=json","environment":"local-docker"}'
+node bin/ast.mjs exec start --input exec-2.json
 
 npx playwright test checkout-double-submit --trace=on --reporter=json
 ```
@@ -191,17 +233,53 @@ npx playwright test checkout-double-submit --trace=on --reporter=json
 The test fails — which is the correct outcome. A regression test that was never seen to fail
 proves nothing.
 
-```bash
-node bin/ast.mjs evidence add --json '{"kind":"test-report","summary":"playwright: 0/1 passed — expected 1 order, received 2","epistemicClass":"observed","executionId":"EXEC-2026-00005","artifactPath":"test-results/results.json"}'
-node bin/ast.mjs evidence add --json '{"kind":"trace","summary":"Playwright trace, double-submit","epistemicClass":"observed","executionId":"EXEC-2026-00005","artifactPath":"test-results/checkout-double-submit/trace.zip"}'
+`evidence-3.json`:
 
-node bin/ast.mjs exec finish EXEC-2026-00005 --json '{
-  "status":"FAILED",
-  "statusReason":"Two orders created from one double-click at commit abc1234.",
-  "evidence":["EV-2026-00016","EV-2026-00017"],
-  "signals":["assertion-mismatch","data-not-persisted"],
-  "testResults":[{"name":"double-clicking Pay now creates exactly one order","status":"FAILED","file":"e2e/checkout-double-submit.spec.ts"}]
-}'
+```json
+{"kind":"test-report","summary":"playwright: 0/1 passed — expected 1 order, received 2","epistemicClass":"observed","executionId":"EXEC-2026-00005","artifactPath":"test-results/results.json"}
+```
+
+```bash
+node bin/ast.mjs evidence add --input evidence-3.json
+```
+
+`evidence-4.json`:
+
+```json
+{"kind":"trace","summary":"Playwright trace, double-submit","epistemicClass":"observed","executionId":"EXEC-2026-00005","artifactPath":"test-results/checkout-double-submit/trace.zip"}
+```
+
+```bash
+node bin/ast.mjs evidence add --input evidence-4.json
+
+```
+
+`result-2.json`:
+
+```json
+{
+  "status": "FAILED",
+  "statusReason": "Two orders created from one double-click at commit abc1234.",
+  "evidence": [
+    "EV-2026-00016",
+    "EV-2026-00017"
+  ],
+  "signals": [
+    "assertion-mismatch",
+    "data-not-persisted"
+  ],
+  "testResults": [
+    {
+      "name": "double-clicking Pay now creates exactly one order",
+      "status": "FAILED",
+      "file": "e2e/checkout-double-submit.spec.ts"
+    }
+  ]
+}
+```
+
+```bash
+node bin/ast.mjs exec finish EXEC-2026-00005 --input result-2.json
 ```
 
 Classifier returns `product-defect` at confidence 0.70. Next action: *raise a finding; do

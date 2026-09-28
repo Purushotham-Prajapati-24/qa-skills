@@ -50,8 +50,14 @@ Counting test files is not measuring coverage. If you count files, set
 Before claiming a suite is usable, **run it once**. A test command in the README that
 does not execute is not coverage. Set `verified_runnable` accordingly.
 
+`exec.json`:
+
+```json
+{"goal":"Verify the existing suite runs at all","method":"existing-suite","testCategory":"smoke"}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --json '{"goal":"Verify the existing suite runs at all","method":"existing-suite","testCategory":"smoke"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --input exec.json
 ```
 
 ## 4. Record what you could not determine

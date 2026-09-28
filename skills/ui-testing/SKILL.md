@@ -60,8 +60,14 @@ Otherwise the diff noise trains everyone to click "approve".
 - A diff is not a defect until someone looks at it. Report it as an observation until
   confirmed.
 
+`evidence.json`:
+
+```json
+{"kind":"screenshot-diff","summary":"Checkout summary panel shifted 4px","epistemicClass":"observed","artifactPath":"__diff__/checkout.png"}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --json '{"kind":"screenshot-diff","summary":"Checkout summary panel shifted 4px","epistemicClass":"observed","artifactPath":"__diff__/checkout.png"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input evidence.json
 ```
 
 Screenshot diffs are **corroborating** evidence: they show a change, not that a behaviour

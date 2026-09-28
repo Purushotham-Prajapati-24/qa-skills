@@ -22,8 +22,14 @@ Two hard prerequisites. Without either, stop and get it.
 Load traffic is indistinguishable from an attack. Stress, spike and endurance tests need
 explicit authorisation **and** an isolated non-production target.
 
+`auth.json`:
+
+```json
+{"action":"load_test.execute","target":"staging","userAuthorised":true,"authorisationQuote":"yes, load test staging"}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" auth check --json '{"action":"load_test.execute","target":"staging","userAuthorised":true,"authorisationQuote":"yes, load test staging"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" auth check --input auth.json
 ```
 
 Never point load at shared infrastructure without telling whoever owns it.
@@ -79,8 +85,14 @@ A slower number is not automatically a regression:
 3. Check for environmental causes — other processes, thermal throttling, a cold cache.
 4. Only then call it a regression, and state the delta with both numbers.
 
+`signals.json`:
+
+```json
+{"signals":["latency-above-baseline"],"evidenceIds":["EV-2026-00061"]}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --json '{"signals":["latency-above-baseline"],"evidenceIds":["EV-2026-00061"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --input signals.json
 ```
 
 The classifier caps confidence here deliberately: performance conclusions from one run are
@@ -90,14 +102,26 @@ unreliable.
 
 Performance metrics are execution evidence when they include the conditions:
 
+`evidence.json`:
+
+```json
+{
+  "kind": "performance-metric",
+  "summary": "GET /api/orders p95 412ms at 50rps (baseline 180ms at abc1234)",
+  "epistemicClass": "observed",
+  "executionId": "EXEC-2026-00012",
+  "artifactPath": "perf/orders-k6-summary.json",
+  "mediaType": "application/json",
+  "environment": {
+    "os": "windows",
+    "base_url": "http://localhost:3000",
+    "ci": false
+  }
+}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --json '{
-  "kind":"performance-metric",
-  "summary":"GET /api/orders p95 412ms at 50rps (baseline 180ms at abc1234)",
-  "epistemicClass":"observed","executionId":"EXEC-2026-00012",
-  "artifactPath":"perf/orders-k6-summary.json","mediaType":"application/json",
-  "environment":{"os":"windows","base_url":"http://localhost:3000","ci":false}
-}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input evidence.json
 ```
 
 A number without its conditions is not evidence. Always report: the target, the baseline,

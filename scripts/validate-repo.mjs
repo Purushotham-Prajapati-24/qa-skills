@@ -127,6 +127,21 @@ for (const file of walk('skills', (n) => n.endsWith('.md')).concat(walk('agents'
   }
 }
 
+/* --------------------- 3b. documented CLI payloads are files, not shell-quoted JSON */
+
+// G-08: `--json '{...}'` is POSIX quoting; on the documented Windows/PowerShell target it
+// breaks, and `--input '{...}'` is simply wrong (--input takes a path). Every documented
+// payload is a ```json block plus `--input <file>.json`. The flag itself still works.
+const docRoots = ['skills', 'agents', 'docs', 'examples', 'integrations', 'templates'];
+const docFiles = docRoots.flatMap((d) => (exists(d) ? walk(d, (n) => n.endsWith('.md')) : [])).concat(['README.md']);
+for (const file of docFiles) {
+  read(file).split(/\r?\n/).forEach((line, i) => {
+    if (/ast\.mjs.*--(json|input)\s+'/.test(line)) {
+      problems.push(`${file}:${i + 1}: shell-quoted inline JSON payload -- show it as a \`\`\`json block and pass --input <file>.json`);
+    }
+  });
+}
+
 /* ------------------------------- 4. catalog skill references point at real skills */
 
 const catalog = readJson('engine/applicability-engine/catalog.json');

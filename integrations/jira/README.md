@@ -93,9 +93,24 @@ deliberately at the time.
 A requirement admitting two readings that imply different tests is not an obstacle — it is
 something worth someone's attention:
 
+`uncertainty.json`:
+
+```json
+{"question":"...","status":"ambiguous-requirement","impact":"the two readings need different expected outcomes","affectedScope":["REQ-3"],"nextAction":"ask the ticket author","owner":"user"}
+```
+
 ```bash
-node bin/ast.mjs uncertainty raise --json '{"question":"...","status":"ambiguous-requirement","impact":"the two readings need different expected outcomes","affectedScope":["REQ-3"],"nextAction":"ask the ticket author","owner":"user"}'
-node bin/ast.mjs finding add --json '{"title":"SHOP-412 acceptance criteria are ambiguous about saved cards","kind":"requirement-ambiguity","severity":"minor","confidence":0.9}'
+node bin/ast.mjs uncertainty raise --input uncertainty.json
+```
+
+`finding.json`:
+
+```json
+{"title":"SHOP-412 acceptance criteria are ambiguous about saved cards","kind":"requirement-ambiguity","severity":"minor","confidence":0.9}
+```
+
+```bash
+node bin/ast.mjs finding add --input finding.json
 ```
 
 Then test the narrower reading, state the assumption, and flag the other as untested.

@@ -94,8 +94,14 @@ DISCOVER  →  VALIDATE  →  STABILIZE  →  AUTOMATE  →  REGRESS  →  EVOLV
 
 Exploration that leaves nothing behind was half a job. After exploring, ask:
 
+`automate.json`:
+
+```json
+{"factors":{"repeatability":0.8,"business_criticality":0.9,"environment_stability":0.8,"expected_runtime_minutes":3}}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" browser should-automate --json '{"factors":{"repeatability":0.8,"business_criticality":0.9,"environment_stability":0.8,"expected_runtime_minutes":3}}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" browser should-automate --input automate.json
 ```
 
 Converts only when the scenario is repeatable, valuable, stable **and** fast. Thresholds

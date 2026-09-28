@@ -27,8 +27,14 @@ explains it; the JSON enforces it.
 
 Check before acting:
 
+`auth.json`:
+
+```json
+{"action":"github.create_issue","target":"owner/repo","userAuthorised":true,"authorisationQuote":"yes, open an issue"}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" auth check --json '{"action":"github.create_issue","target":"owner/repo","userAuthorised":true,"authorisationQuote":"yes, open an issue"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" auth check --input auth.json
 ```
 
 An action absent from the policy is **denied**. Add it deliberately rather than routing

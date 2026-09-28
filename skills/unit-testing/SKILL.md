@@ -25,8 +25,14 @@ fixture usage. A test that ignores local convention gets deleted by whoever main
 
 ## Run the existing suite before writing anything
 
+`exec.json`:
+
+```json
+{"goal":"Baseline the existing unit suite","method":"existing-suite","testCategory":"unit","command":"npm test","environment":"local"}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --json '{"goal":"Baseline the existing unit suite","method":"existing-suite","testCategory":"unit","command":"npm test","environment":"local"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --input exec.json
 npm test
 ```
 
@@ -94,11 +100,21 @@ npx vitest run --coverage --changed
 
 ## Evidence
 
+`evidence.json`:
+
+```json
+{
+  "kind": "test-report",
+  "summary": "vitest: 91 passed, 0 failed",
+  "epistemicClass": "observed",
+  "executionId": "EXEC-2026-00002",
+  "artifactPath": "coverage/coverage-summary.json",
+  "mediaType": "application/json"
+}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --json '{
-  "kind":"test-report","summary":"vitest: 91 passed, 0 failed","epistemicClass":"observed",
-  "executionId":"EXEC-2026-00002","artifactPath":"coverage/coverage-summary.json","mediaType":"application/json"
-}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input evidence.json
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec finish EXEC-2026-00002 --input result.json
 ```
 
@@ -109,8 +125,14 @@ Attach per-test results with `validates_requirements` so traceability works.
 More often a test defect than a product defect. Check your assumptions, the fixture setup
 and the import path before writing a defect report. Classify it:
 
+`signals.json`:
+
+```json
+{"signals":["assertion-typo"],"evidenceIds":["EV-2026-00009"]}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --json '{"signals":["assertion-typo"],"evidenceIds":["EV-2026-00009"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --input signals.json
 ```
 
 And never adjust product code to make your new test pass.

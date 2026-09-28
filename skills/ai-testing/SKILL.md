@@ -114,13 +114,21 @@ change that quietly triples token usage is a real regression even when quality i
 
 ## Evidence
 
+`evidence.json`:
+
+```json
+{
+  "kind": "assertion-result",
+  "summary": "Golden set: 27/30 passed over 3 runs each (90%); 2 grounding failures, 1 refusal failure",
+  "epistemicClass": "observed",
+  "executionId": "EXEC-2026-00018",
+  "artifactPath": "evals/results-2026-09-16.json",
+  "mediaType": "application/json"
+}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --json '{
-  "kind":"assertion-result",
-  "summary":"Golden set: 27/30 passed over 3 runs each (90%); 2 grounding failures, 1 refusal failure",
-  "epistemicClass":"observed","executionId":"EXEC-2026-00018",
-  "artifactPath":"evals/results-2026-09-16.json","mediaType":"application/json"
-}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input evidence.json
 ```
 
 Record the model, the model version, the temperature, the prompt version and the run count.

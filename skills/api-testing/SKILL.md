@@ -82,8 +82,14 @@ Use the repository's existing API test setup if one exists — supertest, pytest
 RestAssured, `.http` files. Only reach for raw `curl` when nothing exists, and then say
 that the checks were ad hoc rather than committed.
 
+`exec.json`:
+
+```json
+{"goal":"Checkout API contract and authz","method":"api-client","testCategory":"api","command":"npm run test:api","environment":"local-docker"}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --json '{"goal":"Checkout API contract and authz","method":"api-client","testCategory":"api","command":"npm run test:api","environment":"local-docker"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --input exec.json
 ```
 
 Capture full request/response pairs as evidence. **Redact headers** — an `Authorization`

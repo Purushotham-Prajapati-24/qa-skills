@@ -96,16 +96,34 @@ complete and tests three quarters of the feature.
 checkout, or only a logged-in user's card? The two readings need different test data and
 different expected outcomes.
 
+`uncertainty.json`:
+
+```json
+{
+  "question": "Does \"saved card\" include one saved during a previous GUEST checkout, or only a logged-in user's card?",
+  "status": "ambiguous-requirement",
+  "impact": "the two readings need different fixtures and different expected outcomes for REQ-1 and REQ-3",
+  "affectedScope": [
+    "REQ-1",
+    "REQ-3"
+  ],
+  "nextAction": "ask the ticket author; meanwhile plan the narrower reading and flag the other as untested",
+  "owner": "user"
+}
+```
+
 ```bash
-node bin/ast.mjs uncertainty raise --json '{
-  "question":"Does \"saved card\" include one saved during a previous GUEST checkout, or only a logged-in user'"'"'s card?",
-  "status":"ambiguous-requirement",
-  "impact":"the two readings need different fixtures and different expected outcomes for REQ-1 and REQ-3",
-  "affectedScope":["REQ-1","REQ-3"],
-  "nextAction":"ask the ticket author; meanwhile plan the narrower reading and flag the other as untested",
-  "owner":"user"
-}'
-node bin/ast.mjs finding add --json '{"title":"SHOP-412 acceptance criteria are ambiguous about what a guest saved card is","kind":"requirement-ambiguity","severity":"minor","confidence":0.9,"epistemicClass":"observed"}'
+node bin/ast.mjs uncertainty raise --input uncertainty.json
+```
+
+`finding.json`:
+
+```json
+{"title":"SHOP-412 acceptance criteria are ambiguous about what a guest saved card is","kind":"requirement-ambiguity","severity":"minor","confidence":0.9,"epistemicClass":"observed"}
+```
+
+```bash
+node bin/ast.mjs finding add --input finding.json
 ```
 
 The ambiguity is itself worth someone's attention, so it becomes a finding as well as a

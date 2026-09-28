@@ -14,8 +14,14 @@ metadata:
 
 **Never touch a production database.** Not a read, not a count, not "just to check".
 
+`auth.json`:
+
+```json
+{"action":"db.read_non_production","environmentClass":"non-production"}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" auth check --json '{"action":"db.read_non_production","environmentClass":"non-production"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" auth check --input auth.json
 ```
 
 An environment is non-production only when the repository profile explicitly says so.

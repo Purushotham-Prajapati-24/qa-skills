@@ -52,8 +52,14 @@ against it.
 
 Open an execution record first — exploration is real work and belongs in the report:
 
+`exec.json`:
+
+```json
+{"goal":"Explore the changed checkout flow","method":"playwright-mcp","testCategory":"exploratory","decisionId":"DEC-00007","environment":"local"}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --json '{"goal":"Explore the changed checkout flow","method":"playwright-mcp","testCategory":"exploratory","decisionId":"DEC-00007","environment":"local"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --input exec.json
 ```
 
 Then work in this order:
@@ -72,15 +78,37 @@ Then work in this order:
 
 ## Capture as you go
 
+`evidence.json`:
+
+```json
+{
+  "kind": "screenshot",
+  "summary": "Checkout step 2 with an empty postcode",
+  "epistemicClass": "observed",
+  "executionId": "EXEC-2026-00004",
+  "artifactPath": ".playwright-mcp/step2-empty-postcode.png",
+  "mediaType": "image/png"
+}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --json '{
-  "kind":"screenshot","summary":"Checkout step 2 with an empty postcode","epistemicClass":"observed",
-  "executionId":"EXEC-2026-00004","artifactPath":".playwright-mcp/step2-empty-postcode.png","mediaType":"image/png"
-}'
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --json '{
-  "kind":"console-log","summary":"TypeError on submit: cannot read \"total\" of undefined",
-  "epistemicClass":"observed","executionId":"EXEC-2026-00004","excerpt":"<paste>"
-}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input evidence.json
+```
+
+`evidence-2.json`:
+
+```json
+{
+  "kind": "console-log",
+  "summary": "TypeError on submit: cannot read \"total\" of undefined",
+  "epistemicClass": "observed",
+  "executionId": "EXEC-2026-00004",
+  "excerpt": "<paste>"
+}
+```
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input evidence-2.json
 ```
 
 Screenshots and console logs are **corroborating** evidence. On their own they cannot
@@ -102,8 +130,14 @@ support `PASSED`. Close an exploration as `COMPLETED` (the exploration happened)
 
 Exploration that leaves nothing behind was half a job:
 
+`automate.json`:
+
+```json
+{"factors":{"repeatability":0.8,"business_criticality":0.9,"environment_stability":0.8,"expected_runtime_minutes":4}}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" browser should-automate --json '{"factors":{"repeatability":0.8,"business_criticality":0.9,"environment_stability":0.8,"expected_runtime_minutes":4}}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" browser should-automate --input automate.json
 ```
 
 If it says yes → [playwright-script.md](playwright-script.md). If no, record why, so the

@@ -81,13 +81,37 @@ test.describe('guest checkout', () => {
 
 ## Running it and capturing evidence
 
+`exec.json`:
+
+```json
+{"goal":"Guest checkout creates an order","method":"playwright-script","testCategory":"e2e","decisionId":"DEC-00007","command":"npx playwright test checkout --reporter=json --trace=on","environment":"local-docker"}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --json '{"goal":"Guest checkout creates an order","method":"playwright-script","testCategory":"e2e","decisionId":"DEC-00007","command":"npx playwright test checkout --reporter=json --trace=on","environment":"local-docker"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --input exec.json
 
 npx playwright test checkout --reporter=json --trace=on
 
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --json '{"kind":"test-report","summary":"playwright: 1/1 passed","epistemicClass":"observed","executionId":"EXEC-2026-00005","artifactPath":"test-results/results.json","mediaType":"application/json"}'
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --json '{"kind":"trace","summary":"Playwright trace for guest checkout","epistemicClass":"observed","executionId":"EXEC-2026-00005","artifactPath":"test-results/checkout/trace.zip"}'
+```
+
+`evidence.json`:
+
+```json
+{"kind":"test-report","summary":"playwright: 1/1 passed","epistemicClass":"observed","executionId":"EXEC-2026-00005","artifactPath":"test-results/results.json","mediaType":"application/json"}
+```
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input evidence.json
+```
+
+`evidence-2.json`:
+
+```json
+{"kind":"trace","summary":"Playwright trace for guest checkout","epistemicClass":"observed","executionId":"EXEC-2026-00005","artifactPath":"test-results/checkout/trace.zip"}
+```
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input evidence-2.json
 
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec finish EXEC-2026-00005 --input result.json
 ```
@@ -99,8 +123,14 @@ Both the JSON report and the trace are **execution evidence** — either support
 
 Do not assume a defect and do not touch product code. Classify:
 
+`signals.json`:
+
+```json
+{"signals":["assertion-mismatch","brittle-selector"],"evidenceIds":["EV-2026-00011"]}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --json '{"signals":["assertion-mismatch","brittle-selector"],"evidenceIds":["EV-2026-00011"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --input signals.json
 ```
 
 A brand-new spec failing first time is more often a test defect than a product defect.

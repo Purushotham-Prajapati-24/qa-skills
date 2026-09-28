@@ -190,15 +190,27 @@ deciding, you were defaulting.
 
 ## After every result
 
+`next.json`:
+
+```json
+{"status":"FAILED","failureClass":"...","remainingWork":["..."]}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" decision next --json '{"status":"FAILED","failureClass":"...","remainingWork":["..."]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" decision next --input next.json
 ```
 
 Never continue blindly after a failure. Classify first — a red result caused by a missing
 environment variable and one caused by a real defect demand opposite responses:
 
+`signals.json`:
+
+```json
+{"signals":["http-500","stale-test-data"]}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --json '{"signals":["http-500","stale-test-data"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --input signals.json
 ```
 
 ## Finishing

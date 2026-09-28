@@ -392,7 +392,7 @@ const COMMANDS = {
     run: ({ positional, flags }) => decisions.assess(positional[2], { verdict: flags.verdict, note: flags.note ?? '' }),
   },
   'decision next': {
-    help: 'Ask what to do after a result: decision next --input {"status":"FAILED","failureClass":"..."}',
+    help: 'Ask what to do after a result: decision next --input next.json, where next.json is {"status":"FAILED","failureClass":"...","remainingWork":["..."]}',
     run: ({ flags }) => decisions.nextAction(payload(flags)),
   },
   'decision list': { help: 'List decision records.', run: () => state.list('decisions') },
@@ -480,7 +480,7 @@ const COMMANDS = {
     },
   },
   'evidence verify': {
-    help: 'Check whether a status claim is supported: evidence verify --input {"status":"PASSED","evidenceIds":[...]}',
+    help: 'Check whether a status claim is supported: evidence verify --input claim.json, where claim.json is {"status":"PASSED","evidenceIds":["EV-..."]}',
     run: ({ flags }) => evidence.verifyClaim(payload(flags)),
   },
   'evidence amend': {
@@ -519,7 +519,7 @@ const COMMANDS = {
     run: ({ positional, flags }) => execution.finish(positional[2], payload(flags)),
   },
   'exec not-run': {
-    help: 'Document work that was NOT executed: exec not-run --input {"goal":"...","status":"BLOCKED","reason":"..."}',
+    help: 'Document work that was NOT executed: exec not-run --input not-run.json, where not-run.json is {"goal":"...","status":"BLOCKED","reason":"..."}',
     run: ({ flags }) => execution.recordNonExecution(payload(flags)),
   },
   'exec list': { help: 'List executions.', run: () => state.list('executions') },
@@ -527,7 +527,7 @@ const COMMANDS = {
 
   /* ---- failure ---- */
   'failure classify': {
-    help: 'Classify a failure: failure classify --input {"signals":["http-500"]}. Known signal tokens: `failure signals`.',
+    help: 'Classify a failure: failure classify --input signals.json, where signals.json is {"signals":["http-500"],"evidenceIds":["EV-..."]}. Known signal tokens: `failure signals`.',
     run: ({ flags }) => {
       const body = payload(flags);
       const result = classify(body);
@@ -602,7 +602,7 @@ const COMMANDS = {
 
   /* ---- authorization + external writes ---- */
   'auth check': {
-    help: 'Authorization gate: auth check --input {"action":"github.create_issue","userAuthorised":true}',
+    help: 'Authorization gate: auth check --input auth.json, where auth.json is {"action":"github.create_issue","target":"owner/repo","userAuthorised":true,"authorisationQuote":"..."}',
     run: ({ flags }) => {
       const body = payload(flags);
       if (!body.environmentClass && body.target) {

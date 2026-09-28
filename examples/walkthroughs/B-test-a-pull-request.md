@@ -111,8 +111,14 @@ diff, and each appears in the report's not-applicable table with that reason.
 
 ## 6. Execute, and classify what fails
 
+`exec.json`:
+
+```json
+{"goal":"Baseline: full unit suite at head","method":"existing-suite","testCategory":"regression","command":"npm test","environment":"local"}
+```
+
 ```bash
-node bin/ast.mjs exec start --json '{"goal":"Baseline: full unit suite at head","method":"existing-suite","testCategory":"regression","command":"npm test","environment":"local"}'
+node bin/ast.mjs exec start --input exec.json
 ```
 
 211/211 pass. Then the same suite at **base**, because a failure of unknown vintage is not a
@@ -131,8 +137,14 @@ FAIL  saved card belonging to another user is not selectable
   expected 403, received 200
 ```
 
+`signals.json`:
+
+```json
+{"signals":["assertion-mismatch","http-403"],"evidenceIds":["EV-2026-00019"]}
+```
+
 ```bash
-node bin/ast.mjs failure classify --json '{"signals":["assertion-mismatch","http-403"],"evidenceIds":["EV-2026-00019"]}'
+node bin/ast.mjs failure classify --input signals.json
 ```
 
 The classifier returns `authentication-failure` at confidence **0.5**, capped, with the

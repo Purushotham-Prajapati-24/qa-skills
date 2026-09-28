@@ -41,16 +41,27 @@ node bin/ast.mjs caps resolve http.request
 
 The wrong move is to stop here. The right move is to record it and carry on:
 
+`uncertainty.json`:
+
+```json
+{
+  "question": "Should payment tests use real provider credentials, a sandbox key, or a mock?",
+  "status": "user-input-required",
+  "impact": "cannot safely execute a real transaction; will not transact against a live key",
+  "affectedScope": [
+    "payment-e2e",
+    "payment-integration"
+  ],
+  "blocksCategories": [
+    "e2e"
+  ],
+  "nextAction": "ask the user which environment and credentials to use",
+  "owner": "user"
+}
+```
+
 ```bash
-node bin/ast.mjs uncertainty raise --json '{
-  "question":"Should payment tests use real provider credentials, a sandbox key, or a mock?",
-  "status":"user-input-required",
-  "impact":"cannot safely execute a real transaction; will not transact against a live key",
-  "affectedScope":["payment-e2e","payment-integration"],
-  "blocksCategories":["e2e"],
-  "nextAction":"ask the user which environment and credentials to use",
-  "owner":"user"
-}'
+node bin/ast.mjs uncertainty raise --input uncertainty.json
 ```
 → `U-00019`
 
@@ -89,7 +100,16 @@ currency rounding bug — came from a unit test of arithmetic.
 
 ```bash
 node bin/ast.mjs uncertainty resolve U-00019 --answer "(pending)" 2>/dev/null   # not yet — still open
-node bin/ast.mjs exec not-run --json '{"goal":"Payment E2E against the real provider","status":"BLOCKED","reason":"No authorised sandbox credentials; refusing to transact against a live key.","testCategory":"e2e","uncertainties":["U-00019"]}'
+```
+
+`not-run.json`:
+
+```json
+{"goal":"Payment E2E against the real provider","status":"BLOCKED","reason":"No authorised sandbox credentials; refusing to transact against a live key.","testCategory":"e2e","uncertainties":["U-00019"]}
+```
+
+```bash
+node bin/ast.mjs exec not-run --input not-run.json
 ```
 
 The blocked work gets a **first-class execution record**, so it appears in the report rather
@@ -112,8 +132,14 @@ test('a declined card shows the decline reason and creates no order', async ({ p
 });
 ```
 
+`uncertainty-2.json`:
+
+```json
+{"...":"..."}
+```
+
 ```bash
-node bin/ast.mjs uncertainty raise --json '{"...":"..."}'   # (already raised)
+node bin/ast.mjs uncertainty raise --input uncertainty-2.json   # (already raised)
 ```
 
 And the independent work is recorded against the blocker, which is the evidence the agent

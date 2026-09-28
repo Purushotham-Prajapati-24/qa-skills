@@ -129,8 +129,14 @@ Budget: 90 minutes. Selection walks priority tiers, so P0 work is taken before c
 
 ## 6. Execute what is unblocked
 
+`uncertainty.json`:
+
+```json
+{"question":"Should I install Playwright browsers to enable E2E?","status":"user-input-required","impact":"E2E and browser categories cannot run","affectedScope":["e2e","browser-automation"],"blocksCategories":["e2e"],"nextAction":"ask the user whether to run npx playwright install","owner":"user"}
+```
+
 ```bash
-node bin/ast.mjs uncertainty raise --json '{"question":"Should I install Playwright browsers to enable E2E?","status":"user-input-required","impact":"E2E and browser categories cannot run","affectedScope":["e2e","browser-automation"],"blocksCategories":["e2e"],"nextAction":"ask the user whether to run npx playwright install","owner":"user"}'
+node bin/ast.mjs uncertainty raise --input uncertainty.json
 node bin/ast.mjs uncertainty partition --input scenarios.json
 ```
 

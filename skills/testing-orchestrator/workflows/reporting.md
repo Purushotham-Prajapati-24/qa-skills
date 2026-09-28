@@ -76,13 +76,19 @@ Launch it (Task tool, `evidence-auditor`) before every report generation. Then r
 it ran, so the omission is visible on any session that skips it instead of looking identical
 to one that didn't:
 
-```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input '{
+`evidence.json`:
+
+```json
+{
   "kind": "evidence-audit",
   "summary": "evidence-auditor reviewed N claims; found <M issues | nothing unsupported>",
   "epistemicClass": "observed",
-  "excerpt": "<the auditor'"'"'s findings, verbatim>"
-}'
+  "excerpt": "<the auditor's findings, verbatim>"
+}
+```
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input evidence.json
 ```
 
 Recorded the audit under the wrong `kind` (e.g. `other`) and only noticed after
