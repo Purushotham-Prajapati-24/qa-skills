@@ -259,3 +259,51 @@ export function recover({ now = new Date() } = {}) {
     next_action: state.next_action,
   };
 }
+
+/* -------------------------------------------------------------------- goals */
+
+const DONE = ['PASSED', 'COMPLETED'];
+
+function rollUp(criteria) {
+  if (criteria.some((c) => c.status === 'FAILED')) return 'FAILED';
+  if (criteria.every((c) => DONE.includes(c.status))) return 'PASSED';
+  if (criteria.every((c) => c.status === 'NOT_APPLICABLE')) return 'NOT_APPLICABLE';
+  return 'PARTIAL';
+}
+
+/**
+ * Record the assessed status of a goal, or of one of its success criteria (1-based).
+ * The caller runs the evidence gate first; this only stores the outcome. When every
+ * criterion of a goal has been assessed, the goal's own status is rolled up from them.
+ */
+export function assessGoal({ goalId, criterion = null, status, evidence = [], executionId = null, note = '', now = new Date() }) {
+  let result;
+  update((s) => {
+    const goal = (s.goals ?? []).find((g) => g.id === goalId);
+    if (!goal) throw new Error(`No goal "${goalId}". Goals: ${(s.goals ?? []).map((g) => g.id).join(', ') || 'none'}`);
+    const at = now.toISOString();
+    const stamp = (target) => {
+      target.status = status;
+      target.assessed_at = at;
+      if (evidence.length) target.evidence = evidence;
+      if (note) target.note = note;
+    };
+    if (criterion === null) {
+      stamp(goal);
+      delete goal.evidence;
+      if (evidence.length) goal.note = [note, `evidence: ${evidence.join(', ')}`].filter(Boolean).join(' -- ');
+    } else {
+      const c = goal.success_criteria?.[criterion - 1];
+      if (!c) throw new Error(`Goal ${goalId} has no criterion ${criterion} (it has ${goal.success_criteria?.length ?? 0}).`);
+      stamp(c);
+      if (executionId) c.execution_id = executionId;
+      if (goal.success_criteria.every((x) => x.assessed_at)) {
+        goal.status = rollUp(goal.success_criteria);
+        goal.assessed_at = at;
+      }
+    }
+    result = goal;
+    return s;
+  }, now);
+  return result;
+}

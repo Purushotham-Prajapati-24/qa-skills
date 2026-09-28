@@ -99,8 +99,8 @@ export function check({
         allowed: false,
         reason: `Environment class is "${environmentClass}". ${POLICY.environment_rules.why} An unclassified environment is treated as production.`,
         required_of_user: hint.looks_non_production
-          ? `"${target}" looks non-production, but looking is not declaring. Classify it as "non-production" in the repository profile, or confirm which environment to use.`
-          : 'Confirm which environment to use, or classify it in the repository profile.',
+          ? `"${target}" looks non-production, but looking is not declaring. Add it to the repository profile's \`environments\` list with class "non-production" and your evidence, or confirm which environment to use.`
+          : "Confirm which environment to use, or classify it in the repository profile's `environments` list.",
         environment_signals: hint,
       };
     }
@@ -210,6 +210,38 @@ const NON_PRODUCTION_HINTS = /localhost|127\.0\.0\.1|\.local\b|staging|stage\b|d
  * `looks_non_production` carries the hint so a denial can tell the user which declaration
  * would unblock them.
  */
+function hostOf(s) {
+  const str = String(s ?? '').trim().toLowerCase();
+  if (!str) return '';
+  try {
+    return new URL(/^[a-z][a-z0-9+.-]*:\/\//.test(str) ? str : `https://${str}`).hostname;
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * The profile's own classification of `nameOrUrl`, or null. Matches an environment by
+ * name (case-insensitive) or by hostname -- never by a substring like "staging", which is
+ * the heuristic this function exists to replace.
+ */
+export function declaredClassFromProfile(nameOrUrl, profile) {
+  const envs = profile?.environments ?? [];
+  const target = String(nameOrUrl ?? '').trim().toLowerCase();
+  if (!target || envs.length === 0) return null;
+  const host = hostOf(target);
+  const match = envs.find((e) => e.name.toLowerCase() === target)
+    ?? (host ? envs.find((e) => e.url && hostOf(e.url) === host) : undefined);
+  return match ? { class: match.class, environment: match.name, evidence: match.evidence } : null;
+}
+
+/** classifyEnvironment, with the declaration looked up in the repository profile. */
+export function resolveEnvironment(nameOrUrl, profile) {
+  const declared = declaredClassFromProfile(nameOrUrl, profile);
+  const out = classifyEnvironment(nameOrUrl, declared?.class ?? null);
+  return declared ? { ...out, declared_as: declared.environment, declaration_evidence: declared.evidence } : out;
+}
+
 export function classifyEnvironment(nameOrUrl, declared = null) {
   const target = String(nameOrUrl ?? '');
   const s = target.toLowerCase();
@@ -234,7 +266,7 @@ export function classifyEnvironment(nameOrUrl, declared = null) {
     looks_non_production: looksNonProduction,
     production_markers: productionMarkers,
     reason: looksNonProduction
-      ? `Looks non-production, but nothing declared it. ${POLICY.environment_rules.why} Declare it as "non-production" in the repository profile to unblock non-production-only actions.`
+      ? `Looks non-production, but nothing declared it. ${POLICY.environment_rules.why} Add it to the repository profile's \`environments\` list as "non-production" to unblock non-production-only actions.`
       : `Nothing declared this environment${productionMarkers.length ? ` and it carries production marker(s): ${productionMarkers.join(', ')}` : ''}. ${POLICY.environment_rules.why}`,
     treated_as: POLICY.environment_rules.unknown_is_treated_as,
   };

@@ -100,6 +100,9 @@ state.setPhase('classify');
 
 const browserChoice = browser.decide({
   scenario: 'Saved-card checkout flow was changed; existing Playwright coverage is partial and the new branch has not been examined.',
+  // The demo runs against local-docker. Undeclared environments are treated as production
+  // (0.11.0), which forbids the explore-then-automate path this walkthrough demonstrates.
+  environment: 'non-production',
   factors: {
     ui_known: 0.2, repeatability: 0.9, determinism_required: 0.7, exploratory_value: 0.8,
     ci_suitability: 0.6, business_criticality: 0.95, assertion_complexity: 0.7,

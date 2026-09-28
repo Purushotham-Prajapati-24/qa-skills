@@ -20,7 +20,7 @@
     "jira-rest": { "kind": "http", "probe": { "type": "env", "vars": ["JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN"] }, "notes": "Direct Jira Cloud REST v3 fallback when the connector is unavailable." },
     "mcp-playwright": { "kind": "mcp", "probe": { "type": "agent-declared" }, "notes": "@playwright/mcp. Tool names verified against microsoft/playwright-mcp: browser_navigate, browser_snapshot, browser_click, browser_take_screenshot, browser_console_messages, browser_network_requests." },
     "builtin-browser": { "kind": "builtin", "probe": { "type": "agent-declared" }, "notes": "The Claude Code in-app browser pane. Adequate for exploration and evidence capture; it is NOT a test runner." },
-    "playwright-cli": { "kind": "command", "probe": { "type": "command", "command": "npx --no-install playwright --version" } },
+    "playwright-cli": { "kind": "command", "probe": { "type": "node-module", "module": "@playwright/test" }, "notes": "Needs the Playwright Test runner (@playwright/test) resolvable from the repository under test. The `playwright` library on its own answers `playwright --version` but cannot run `playwright test`." },
     "mcp-google-drive": { "kind": "mcp", "probe": { "type": "agent-declared" } },
     "local-doc-mirror": {
       "kind": "builtin",

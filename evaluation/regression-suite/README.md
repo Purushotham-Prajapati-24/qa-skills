@@ -42,12 +42,23 @@ change.
 
 ## Running
 
-`ast eval run` reads `benchmark-cases/` only. To include these, copy the case into
-`benchmark-cases/` with a `reg-` prefix once it is stable, or point the loader here by
-editing `CASES_DIR` in `engine/evaluation-engine/index.mjs`.
+`ast eval run` loads these alongside `benchmark-cases/`; each result carries `suite: "regression"`.
+A case goes in only after it has been run against the engine version that produced the field
+failure and seen to fail there -- say which version in `reasoning_notes`.
 
-Keeping them separate until they are stable is deliberate: a half-formed case that fails for
-unclear reasons trains people to ignore a red suite.
+A case may supply `given.profile` instead of `given.signals`. The signals are then derived
+by `signalsFromProfile` (checked with `expect.profile_signals_include`), so a gap in the
+profile-to-signal mapping is caught, not only a gap in the matrix.
+
+## Cases
+
+| Case | Source | What went wrong |
+| --- | --- | --- |
+| reg-001 | Field trial 3, AgentDesk | Production URL, environment omitted as in the `--example` -> `browser decide` chose MCP exploration of production |
+| reg-002 | Field trial 3, AgentDesk | Production + unseen UI must escalate; an `environment` field was silently ignored |
+| reg-003 | Field trial 3, AgentDesk | Profile could not express responsive / deploy-config / rag, so those categories were N/A |
+| reg-004 | Field trial 2, Madhubala (G-09) | Dependency-scan finding with no runtime signal had no class to go to |
+| reg-005 | Field trial 3, AgentDesk | A runner invoked wrongly had no signal token; unknown tokens were dropped silently |
 
 ## Fix the policy, not the case
 

@@ -12,6 +12,9 @@ import * as state from '../state-engine/index.mjs';
 import { verifyClaim } from '../evidence-engine/index.mjs';
 import { classify } from '../failure-classifier/index.mjs';
 import { inheritedGit } from '../core/git.mjs';
+import fs from 'node:fs';
+import { decodeText } from '../core/fsjson.mjs';
+import { parseJUnit } from '../core/junit.mjs';
 
 export function start({
   goal,
@@ -22,6 +25,7 @@ export function start({
   command = null,
   cwd = null,
   environment = null,
+  target = null,
   // No default: an omitted key (undefined) inherits the session's captured git info; an
   // explicit `git: null` means "no git context for this execution specifically" and must
   // stay distinguishable from "not supplied" all the way to inheritedGit(). See
@@ -53,6 +57,7 @@ export function start({
   if (command) rec.command = command;
   if (cwd) rec.cwd = cwd;
   if (environment) rec.environment = environment;
+  if (target) rec.target = typeof target === 'string' ? { url: target } : target;
   const gitInfo = inheritedGit(git, session);
   if (gitInfo) rec.git = gitInfo;
 
@@ -73,6 +78,7 @@ export function finish(executionId, {
   status,
   statusReason = '',
   testResults = [],
+  junit = null,
   evidence = [],
   findings = [],
   uncertainties = [],
@@ -82,6 +88,14 @@ export function finish(executionId, {
 } = {}) {
   const rec = state.get('executions', executionId);
   if (!rec) throw new Error(`No such execution: ${executionId}`);
+
+  // One suite run is one execution, so without per-test results a run with 9 passing and 3
+  // failing tests reads as nothing but FAILED, and the 9 never reach "What was proven".
+  if (junit) {
+    if (!fs.existsSync(junit)) throw new Error(`junit file does not exist: ${junit}`);
+    const parsed = parseJUnit(decodeText(fs.readFileSync(junit)));
+    testResults = [...testResults, ...parsed.map((t) => ({ ...t, ...(evidence.length ? { evidence } : {}) }))];
+  }
 
   const verdict = verifyClaim({ status, evidenceIds: evidence, statement: statusReason, executionId });
   let finalStatus = status;

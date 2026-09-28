@@ -60,8 +60,14 @@ Full matrix and rationale: [browser-decision.md](browser-decision.md).
   exit code. An agent session is neither.
 - **`ui_known <= 0.25` forbids method B.** Explore before you write selectors.
 - **`existing_automation <= 0.15` forbids C and E.** There is nothing to run.
-- **Production forbids A and D.** Open-ended agent interaction with production can trigger
-  real side effects. Overriding this needs explicit user authorisation.
+- **Production forbids A and D, and an undeclared environment counts as production.** Open-ended
+  agent interaction with production can trigger real side effects; overriding this needs explicit
+  user authorisation. Say where the UI runs — `"environment": "non-production"` for localhost or
+  a disposable preview, `"production"` for a live site — or pass `"target": "<url>"` and let the
+  CLI look it up in the profile's `environments`. Leaving it out is treated as production.
+- **Production + an unseen UI escalates.** With `ui_known <= 0.25` on production every method is
+  forbidden. Read the source to learn the UI (raising `ui_known` honestly), or ask the user to
+  authorise exploration. Do not pick a forbidden method.
 - **A missing capability removes its method.** Never simulate a browser you do not have.
 
 ## Capabilities, not tool names

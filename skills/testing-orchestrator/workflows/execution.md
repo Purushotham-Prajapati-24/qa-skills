@@ -35,6 +35,21 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input evidence.json
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec finish EXEC-2026-00003 --input result.json
 ```
 
+`exec start --example` and `exec finish --example` print valid payloads. Three fields matter
+more than they look:
+
+- **`target`** on `exec start` — when you test a deployed system over the network, give its
+  URL (and `deployed_commit` if the hosting dashboard shows it). The local git commit says
+  nothing about what is deployed, and the report says so instead of pinning live-site results
+  to your working tree.
+- **`junit`** on `exec finish` — a path to the runner's JUnit XML (`node --test
+  --test-reporter=junit`, `playwright test --reporter=junit`, Jest, pytest, Vitest). A suite
+  run is one execution; without per-test results, 9 passing tests next to 3 failing ones read
+  as nothing but FAILED and never reach "What was proven".
+- **Goals** — when a goal or criterion is settled, record it:
+  `session goal G-01 --criterion 1 --status PASSED --evidence EV-…`. It goes through the same
+  evidence gate. Unassessed goals render as "not assessed" in the report.
+
 `exec finish` re-checks your claim against the evidence. Claim `PASSED` without execution
 evidence and it comes back `INCONCLUSIVE` with the reason attached. Do not fight this —
 attach the evidence or accept the downgrade.
@@ -111,7 +126,10 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" decision next --json '{"status":"FAILED
 ```
 
 Signal tokens come from real output — `http-500`, `econnrefused`, `timeout`,
-`missing-env-var`, `brittle-selector`, `passed-on-retry`, `stale-test-data`. A static
+`missing-env-var`, `brittle-selector`, `passed-on-retry`, `stale-test-data`; the full list is
+`failure signals`, and an unknown token comes back in `unknown_signals` rather than being
+silently ignored. A runner that died or matched nothing before any test ran (wrong path, bad
+flag, empty filter) is `harness-invocation-error` / `no-tests-executed`. A static
 review or a dependency scan has no runtime output to draw a signal from — use
 `advisory-in-range`, `missing-auth-check`, `hardcoded-secret` or `policy-violation`
 instead of leaving `signals` empty, which routes to `unclassified-no-signals` regardless

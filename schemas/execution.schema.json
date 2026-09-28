@@ -30,6 +30,16 @@
     "command": { "type": "string", "description": "Exact command line, redacted." },
     "cwd": { "type": "string" },
     "environment": { "type": "string", "description": "Named environment, e.g. 'local-docker', 'staging'." },
+    "target": {
+      "type": "object",
+      "description": "A deployed system tested over the network. Its code is whatever was deployed, which the local git commit does not identify.",
+      "required": ["url"],
+      "properties": {
+        "url": { "type": "string", "minLength": 1 },
+        "deployed_commit": { "type": "string", "description": "The commit the deployment was built from, if known (e.g. from the hosting dashboard). Absent means unknown." }
+      },
+      "additionalProperties": false
+    },
     "status": { "$ref": "common.schema.json#/definitions/status" },
     "status_reason": { "type": "string" },
     "test_results": {

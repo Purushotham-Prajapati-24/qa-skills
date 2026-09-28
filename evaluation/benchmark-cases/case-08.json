@@ -19,6 +19,7 @@
       "browser.explore": true,
       "browser.run_deterministic_test": true
     },
+    "environment": "non-production",
     "browser_factors": {
       "ui_known": 0.1,
       "repeatability": 0.2,
@@ -43,6 +44,7 @@
   },
   "reasoning_notes": [
     "Unknown UI plus LOW repeatability is the one case where pure exploration is right -- the hybrid trigger must not fire.",
-    "should-automate must refuse: a one-off scenario does not earn a permanent test."
+    "should-automate must refuse: a one-off scenario does not earn a permanent test.",
+    "Input made explicit in 0.11.0: this is a pre-release development scenario, so environment is non-production. Before 0.11.0 browser decide silently assumed non-production when nothing was said; it now assumes production (policy.json unknown_is_treated_as), and a case that depends on exploration must say where it runs. The expectation is unchanged."
   ]
 }

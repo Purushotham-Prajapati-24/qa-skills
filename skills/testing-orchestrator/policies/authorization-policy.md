@@ -45,8 +45,10 @@ they restate it after you have named the consequence.
 
 ## Environment classification
 
-An environment is non-production **only** when the repository profile says so. Unknown is
-treated as production.
+An environment is non-production **only** when the repository profile says so — an entry in
+its `environments` list with `class: "non-production"` and evidence. `auth check`,
+`auth classify-env` and `browser decide` look a `target` up there by name or hostname.
+Unknown is treated as production.
 
 > Mistaking staging for production costs a wasted question.
 > Mistaking production for staging costs an incident.

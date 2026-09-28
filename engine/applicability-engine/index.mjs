@@ -236,6 +236,19 @@ export function signalsFromProfile(profile) {
     if (d.kind === 'payment') out.add('payments');
     if (d.kind === 'llm') out.add('llm');
   }
+  const VECTOR_STORE = /qdrant|pinecone|weaviate|chroma|milvus|pgvector|vector/;
+  const names = [
+    ...(profile.technologies ?? []).map((t) => t.name),
+    ...(profile.external_dependencies ?? []).map((d) => d.name),
+  ].map((n) => String(n).toLowerCase());
+  if (out.has('llm') && names.some((n) => VECTOR_STORE.test(n))) out.add('rag');
+  if (has('iac:') || has('container:') || (profile.environments ?? []).some((e) => e.url)) out.add('deploy-config');
+  for (const d of profile.declared_signals ?? []) {
+    if (!CATALOG.signals[d.signal]) {
+      throw new Error(`declared_signals: "${d.signal}" is not a signal in the applicability catalog. Known signals: \`ast applicability catalog\`.`);
+    }
+    out.add(d.signal);
+  }
   return [...out].sort();
 }
 

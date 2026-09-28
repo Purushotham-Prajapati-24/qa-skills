@@ -105,6 +105,7 @@ test('browser decide never returns a real "selected" value at the same time as e
   const out = runInput(['browser', 'decide'], {
     factors: {},
     capabilities: { 'browser.run_deterministic_test': true, 'browser.explore': true },
+    environment: 'non-production',
   }, dir);
   const d = JSON.parse(out);
   assert.equal(d.escalate, true);
@@ -131,6 +132,7 @@ test('a correctly-nested, unambiguous browser decide payload still selects norma
   const out = runInput(['browser', 'decide'], {
     factors: { ui_known: 0.2, exploratory_value: 0.8, repeatability: 0.85, business_criticality: 0.9, existing_automation: 0.3 },
     capabilities: { 'browser.explore': true },
+    environment: 'non-production',
   }, dir);
   const d = JSON.parse(out);
   assert.equal(d.escalate, false);

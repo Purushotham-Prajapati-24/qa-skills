@@ -1,0 +1,30 @@
+{
+  "id": "reg-003",
+  "title": "Next.js RAG app on Vercel: profile-derived signals must reach responsive, deployment and rag-evaluation",
+  "context": "Field trial 3, AgentDesk. The repository profile described a Next.js frontend, Qdrant, Gemini, and a Vercel production URL.",
+  "observed_failure": "signalsFromProfile had no derivation path for rag, deploy-config or responsive, and the profile had no way to declare them. Applicability marked responsive, mobile-viewport, deployment and rag-evaluation not applicable, and the skill's rule 'fix the profile, not the verdict' could not be followed.",
+  "source_session": "SESSION-0001 (AgentDesk)",
+  "given": {
+    "profile": {
+      "architecture": { "frontend": { "present": true, "stack": ["React", "Next.js"] } },
+      "technologies": [
+        { "name": "Next.js", "kind": "framework", "evidence": ["package.json"] },
+        { "name": "Qdrant", "kind": "database", "evidence": ["package.json#dependencies.@qdrant/js-client-rest"] },
+        { "name": "Gemini", "kind": "llm", "evidence": ["src/lib/embeddings.ts"] }
+      ],
+      "environments": [
+        { "name": "production", "url": "https://agentdeskbot.vercel.app", "class": "production", "evidence": ["user named it"] }
+      ],
+      "declared_signals": [
+        { "signal": "responsive", "evidence": ["src/app/page.tsx uses sm:/md:/lg: breakpoints"] }
+      ]
+    }
+  },
+  "expect": {
+    "profile_signals_include": ["rag", "deploy-config", "responsive", "web-ui", "llm"],
+    "applicable_includes": ["responsive", "mobile-viewport", "deployment", "rag-evaluation"]
+  },
+  "reasoning_notes": [
+    "rag is derived from llm + a vector store; deploy-config from a declared environment with a URL; responsive has no reliable derivation, so it is declared with evidence."
+  ]
+}

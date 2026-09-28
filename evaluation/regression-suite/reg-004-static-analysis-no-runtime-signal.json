@@ -1,0 +1,18 @@
+{
+  "id": "reg-004",
+  "title": "Dependency-scan finding with no runtime output must not classify as an evidence problem",
+  "context": "Field trial 2, Madhubala, 2026-09-18 (G-09 in FIELD_TRIAL_ANALYSIS.md). A dependency scan found an advisory; there was no runtime failure to draw a signal from.",
+  "observed_failure": "A dependency-scan finding had no runtime signal to supply. With signals empty, v0.9.0 classified it insufficient-evidence at 0.9 confidence, which read as a verdict that the finding lacked proof; the static-analysis token advisory-in-range did not exist (on v0.9.0 it returns unclassified).",
+  "source_session": "REPORT-2026-00002 (Madhubala)",
+  "given": {
+    "failure_signals": [
+      "advisory-in-range"
+    ]
+  },
+  "expect": {
+    "failure_class": "product-defect"
+  },
+  "reasoning_notes": [
+    "Fixed in 0.10.0 (static-analysis signals). This case was run against v0.9.0 engines and failed (unclassified) before being committed."
+  ]
+}

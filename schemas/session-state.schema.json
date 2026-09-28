@@ -54,12 +54,16 @@
                 "criterion": { "type": "string" },
                 "status": { "$ref": "common.schema.json#/definitions/status" },
                 "evidence": { "$ref": "common.schema.json#/definitions/evidenceRefs" },
-                "execution_id": { "$ref": "common.schema.json#/definitions/executionId" }
+                "execution_id": { "$ref": "common.schema.json#/definitions/executionId" },
+                "assessed_at": { "$ref": "common.schema.json#/definitions/timestamp", "description": "Set by `ast session goal`. Absent means the status is still the placeholder it was created with." },
+                "note": { "type": "string" }
               },
               "additionalProperties": false
             }
           },
-          "status": { "$ref": "common.schema.json#/definitions/status" }
+          "status": { "$ref": "common.schema.json#/definitions/status" },
+          "assessed_at": { "$ref": "common.schema.json#/definitions/timestamp" },
+          "note": { "type": "string" }
         },
         "additionalProperties": false
       }

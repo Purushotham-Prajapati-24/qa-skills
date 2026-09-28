@@ -145,6 +145,9 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
         findings: e.findings ?? [],
         failure_classification: e.failure_classification ?? null,
         decision_id: e.decision_id ?? null,
+        ...(e.totals ? { totals: e.totals } : {}),
+        ...(e.target ? { target: e.target } : {}),
+        ...(e.test_results?.length ? { passed_tests: e.test_results.filter((t) => t.status === 'PASSED').map((t) => t.name) } : {}),
       })),
     evidence_index: evidence.map((e) => ({
       evidence_id: e.evidence_id,
@@ -459,7 +462,12 @@ export function render(r) {
   /* ------------------------------------------------------ 3. what was proven */
 
   const proven = (r.detailed_results ?? []).filter((d) => ['PASSED', 'COMPLETED'].includes(d.status));
-  if (proven.length) {
+  // Individual tests that passed inside a run that did not pass overall. Each is a real,
+  // evidenced result; hiding them because a sibling test failed understates what was shown.
+  const provenInsideFailedRuns = (r.detailed_results ?? [])
+    .filter((d) => !['PASSED', 'COMPLETED'].includes(d.status) && d.passed_tests?.length)
+    .flatMap((d) => d.passed_tests.map((name) => ({ ...d, goal: `${name} _(passed; run ${d.status} overall: ${d.totals.passed}/${d.totals.total})_`, execution_id: `${d.execution_id}` })));
+  if (proven.length || provenInsideFailedRuns.length) {
     // This sentence must never assert a commit the report cannot actually name -- it did,
     // unconditionally, before git provenance was ever auto-captured (see core/git.mjs),
     // and a report with no commit still claimed traceability to one. Three honest states:
@@ -471,12 +479,24 @@ export function render(r) {
         ? `_Every row above executed against commit \`${r.git.commit.slice(0, 7)}\` **with uncommitted changes in the working tree** at the time -- these results are not fixed against a stable, committed point -- and is backed by the evidence cited. Nothing else in this report is a claim that something works._`
         : '_Every row above executed against the commit named at the top and is backed by the evidence cited. Nothing else in this report is a claim that something works._'
       : '_No commit was recorded for this session, so these results are not traceable to a fixed point in the codebase -- only to the evidence cited. Nothing else in this report is a claim that something works._';
+    // A deployed target runs whatever was deployed; the local commit above says nothing about
+    // it, and a dirty-tree warning attached to live-site results describes the wrong thing.
+    const rows = [...proven, ...provenInsideFailedRuns];
+    const remote = rows.filter((d) => d.target?.url);
+    const deployedNote = remote.length
+      ? `_Rows marked "deployed" ran against ${[...new Set(remote.map((d) => d.target.url))].join(', ')}, testing whatever was deployed there. `
+        + (remote.every((d) => d.target.deployed_commit)
+          ? `Deployed commit: ${[...new Set(remote.map((d) => d.target.deployed_commit.slice(0, 7)))].join(', ')}.`
+          : '**The deployed commit was not recorded**, so these results are not tied to any commit -- including the local one named at the top.')
+        + '_'
+      : '';
     add(section('What was proven', [
       table(
-        proven.map((d) => [d.execution_id, d.goal, d.category ?? '—', d.method, (d.evidence ?? []).join(', ') || '—']),
+        rows.map((d) => [d.execution_id, d.target?.url ? `${d.goal} _(deployed)_` : d.goal, d.category ?? '—', d.method, (d.evidence ?? []).join(', ') || '—']),
         ['Execution', 'What was checked', 'Category', 'Method', 'Evidence'],
       ),
-      traceability,
+      remote.length < rows.length ? traceability : '',
+      deployedNote,
     ]));
   }
 
@@ -621,8 +641,9 @@ export function render(r) {
 
     section('Goals', table(
       (r.goals ?? []).flatMap((g) =>
-        (g.success_criteria?.length ? g.success_criteria : [{ criterion: '_no criteria declared_', status: g.status }])
-          .map((c) => [g.id, g.goal, c.criterion, c.status, (c.evidence ?? []).join(', ') || '—'])),
+        // A status nobody assessed is the placeholder it was created with, not a result.
+        (g.success_criteria?.length ? g.success_criteria : [{ criterion: '_no criteria declared_', status: g.status, assessed_at: g.assessed_at }])
+          .map((c) => [g.id, g.goal, c.criterion, c.assessed_at ? c.status : '_not assessed_', (c.evidence ?? []).join(', ') || '—'])),
       ['Goal', 'Description', 'Success criterion', 'Status', 'Evidence'],
     ), { level: 3 }),
 

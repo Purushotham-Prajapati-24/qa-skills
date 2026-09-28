@@ -6,7 +6,7 @@
     "risk_profile": "security-critical",
     "risk_factors": {
       "business_criticality": {
-        "value": 1.0,
+        "value": 1,
         "basis": "checkout is the only revenue path"
       },
       "security_sensitivity": {
@@ -14,7 +14,7 @@
         "basis": "handles stored payment instruments"
       },
       "data_sensitivity": {
-        "value": 1.0,
+        "value": 1,
         "basis": "financial data and stored card references"
       },
       "change_magnitude": {
@@ -61,6 +61,7 @@
       "browser.explore": true,
       "browser.run_deterministic_test": true
     },
+    "environment": "non-production",
     "browser_factors": {
       "ui_known": 0.2,
       "repeatability": 0.9,
@@ -102,6 +103,7 @@
   },
   "reasoning_notes": [
     "The reference pattern: unknown UI plus a recurring critical flow selects explore-then-automate.",
-    "payment.execute stays prohibited even when the user said yes -- executing a real payment is never part of testing."
+    "payment.execute stays prohibited even when the user said yes -- executing a real payment is never part of testing.",
+    "Input made explicit in 0.11.0: this is a pre-release development scenario, so environment is non-production. Before 0.11.0 browser decide silently assumed non-production when nothing was said; it now assumes production (policy.json unknown_is_treated_as), and a case that depends on exploration must say where it runs. The expectation is unchanged."
   ]
 }

@@ -50,7 +50,9 @@ Do not reach for the browser MCP by reflex. Run the decision:
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" browser decide --input browser-factors.json
 ```
 
-Full reasoning in the `browser-testing` skill. Record the outcome as a decision.
+Include `"environment"` (or a `"target"` URL declared in the profile). Undeclared is treated
+as production, which removes the exploration methods. Full reasoning in the `browser-testing`
+skill. Record the outcome as a decision.
 
 ## 5. Decide depth
 
