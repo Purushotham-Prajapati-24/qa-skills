@@ -48,6 +48,7 @@ Working, tested, exercised by the demo session.
 | Plugin + marketplace manifests | Match the verified plugin layout |
 | **npx installer** | `bin/install.mjs`; 7 tests install into a throwaway repo and assert the CLI runs, every link resolves and no skill still points at the source layout |
 | Repository self-check | Catches broken links, hard-coded MCP names, dangling references |
+| **Regression suite from real sessions** | `evaluation/regression-suite/`: 5 cases from 3 field trials, loaded by `ast eval run`; each seen failing on the engine version that produced it |
 | **Jira adapter (executable)** | `engine/adapters/jira.mjs` (0.11.0): REST v3 reads with ADF-to-text and acceptance-criteria extraction, gated writes, delegated writes confirmed by REST read-back; transitions stay prohibited |
 | **GitHub adapter (executable)** | `engine/adapters/github.mjs`; 29 tests assert each gate refuses **before** the provider is called |
 | **Enforced write protocol** | `performWrite` is the only path to a ledger entry, and it runs capability -> authorisation -> ledger -> render -> perform -> parse -> record in order |
@@ -68,8 +69,6 @@ Working, tested, exercised by the demo session.
 | --- | --- | --- |
 | Google Docs adapter | `integrations/google/docs.md` | No Google MCP server was available. Fallback to `state/reports/` works and is honest. |
 | Google Drive adapter | `integrations/google/drive.md` | Same |
-| Regression suite from real sessions | `evaluation/regression-suite/README.md` | Needs real sessions to derive cases from |
-| Decision outcome assessment at scale | `ast decision assess` exists | Nothing prompts the agent to assess past decisions; `decision_assessment_rate` will read low until something does |
 | External trigger layer | `ARCHITECTURE.md` | Belongs to CI, not to this system. Documented rather than claimed. |
 
 ## REQUIRES EXTERNAL CONFIGURATION
@@ -82,7 +81,7 @@ Nothing here is broken — each needs a credential or an authorisation the user 
 | `jira.*` | Atlassian connector authorised, **or** `JIRA_BASE_URL` + `JIRA_EMAIL` + `JIRA_API_TOKEN` |
 | `docs.*`, `drive.*` | A Google MCP server. Without one, falls back to local Markdown and says so. |
 | `browser.explore` | Playwright MCP or the in-app browser, **declared** via `ast caps declare` |
-| `browser.run_deterministic_test` | `npx playwright install chromium` |
+| `browser.run_deterministic_test` | `@playwright/test` installed in the repository under test (the `playwright` library alone is not a test runner), plus `npx playwright install chromium` |
 | `database.query` | A disposable database, and a profile that classifies it non-production |
 
 ## BLOCKED

@@ -1,36 +1,56 @@
-# This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
-# For more information see: https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages
+# Verifies a release and publishes it to GitHub Packages.
+#
+# GitHub Packages only accepts scoped names, so the package is published as
+# @purushotham-prajapati-24/autonomous-software-testing. The documented install
+# (npx github:Purushotham-Prajapati-24/qa-skills#vX.Y.Z) does not depend on this.
 
-name: Node.js Package
+name: Publish package
 
 on:
   release:
-    types: [created]
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to verify and publish (e.g. v0.11.0)
+        required: true
+
+permissions:
+  contents: read
 
 jobs:
-  build:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - run: npm ci
+          # node --test with a glob pattern needs Node >= 21.
+          node-version: 22
+      # Zero dependencies and no lockfile, so there is nothing to install.
       - run: npm test
+      - run: node bin/ast.mjs eval run > /dev/null
+      - run: node scripts/validate-repo.mjs
+      - run: node scripts/demo-session.mjs
 
   publish-gpr:
-    needs: build
+    needs: verify
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           registry-url: https://npm.pkg.github.com/
-      - run: npm ci
+          scope: '@purushotham-prajapati-24'
+      - run: npm pkg set name=@purushotham-prajapati-24/autonomous-software-testing
       - run: npm publish
         env:
-          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
