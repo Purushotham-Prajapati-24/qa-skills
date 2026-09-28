@@ -1,0 +1,36 @@
+# The four checks every change must pass, on the oldest supported Node, the current LTS
+# lines, and Windows (the primary development platform).
+
+name: Check
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, node: '20.6.0' }
+          - { os: ubuntu-latest, node: '22' }
+          - { os: ubuntu-latest, node: '24' }
+          - { os: windows-latest, node: '22' }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      # Zero dependencies and no lockfile: nothing to install.
+      - run: npm test
+      # Exits 1 on any failed check; the full JSON result is not needed in the log.
+      - run: node bin/ast.mjs eval run > /dev/null
+        shell: bash
+      - run: node scripts/validate-repo.mjs
+      - run: node scripts/demo-session.mjs
