@@ -1,20 +1,21 @@
 {
   "report_id": "REPORT-2026-00001",
   "report_version": "1.2.0",
-  "generated_at": "2026-09-19T10:26:31.997Z",
+  "generated_at": "2026-09-28T07:08:46.559Z",
   "session_id": "SESSION-0001",
   "executive_summary": {
-    "headline": "**FAILED** — 4 executions run · 1 finding, worst critical · 2 planned items not run.",
+    "headline": "**FAILED** — 8 executions run · 2 findings, worst critical · 3 planned items not run.",
     "overall_status": "FAILED",
     "confidence": 1,
     "key_points": [
-      "1 execution(s) failed — each carries a failure classification below.",
-      "1 execution(s) blocked; their scope was NOT covered by anything else.",
+      "2 execution(s) failed — each carries a failure classification below.",
+      "2 execution(s) blocked; their scope was NOT covered by anything else.",
       "1 finding(s) at critical severity or above."
     ],
     "what_was_not_tested": [
       "Payment E2E against the real provider — BLOCKED: STRIPE_SECRET_KEY is unset; refusing to transact against a live key.",
-      "Localisation testing — NOT_APPLICABLE: No i18n resources exist in the repository; nothing is translated."
+      "Localisation testing — NOT_APPLICABLE: No i18n resources exist in the repository; nothing is translated.",
+      "Saved-card E2E with real provider credentials — NEEDS_USER_INPUT: Which sandbox account may be charged is the user's call, not the agent's."
     ],
     "not_applicable_summary": {
       "total": 22,
@@ -51,17 +52,18 @@
     }
   },
   "execution_summary": {
-    "executions": 6,
+    "executions": 11,
     "by_status": {
       "INCONCLUSIVE": 1,
-      "PASSED": 1,
-      "FAILED": 1,
+      "PASSED": 4,
+      "FAILED": 2,
       "BLOCKED": 1,
       "NOT_APPLICABLE": 1,
-      "INTERRUPTED": 1
+      "INTERRUPTED": 1,
+      "NEEDS_USER_INPUT": 1
     },
-    "total_duration_ms": 20,
-    "test_cases": 3
+    "total_duration_ms": 71,
+    "test_cases": 9
   },
   "detailed_results": [
     {
@@ -71,8 +73,8 @@
       "method": "api-client",
       "status": "FAILED",
       "status_reason": "GET /api/payment-methods/:id returned another user's card with HTTP 200.",
-      "duration_ms": 7,
-      "wall_clock_ms": 7,
+      "duration_ms": 10,
+      "wall_clock_ms": 10,
       "command_duration_ms": 3120,
       "evidence": [
         "EV-2026-00002"
@@ -91,7 +93,51 @@
           "EV-2026-00002"
         ]
       },
-      "decision_id": "DEC-00001"
+      "decision_id": "DEC-00001",
+      "totals": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1,
+        "skipped": 0,
+        "errored": 0
+      },
+      "passed_tests": []
+    },
+    {
+      "execution_id": "EXEC-2026-00010",
+      "goal": "Checkout UI regression suite, run 2 of 3",
+      "category": "regression",
+      "method": "playwright-script",
+      "status": "FAILED",
+      "status_reason": "\"saved card survives a reload\" failed: expected 1 saved card, found 0.",
+      "duration_ms": 11,
+      "wall_clock_ms": 11,
+      "command_duration_ms": 3700,
+      "evidence": [
+        "EV-2026-00005"
+      ],
+      "findings": [],
+      "failure_classification": {
+        "class": "product-defect",
+        "confidence": 0.59,
+        "signals": [
+          "assertion-mismatch"
+        ],
+        "evidence_refs": [
+          "EV-2026-00005"
+        ]
+      },
+      "decision_id": null,
+      "totals": {
+        "total": 2,
+        "passed": 1,
+        "failed": 1,
+        "skipped": 0,
+        "errored": 0
+      },
+      "passed_tests": [
+        "checkout renders saved cards"
+      ]
     },
     {
       "execution_id": "EXEC-2026-00004",
@@ -109,14 +155,29 @@
       "decision_id": null
     },
     {
+      "execution_id": "EXEC-2026-00008",
+      "goal": "Saved-card E2E with real provider credentials",
+      "category": "e2e",
+      "method": "not-executed",
+      "status": "NEEDS_USER_INPUT",
+      "status_reason": "Which sandbox account may be charged is the user's call, not the agent's.",
+      "duration_ms": 0,
+      "wall_clock_ms": 0,
+      "command_duration_ms": null,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
       "execution_id": "EXEC-2026-00001",
       "goal": "Quick smoke of the checkout page",
       "category": "smoke",
       "method": "existing-suite",
       "status": "INCONCLUSIVE",
       "status_reason": "Checkout works. [DOWNGRADED from PASSED: \"[REDACTED]\" claims something was executed, but no evidence is attached. Absence of failure is not proof of correctness.]",
-      "duration_ms": 5,
-      "wall_clock_ms": 5,
+      "duration_ms": 7,
+      "wall_clock_ms": 7,
       "command_duration_ms": null,
       "evidence": [],
       "findings": [],
@@ -165,15 +226,99 @@
       "method": "existing-suite",
       "status": "PASSED",
       "status_reason": "vitest suite executed against abc1234; 211 tests passed, 0 failed.",
-      "duration_ms": 8,
-      "wall_clock_ms": 8,
+      "duration_ms": 13,
+      "wall_clock_ms": 13,
       "command_duration_ms": 12480,
       "evidence": [
         "EV-2026-00001"
       ],
       "findings": [],
       "failure_classification": null,
-      "decision_id": "DEC-00001"
+      "decision_id": "DEC-00001",
+      "totals": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "errored": 0
+      },
+      "passed_tests": [
+        "cart totals include tax",
+        "payment intent rejects a negative amount"
+      ]
+    },
+    {
+      "execution_id": "EXEC-2026-00007",
+      "goal": "Accessibility scan of the checkout pages (restarted after interruption)",
+      "category": "accessibility",
+      "method": "static-analysis",
+      "status": "PASSED",
+      "status_reason": "axe WCAG 2.1 AA ruleset on /checkout at abc1234: 0 violations.",
+      "duration_ms": 10,
+      "wall_clock_ms": 10,
+      "command_duration_ms": 4100,
+      "evidence": [
+        "EV-2026-00003"
+      ],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00009",
+      "goal": "Checkout UI regression suite, run 1 of 3",
+      "category": "regression",
+      "method": "playwright-script",
+      "status": "PASSED",
+      "status_reason": "Both checkout UI tests passed at abc1234.",
+      "duration_ms": 10,
+      "wall_clock_ms": 10,
+      "command_duration_ms": 1700,
+      "evidence": [
+        "EV-2026-00004"
+      ],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null,
+      "totals": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "errored": 0
+      },
+      "passed_tests": [
+        "checkout renders saved cards",
+        "saved card survives a reload"
+      ]
+    },
+    {
+      "execution_id": "EXEC-2026-00011",
+      "goal": "Checkout UI regression suite, run 3 of 3",
+      "category": "regression",
+      "method": "playwright-script",
+      "status": "PASSED",
+      "status_reason": "Both checkout UI tests passed at abc1234.",
+      "duration_ms": 10,
+      "wall_clock_ms": 10,
+      "command_duration_ms": 1700,
+      "evidence": [
+        "EV-2026-00006"
+      ],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null,
+      "totals": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "errored": 0
+      },
+      "passed_tests": [
+        "checkout renders saved cards",
+        "saved card survives a reload"
+      ]
     }
   ],
   "evidence_index": [
@@ -182,7 +327,7 @@
       "kind": "command-output",
       "summary": "vitest: 211/211 passed",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\claude\\D--QATesting\\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\\scratchpad\\demo-real-state\\evidence\\blobs\\output-2026-09-19T10-26-31-933Z-16760.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-5lj6vO\\evidence\\blobs\\output-2026-09-28T07-08-46-371Z-53500.txt",
       "sha256": "sha256:08847719b18700defc4e5811a3e0be639fa4d8c92fcbdefd7cff7a429ac59e38"
     },
     {
@@ -190,13 +335,46 @@
       "kind": "command-output",
       "summary": "api: 11/12 passed, 1 failed",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\claude\\D--QATesting\\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\\scratchpad\\demo-real-state\\evidence\\blobs\\output-2026-09-19T10-26-31-945Z-16760.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-5lj6vO\\evidence\\blobs\\output-2026-09-28T07-08-46-391Z-53500.txt",
       "sha256": "sha256:6860525264278abb9c4fb263992a6bcbbfd9d5d8d074c9c5f1779db558c4b2b8"
+    },
+    {
+      "evidence_id": "EV-2026-00003",
+      "kind": "command-output",
+      "summary": "axe: 0 violations on /checkout",
+      "grade": "anchored",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-5lj6vO\\evidence\\blobs\\output-2026-09-28T07-08-46-462Z-53500.txt",
+      "sha256": "sha256:bbacb4745aabb84bc3a3a939b8e07b53f73b807ba3f95e3389fb70e6445bcbaf"
+    },
+    {
+      "evidence_id": "EV-2026-00004",
+      "kind": "command-output",
+      "summary": "playwright checkout suite, run 1",
+      "grade": "anchored",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-5lj6vO\\evidence\\blobs\\output-2026-09-28T07-08-46-488Z-53500.txt",
+      "sha256": "sha256:fcf6eedae0c5ae91968ac5863ca304acb9622c37abbe13ee82f26097765faef3"
+    },
+    {
+      "evidence_id": "EV-2026-00005",
+      "kind": "command-output",
+      "summary": "playwright checkout suite, run 2",
+      "grade": "anchored",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-5lj6vO\\evidence\\blobs\\output-2026-09-28T07-08-46-506Z-53500.txt",
+      "sha256": "sha256:6ab2b01371879032854e860ae6e74ff4097a33e82e7fe0cddd4b44e165d74960"
+    },
+    {
+      "evidence_id": "EV-2026-00006",
+      "kind": "command-output",
+      "summary": "playwright checkout suite, run 3",
+      "grade": "anchored",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-5lj6vO\\evidence\\blobs\\output-2026-09-28T07-08-46-523Z-53500.txt",
+      "sha256": "sha256:fcf6eedae0c5ae91968ac5863ca304acb9622c37abbe13ee82f26097765faef3"
     }
   ],
   "findings": [
     "FIND-00001",
-    "FIND-00002"
+    "FIND-00002",
+    "FIND-00003"
   ],
   "finding_details": [
     {
@@ -230,6 +408,27 @@
       "evidence": [],
       "duplicate_of": "FIND-00001",
       "external_refs": []
+    },
+    {
+      "finding_id": "FIND-00003",
+      "title": "Flaky test quarantined: saved card survives a reload",
+      "kind": "test-quality-issue",
+      "severity": "minor",
+      "confidence": 0.7,
+      "component": "saved card survives a reload",
+      "summary": "Mixed outcomes (2 passed / 1 failed) at a single commit (abc1234): the code did not change between runs. Duration variance is high (coefficient 0.74), consistent with timing sensitivity.",
+      "expected": "The same outcome on every run at the same commit",
+      "actual": "2 of 3 runs passed",
+      "reproducible": "intermittent",
+      "attempts": 3,
+      "impact": "Until it is fixed, a pass from this test proves nothing; the report excludes it from \"What was proven\".",
+      "evidence": [
+        "EV-2026-00004",
+        "EV-2026-00005",
+        "EV-2026-00006"
+      ],
+      "recommended_action": "Find the nondeterminism (shared state, timing, order dependence, network) and fix the test. Do not add retries to hide it.",
+      "external_refs": []
     }
   ],
   "external_writes": [
@@ -256,6 +455,11 @@
       "execution_id": "EXEC-2026-00004",
       "goal": "Payment E2E against the real provider",
       "reason": "STRIPE_SECRET_KEY is unset; refusing to transact against a live key."
+    },
+    {
+      "execution_id": "EXEC-2026-00008",
+      "goal": "Saved-card E2E with real provider credentials",
+      "reason": "Which sandbox account may be charged is the user's call, not the agent's."
     }
   ],
   "deferred_work": [],
@@ -297,11 +501,6 @@
       "blocked_by": "U-00001"
     },
     {
-      "item": "Accessibility scan of the checkout pages",
-      "status": "INTERRUPTED",
-      "reason": "user redirected mid-run; must restart from the beginning"
-    },
-    {
       "item": "Migration rollback compatibility check",
       "status": "DEFERRED",
       "reason": "deferred for budget; the forward migration was verified"
@@ -326,11 +525,11 @@
     }
   ],
   "metrics": {
-    "computed_at": "2026-09-19T10:26:32.008Z",
+    "computed_at": "2026-09-28T07:08:46.580Z",
     "sample_sizes": {
-      "executions": 6,
+      "executions": 11,
       "decisions": 1,
-      "findings": 2,
+      "findings": 3,
       "external_writes": 1,
       "declared_requirements": 3
     },
@@ -345,30 +544,30 @@
       "evidence_anchored_rate": 1,
       "audit_coverage": 0,
       "automation_conversion": null,
-      "unnecessary_test_rate": 0.5,
-      "runtime_efficiency_ms_per_case": 5200,
-      "flaky_identification_quality": null,
+      "unnecessary_test_rate": 0.25,
+      "runtime_efficiency_ms_per_case": 2977.7778,
+      "flaky_identification_quality": 1,
       "interruption_recovery_rate": 0.5,
       "authorization_compliance": 1,
-      "reproducibility": 0.5
+      "reproducibility": 0.75
     },
     "denominators": {
-      "false_confidence_rate": 1,
+      "false_confidence_rate": 4,
       "requirement_coverage": 3,
       "high_risk_coverage": 6,
       "decision_accuracy": 0,
       "decision_assessment_rate": 1,
-      "actionable_finding_rate": 1,
-      "evidence_completeness": 2,
-      "evidence_anchored_rate": 2,
-      "audit_coverage": 2,
+      "actionable_finding_rate": 2,
+      "evidence_completeness": 6,
+      "evidence_anchored_rate": 6,
+      "audit_coverage": 6,
       "automation_conversion": 0,
-      "unnecessary_test_rate": 4,
-      "runtime_efficiency_ms_per_case": 3,
-      "flaky_identification_quality": 0,
+      "unnecessary_test_rate": 8,
+      "runtime_efficiency_ms_per_case": 9,
+      "flaky_identification_quality": 1,
       "interruption_recovery_rate": 2,
       "authorization_compliance": 1,
-      "reproducibility": 4
+      "reproducibility": 8
     },
     "noise_floor": 5,
     "noisy_metrics": [
@@ -376,19 +575,14 @@
       "requirement_coverage",
       "decision_assessment_rate",
       "actionable_finding_rate",
-      "evidence_completeness",
-      "evidence_anchored_rate",
-      "audit_coverage",
-      "unnecessary_test_rate",
-      "runtime_efficiency_ms_per_case",
+      "flaky_identification_quality",
       "interruption_recovery_rate",
-      "authorization_compliance",
-      "reproducibility"
+      "authorization_compliance"
     ],
     "violations": [],
     "notes": [
       "A null metric means the denominator was zero. Nulls are honest; do not substitute 0 or 1.",
-      "Metrics with a denominator under 5 are noise, not signal -- read them qualitatively: false_confidence_rate (n=1), requirement_coverage (n=3), decision_assessment_rate (n=1), actionable_finding_rate (n=1), evidence_completeness (n=2), evidence_anchored_rate (n=2), audit_coverage (n=2), unnecessary_test_rate (n=4), runtime_efficiency_ms_per_case (n=3), interruption_recovery_rate (n=2), authorization_compliance (n=1), reproducibility (n=4).",
+      "Metrics with a denominator under 5 are noise, not signal -- read them qualitatively: false_confidence_rate (n=4), requirement_coverage (n=3), decision_assessment_rate (n=1), actionable_finding_rate (n=2), flaky_identification_quality (n=1), interruption_recovery_rate (n=2), authorization_compliance (n=1).",
       "Categories executed: smoke, regression, authn-authz, accessibility."
     ],
     "definitions": {
@@ -475,7 +669,8 @@
       "reproducibility": {
         "formula": "executions carrying commit + environment + command / executions with method != not-executed",
         "direction": "higher-is-better",
-        "why": "A result nobody can re-run is an anecdote."
+        "why": "A result nobody can re-run is an anecdote.",
+        "blind_spot": "Counts whether a run could be repeated, not whether a repeat on another OS or Node version would agree. Each execution records its runtime (os, arch, node); compare it before treating two results as the same."
       }
     }
   },
@@ -483,21 +678,22 @@
     "unevidenced_pass_claims": 0,
     "false_confidence_rate": 0,
     "checks_run": [
-      "every PASSED/COMPLETED claim checked against attached evidence (1 claim(s))",
+      "every PASSED/COMPLETED claim checked against attached evidence (4 claim(s))",
       "external writes checked for provider confirmation (2 write(s))",
       "unfinished executions surfaced as INTERRUPTED (1 found)",
       "not-applicable categories listed with reasons (22 categories)"
     ],
     "violations": [
-      "No evidence-auditor record for this session (kind: evidence-audit). Claims here have only passed the mechanical evidence gate, not independent adversarial review."
+      "No evidence-auditor record for this session (kind: evidence-audit). Claims here have only passed the mechanical evidence gate, not independent adversarial review.",
+      "[process:advisory] 1 decision(s) recorded, none assessed. For each whose outcome is now visible, run `decision assess DEC-... --verdict correct|acceptable|suboptimal|wrong|unknown`; decision_accuracy stays null until you do."
     ],
     "evidence_auditor_run": false
   },
   "provenance": {
-    "skill_version": "0.10.0",
+    "skill_version": "0.11.0",
     "skill_name": "test-reporting",
-    "engine_version": "0.10.0",
-    "created_at": "2026-09-19T10:26:31.997Z",
+    "engine_version": "0.11.0",
+    "created_at": "2026-09-28T07:08:46.559Z",
     "created_by": "agent",
     "session_id": "SESSION-0001"
   },
@@ -1595,13 +1791,18 @@
         {
           "criterion": "A user cannot select another user's saved card",
           "status": "FAILED",
+          "assessed_at": "2026-09-28T07:08:46.553Z",
           "evidence": [
             "EV-2026-00002"
           ],
+          "note": "FIND-00001",
           "execution_id": "EXEC-2026-00003"
         }
       ]
     }
   ],
-  "digest": "sha256:87fef7a99b08fb632218f5df283e30c548e58622e70bbc26a47746b3c29dcad6"
+  "quarantined_tests": [
+    "saved card survives a reload"
+  ],
+  "digest": "sha256:77dd1156b97ed6133a4db9aa321f205006550614f9f5ae32c7e9456030ac4e42"
 }

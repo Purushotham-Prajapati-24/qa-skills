@@ -1,7 +1,7 @@
 {
   "execution_id": "EXEC-2026-00003",
   "session_id": "SESSION-0001",
-  "started_at": "2026-09-19T10:26:31.941Z",
+  "started_at": "2026-09-28T07:08:46.385Z",
   "goal": "User A cannot select user B's saved card",
   "method": "api-client",
   "status": "FAILED",
@@ -15,10 +15,10 @@
   "uncertainties": [],
   "retries": 0,
   "provenance": {
-    "skill_version": "0.10.0",
+    "skill_version": "0.11.0",
     "skill_name": "testing-orchestrator",
-    "engine_version": "0.10.0",
-    "created_at": "2026-09-19T10:26:31.941Z",
+    "engine_version": "0.11.0",
+    "created_at": "2026-09-28T07:08:46.385Z",
     "created_by": "agent",
     "session_id": "SESSION-0001"
   },
@@ -26,6 +26,11 @@
   "decision_id": "DEC-00001",
   "command": "npm run test:api -- saved-cards",
   "environment": "local-docker",
+  "runtime": {
+    "os": "win32 10.0.26200",
+    "arch": "x64",
+    "node": "v22.17.1"
+  },
   "git": {
     "repository": "acme/shop",
     "branch": "feat/SHOP-412-saved-card",
@@ -33,9 +38,9 @@
     "pull_request": "412",
     "dirty": false
   },
-  "finished_at": "2026-09-19T10:26:31.948Z",
-  "wall_clock_ms": 7,
-  "duration_ms": 7,
+  "finished_at": "2026-09-28T07:08:46.395Z",
+  "wall_clock_ms": 10,
+  "duration_ms": 10,
   "command_duration_ms": 3120,
   "test_results": [
     {

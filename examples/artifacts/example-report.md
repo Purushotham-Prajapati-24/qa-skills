@@ -8,16 +8,16 @@ hand-written approximation of it.
 -->
 # Testing Report · REPORT-2026-00001
 
-**FAILED** — 4 executions run · 1 finding, worst critical · 2 planned items not run.
+**FAILED** — 8 executions run · 2 findings, worst critical · 3 planned items not run.
 
 | Session | Repository | Commit | PR | Generated | Skill |
 | --- | --- | --- | --- | --- | --- |
-| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-09-19 10:26:31Z | v0.10.0 |
+| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-09-28 07:08:46Z | v0.11.0 |
 
 ## Verdict
 
-- 1 execution(s) failed — each carries a failure classification below.
-- 1 execution(s) blocked; their scope was NOT covered by anything else.
+- 2 execution(s) failed — each carries a failure classification below.
+- 2 execution(s) blocked; their scope was NOT covered by anything else.
 - 1 finding(s) at critical severity or above.
 
 ## Needs attention
@@ -25,6 +25,7 @@ hand-written approximation of it.
 | Severity | Count | Findings |
 | --- | --- | --- |
 | Critical | 1 | FIND-00001 |
+| Minor | 1 | FIND-00003 |
 
 ### Critical
 
@@ -44,6 +45,24 @@ The payment-method lookup does not compare the record owner to the session user,
 
 _Evidence: EV-2026-00002_
 
+### Minor
+
+#### FIND-00003 — Flaky test quarantined: saved card survives a reload
+
+`saved card survives a reload` · reproduced 3/3 (intermittent) · confidence 0.7 · test-quality-issue
+
+Mixed outcomes (2 passed / 1 failed) at a single commit (abc1234): the code did not change between runs. Duration variance is high (coefficient 0.74), consistent with timing sensitivity.
+
+| Expected | Actual |
+| --- | --- |
+| The same outcome on every run at the same commit | 2 of 3 runs passed |
+
+**Impact.** Until it is fixed, a pass from this test proves nothing; the report excludes it from "What was proven".
+
+**Next.** Find the nondeterminism (shared state, timing, order dependence, network) and fix the test. Do not add retries to hide it.
+
+_Evidence: EV-2026-00004, EV-2026-00005, EV-2026-00006_
+
 ## Unblock these
 
 _Every item below is waiting on you, not on more agent work. Say so and it runs._
@@ -55,6 +74,10 @@ _Every item below is waiting on you, not on more agent work. Say so and it runs.
 | Execution | What was checked | Category | Method | Evidence |
 | --- | --- | --- | --- | --- |
 | EXEC-2026-00002 | Baseline: full unit suite at head | regression | existing-suite | EV-2026-00001 |
+| EXEC-2026-00007 | Accessibility scan of the checkout pages (restarted after interruption) | accessibility | static-analysis | EV-2026-00003 |
+| EXEC-2026-00009 | Checkout UI regression suite, run 1 of 3 _(includes quarantined saved card survives a reload; that pass is not counted)_ | regression | playwright-script | EV-2026-00004 |
+| EXEC-2026-00011 | Checkout UI regression suite, run 3 of 3 _(includes quarantined saved card survives a reload; that pass is not counted)_ | regression | playwright-script | EV-2026-00006 |
+| EXEC-2026-00010 | checkout renders saved cards _(passed; run FAILED overall: 1/2)_ | regression | playwright-script | EV-2026-00005 |
 
 _Every row above executed against the commit named at the top and is backed by the evidence cited. Nothing else in this report is a claim that something works._
 
@@ -66,6 +89,7 @@ _Read this before drawing any conclusion from the results above._
 
 - Payment E2E against the real provider — BLOCKED: STRIPE_SECRET_KEY is unset; refusing to transact against a live key.
 - Localisation testing — NOT_APPLICABLE: No i18n resources exist in the repository; nothing is translated.
+- Saved-card E2E with real provider credentials — NEEDS_USER_INPUT: Which sandbox account may be charged is the user's call, not the agent's.
 
 **Not applicable to this repository.**
 
@@ -89,7 +113,6 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 | Status | Item | Why | Blocked by |
 | --- | --- | --- | --- |
 | BLOCKED | Payment E2E against a provider sandbox | awaiting an environment decision | U-00001 |
-| INTERRUPTED | Accessibility scan of the checkout pages | user redirected mid-run; must restart from the beginning | — |
 | DEFERRED | Migration rollback compatibility check | deferred for budget; the forward migration was verified | — |
 
 ## Recommended next
@@ -106,28 +129,38 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 
 | ID | Status | Goal | Method | Failure class | Wall clock | Command time |
 | --- | --- | --- | --- | --- | --- | --- |
-| EXEC-2026-00003 | FAILED | User A cannot select user B's saved card | api-client | authentication-failure (0.5) | 7 ms | 3120 ms |
+| EXEC-2026-00003 | FAILED | User A cannot select user B's saved card | api-client | authentication-failure (0.5) | 10 ms | 3120 ms |
+| EXEC-2026-00010 | FAILED | Checkout UI regression suite, run 2 of 3 | playwright-script | product-defect (0.59) | 11 ms | 3700 ms |
 | EXEC-2026-00004 | BLOCKED | Payment E2E against the real provider | not-executed | — | 0 ms | — |
-| EXEC-2026-00001 | INCONCLUSIVE | Quick smoke of the checkout page | existing-suite | — | 5 ms | — |
+| EXEC-2026-00008 | NEEDS_USER_INPUT | Saved-card E2E with real provider credentials | not-executed | — | 0 ms | — |
+| EXEC-2026-00001 | INCONCLUSIVE | Quick smoke of the checkout page | existing-suite | — | 7 ms | — |
 | EXEC-2026-00006 | INTERRUPTED | Accessibility scan of the checkout pages | static-analysis | — | — | — |
 | EXEC-2026-00005 | NOT_APPLICABLE | Localisation testing | not-executed | — | 0 ms | — |
-| EXEC-2026-00002 | PASSED | Baseline: full unit suite at head | existing-suite | — | 8 ms | 12480 ms |
+| EXEC-2026-00002 | PASSED | Baseline: full unit suite at head | existing-suite | — | 13 ms | 12480 ms |
+| EXEC-2026-00007 | PASSED | Accessibility scan of the checkout pages (restarted after interruption) | static-analysis | — | 10 ms | 4100 ms |
+| EXEC-2026-00009 | PASSED | Checkout UI regression suite, run 1 of 3 | playwright-script | — | 10 ms | 1700 ms |
+| EXEC-2026-00011 | PASSED | Checkout UI regression suite, run 3 of 3 | playwright-script | — | 10 ms | 1700 ms |
 
 | Status | Count |
 | --- | --- |
 | INCONCLUSIVE | 1 |
-| PASSED | 1 |
-| FAILED | 1 |
+| PASSED | 4 |
+| FAILED | 2 |
 | BLOCKED | 1 |
 | NOT_APPLICABLE | 1 |
 | INTERRUPTED | 1 |
+| NEEDS_USER_INPUT | 1 |
 
 ### Evidence
 
 | ID | Kind | Summary | Anchored? | Artifact |
 | --- | --- | --- | --- | --- |
-| EV-2026-00001 | command-output | vitest: 211/211 passed | yes | C:\Users\purus\AppData\Local\Temp\claude\D--QATesting\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\scratchpad\demo-real-state\evidence\blobs\output-2026-09-19T10-26-31-933Z-16760.txt |
-| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | yes | C:\Users\purus\AppData\Local\Temp\claude\D--QATesting\74d4dd92-3cd9-49fc-98ab-f2d785b41b78\scratchpad\demo-real-state\evidence\blobs\output-2026-09-19T10-26-31-945Z-16760.txt |
+| EV-2026-00001 | command-output | vitest: 211/211 passed | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-5lj6vO\evidence\blobs\output-2026-09-28T07-08-46-371Z-53500.txt |
+| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-5lj6vO\evidence\blobs\output-2026-09-28T07-08-46-391Z-53500.txt |
+| EV-2026-00003 | command-output | axe: 0 violations on /checkout | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-5lj6vO\evidence\blobs\output-2026-09-28T07-08-46-462Z-53500.txt |
+| EV-2026-00004 | command-output | playwright checkout suite, run 1 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-5lj6vO\evidence\blobs\output-2026-09-28T07-08-46-488Z-53500.txt |
+| EV-2026-00005 | command-output | playwright checkout suite, run 2 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-5lj6vO\evidence\blobs\output-2026-09-28T07-08-46-506Z-53500.txt |
+| EV-2026-00006 | command-output | playwright checkout suite, run 3 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-5lj6vO\evidence\blobs\output-2026-09-28T07-08-46-523Z-53500.txt |
 
 ### External writes
 
@@ -228,31 +261,32 @@ _Excluded for lack of evidence — not scored, not guessed: user_impact, depende
 
 | Goal | Description | Success criterion | Status | Evidence |
 | --- | --- | --- | --- | --- |
-| G-01 | Validate the saved-card payment flow | A saved card completes and creates exactly one order | NEEDS_USER_INPUT | — |
-| G-01 | Validate the saved-card payment flow | A declined card errors and creates no order | NEEDS_USER_INPUT | — |
+| G-01 | Validate the saved-card payment flow | A saved card completes and creates exactly one order | _not assessed_ | — |
+| G-01 | Validate the saved-card payment flow | A declined card errors and creates no order | _not assessed_ | — |
 | G-01 | Validate the saved-card payment flow | A user cannot select another user's saved card | FAILED | EV-2026-00002 |
 
 ### Evaluation metrics
 
 | Metric | Value | n | Noise | Direction |
 | --- | --- | --- | --- | --- |
-| false_confidence_rate | 0 | 1 | ⚠️ below noise floor (5) | lower-is-better |
+| false_confidence_rate | 0 | 4 | ⚠️ below noise floor (5) | lower-is-better |
 | requirement_coverage | 0.6667 | 3 | ⚠️ below noise floor (5) | higher-is-better |
 | high_risk_coverage | 0 | 6 |  | higher-is-better |
 | decision_assessment_rate | 0 | 1 | ⚠️ below noise floor (5) | higher-is-better |
-| actionable_finding_rate | 1 | 1 | ⚠️ below noise floor (5) | higher-is-better |
-| evidence_completeness | 1 | 2 | ⚠️ below noise floor (5) | higher-is-better |
-| evidence_anchored_rate | 1 | 2 | ⚠️ below noise floor (5) | higher-is-better |
-| audit_coverage | 0 | 2 | ⚠️ below noise floor (5) | higher-is-better |
-| unnecessary_test_rate | 0.5 | 4 | ⚠️ below noise floor (5) | lower-is-better |
-| runtime_efficiency_ms_per_case | 5200 | 3 | ⚠️ below noise floor (5) | lower-is-better |
+| actionable_finding_rate | 1 | 2 | ⚠️ below noise floor (5) | higher-is-better |
+| evidence_completeness | 1 | 6 |  | higher-is-better |
+| evidence_anchored_rate | 1 | 6 |  | higher-is-better |
+| audit_coverage | 0 | 6 |  | higher-is-better |
+| unnecessary_test_rate | 0.25 | 8 |  | lower-is-better |
+| runtime_efficiency_ms_per_case | 2977.7778 | 9 |  | lower-is-better |
+| flaky_identification_quality | 1 | 1 | ⚠️ below noise floor (5) | higher-is-better |
 | interruption_recovery_rate | 0.5 | 2 | ⚠️ below noise floor (5) | higher-is-better |
 | authorization_compliance | 1 | 1 | ⚠️ below noise floor (5) | higher-is-better |
-| reproducibility | 0.5 | 4 | ⚠️ below noise floor (5) | higher-is-better |
+| reproducibility | 0.75 | 8 |  | higher-is-better |
 
 _A ⚠️ means the denominator is real but thin (n < 5); read that value qualitatively, not as a ratio._
 
-_Not measured this session (zero denominator, honestly excluded rather than shown as 0): decision_accuracy, automation_conversion, flaky_identification_quality._
+_Not measured this session (zero denominator, honestly excluded rather than shown as 0): decision_accuracy, automation_conversion._
 
 ### Integrity self-audit
 
@@ -263,16 +297,17 @@ _Not measured this session (zero denominator, honestly excluded rather than show
 **Violations detected:**
 
 - No evidence-auditor record for this session (kind: evidence-audit). Claims here have only passed the mechanical evidence gate, not independent adversarial review.
+- [process:advisory] 1 decision(s) recorded, none assessed. For each whose outcome is now visible, run `decision assess DEC-... --verdict correct|acceptable|suboptimal|wrong|unknown`; decision_accuracy stays null until you do.
 
 **Checks run:**
 
-- every PASSED/COMPLETED claim checked against attached evidence (1 claim(s))
+- every PASSED/COMPLETED claim checked against attached evidence (4 claim(s))
 - external writes checked for provider confirmation (2 write(s))
 - unfinished executions surfaced as INTERRUPTED (1 found)
 - not-applicable categories listed with reasons (22 categories)
 
 ---
 
-Produced by the Autonomous Software Testing skill system v0.10.0. Every status above is traceable to a record under `state/`.
+Produced by the Autonomous Software Testing skill system v0.11.0. Every status above is traceable to a record under `state/`.
 
-_Rendered from REPORT-2026-00001 · digest `sha256:87fef7a99b08fb632218f5df283e30c548e58622e70bbc26a47746b3c29dcad6` · verify with `ast report verify`. A report with no digest line was not produced by this system._
+_Rendered from REPORT-2026-00001 · digest `sha256:77dd1156b97ed6133a4db9aa321f205006550614f9f5ae32c7e9456030ac4e42` · verify with `ast report verify`. A report with no digest line was not produced by this system._

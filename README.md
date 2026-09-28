@@ -193,7 +193,7 @@ Install directly as a plugin bundle:
 
 ```bash
 # Pin to a specific tagged release
-npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.10.0
+npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.11.0
 
 # Dry-run inspection (see what files change without writing)
 npx --yes github:Purushotham-Prajapati-24/qa-skills --dry-run
