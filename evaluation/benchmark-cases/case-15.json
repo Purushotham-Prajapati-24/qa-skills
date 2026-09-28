@@ -6,7 +6,7 @@
     "risk_profile": "prototype",
     "risk_factors": {
       "coverage_deficit": {
-        "value": 1.0,
+        "value": 1,
         "basis": "no test framework is present in the repository"
       },
       "business_criticality": {
@@ -35,13 +35,14 @@
     "capabilities": {
       "browser.explore": true
     },
+    "environment": "non-production",
     "browser_factors": {
       "ui_known": 0.2,
       "repeatability": 0.6,
       "exploratory_value": 0.8,
       "determinism_required": 0.4,
       "ci_suitability": 0.2,
-      "existing_automation": 0.0
+      "existing_automation": 0
     }
   },
   "expect": {
@@ -52,7 +53,8 @@
   },
   "reasoning_notes": [
     "Regression testing requires the existing-tests signal. With no suite, it is genuinely not applicable -- that is the correct answer, not an oversight.",
-    "The first recommendation should be establishing a runnable harness, not scattering tests into a repository with no way to run them."
+    "The first recommendation should be establishing a runnable harness, not scattering tests into a repository with no way to run them.",
+    "Input made explicit in 0.11.0: this is a pre-release development scenario, so environment is non-production. Before 0.11.0 browser decide silently assumed non-production when nothing was said; it now assumes production (policy.json unknown_is_treated_as), and a case that depends on exploration must say where it runs. The expectation is unchanged."
   ],
   "not_covered": [
     "Whether the agent recommends the right first harness for this stack."

@@ -4,7 +4,7 @@ description: Re-run existing tests intelligently against a change — selecting 
 when_to_use: "run the regression suite", "did this break anything", "smoke test", "is this test flaky", "add a regression test for this bug"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.10.0
+  system_version: 0.11.0
   role: specialist
 ---
 
@@ -80,8 +80,10 @@ it is the test or its environment. If so, it is probably the product.
 Do not retry until green and move on. In order of preference:
 
 1. Fix the root cause — usually a timing assumption, shared state, or unseeded randomness.
-2. If it cannot be fixed now, quarantine it explicitly and raise a
-   `test-quality-issue` finding. A quarantined test is visible; a retried one is not.
+2. If it cannot be fixed now, quarantine it. Once a test has ≥ 3 mixed runs at one commit
+   (per-test results via `exec finish` with `junit`), the CLI files the `test-quality-issue`
+   finding itself and the report stops counting its passes as proof; `flaky quarantine`
+   does the same on demand. A quarantined test is visible; a retried one is not.
 3. Never delete it without saying so.
 
 A flaky gate is worse than no gate: it gives false confidence **and** trains people to
@@ -111,8 +113,14 @@ resolved:
 
 ## Evidence
 
+`exec.json`:
+
+```json
+{"goal":"Regression: suites touching checkout and auth","method":"existing-suite","testCategory":"regression","command":"npm test -- checkout auth","environment":"local"}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --json '{"goal":"Regression: suites touching checkout and auth","method":"existing-suite","testCategory":"regression","command":"npm test -- checkout auth","environment":"local"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --input exec.json
 ```
 
 Attach the run report and per-test results. Recording results over time is what makes

@@ -56,9 +56,27 @@ node bin/ast.mjs caps resolve github.create_issue
 
 ```bash
 # Refused — authorised, but no account named
-node bin/ast.mjs auth check --json '{"action":"github.assign_issue","userAuthorised":true,"assignee":null}'
+```
+
+`auth.json`:
+
+```json
+{"action":"github.assign_issue","userAuthorised":true,"assignee":null}
+```
+
+```bash
+node bin/ast.mjs auth check --input auth.json
 # Allowed — the user named the account
-node bin/ast.mjs auth check --json '{"action":"github.assign_issue","userAuthorised":true,"assignee":"octocat"}'
+```
+
+`auth-2.json`:
+
+```json
+{"action":"github.assign_issue","userAuthorised":true,"assignee":"octocat"}
+```
+
+```bash
+node bin/ast.mjs auth check --input auth-2.json
 ```
 
 Assigning work to a real person on a guess is the kind of mistake that is both wrong and
@@ -99,8 +117,14 @@ adapter.
 Node cannot call an MCP tool — those live in the agent's tool list. So the adapter runs
 gates 1–4, issues a single-use ticket with the rendered content, and the agent finishes it:
 
+`response.json`:
+
+```json
+<the provider response>
+```
+
 ```bash
-node bin/ast.mjs adapter complete --ticket WT-… --json '<the provider response>'
+node bin/ast.mjs adapter complete --ticket WT-… --input response.json
 node bin/ast.mjs adapter pending          # tickets authorised but never completed
 ```
 

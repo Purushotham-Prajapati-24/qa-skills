@@ -42,8 +42,14 @@ executions `INTERRUPTED`; it never infers that they would have passed.
 `PASSED`, `FAILED`, `COMPLETED` and `PARTIAL` all claim something executed, so all four
 require evidence:
 
+`claim.json`:
+
+```json
+{"status":"PASSED","evidenceIds":["EV-2026-00031"]}
+```
+
 ```bash
-node bin/ast.mjs evidence verify --json '{"status":"PASSED","evidenceIds":["EV-2026-00031"]}'
+node bin/ast.mjs evidence verify --input claim.json
 ```
 
 A claim that fails the gate is downgraded to `INCONCLUSIVE` with the reason recorded in

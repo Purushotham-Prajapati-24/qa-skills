@@ -30,7 +30,16 @@ Useful:
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec list
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence list
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence verify --json '{"status":"PASSED","evidenceIds":["EV-…"]}'
+```
+
+`claim.json`:
+
+```json
+{"status":"PASSED","evidenceIds":["EV-…"]}
+```
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence verify --input claim.json
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" validate
 ```
 

@@ -9,15 +9,28 @@ what makes an interrupted session recoverable.
 
 ```bash
 # 1. Open the record first
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --json '{
-  "goal":"Guest checkout with a test card creates an order",
-  "method":"playwright-script",
-  "testCategory":"e2e",
-  "decisionId":"DEC-00007",
-  "command":"npx playwright test checkout --reporter=json",
-  "environment":"local-docker",
-  "git":{"repository":"shop","branch":"feat/checkout","commit":"abc1234"}
-}'
+```
+
+`exec.json`:
+
+```json
+{
+  "goal": "Guest checkout with a test card creates an order",
+  "method": "playwright-script",
+  "testCategory": "e2e",
+  "decisionId": "DEC-00007",
+  "command": "npx playwright test checkout --reporter=json",
+  "environment": "local-docker",
+  "git": {
+    "repository": "shop",
+    "branch": "feat/checkout",
+    "commit": "abc1234"
+  }
+}
+```
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --input exec.json
 
 # 2a. Preferred: let the CLI run the command and record what actually happened --
 #     real exit code, real duration, a hashed artifact on disk. Nothing here can
@@ -34,6 +47,21 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input evidence.json
 # 3. Close the record with the claimed status
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec finish EXEC-2026-00003 --input result.json
 ```
+
+`exec start --example` and `exec finish --example` print valid payloads. Three fields matter
+more than they look:
+
+- **`target`** on `exec start` — when you test a deployed system over the network, give its
+  URL (and `deployed_commit` if the hosting dashboard shows it). The local git commit says
+  nothing about what is deployed, and the report says so instead of pinning live-site results
+  to your working tree.
+- **`junit`** on `exec finish` — a path to the runner's JUnit XML (`node --test
+  --test-reporter=junit`, `playwright test --reporter=junit`, Jest, pytest, Vitest). A suite
+  run is one execution; without per-test results, 9 passing tests next to 3 failing ones read
+  as nothing but FAILED and never reach "What was proven".
+- **Goals** — when a goal or criterion is settled, record it:
+  `session goal G-01 --criterion 1 --status PASSED --evidence EV-…`. It goes through the same
+  evidence gate. Unassessed goals render as "not assessed" in the report.
 
 `exec finish` re-checks your claim against the evidence. Claim `PASSED` without execution
 evidence and it comes back `INCONCLUSIVE` with the reason attached. Do not fight this —
@@ -74,12 +102,21 @@ If a test runner already wrote its own structured report to disk (Playwright's
 `results.json`, a coverage summary) and you did not just invoke it yourself, register that
 file directly instead:
 
+`evidence.json`:
+
+```json
+{
+  "kind": "test-report",
+  "summary": "playwright: 11 passed, 1 failed",
+  "epistemicClass": "observed",
+  "executionId": "EXEC-2026-00003",
+  "artifactPath": "test-results/results.json",
+  "mediaType": "application/json"
+}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --json '{
-  "kind":"test-report","summary":"playwright: 11 passed, 1 failed",
-  "epistemicClass":"observed","executionId":"EXEC-2026-00003",
-  "artifactPath":"test-results/results.json","mediaType":"application/json"
-}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input evidence.json
 ```
 
 Registering an artefact that does not exist on disk is an error, not a warning.
@@ -105,13 +142,31 @@ write, a report version bump.
 
 Stop. Classify before concluding:
 
+`signals.json`:
+
+```json
+{"signals":["assertion-mismatch","stale-test-data"],"evidenceIds":["EV-2026-00007"]}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --json '{"signals":["assertion-mismatch","stale-test-data"],"evidenceIds":["EV-2026-00007"]}'
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" decision next --json '{"status":"FAILED","failureClass":"data-failure","remainingWork":["a11y scan"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --input signals.json
+```
+
+`next.json`:
+
+```json
+{"status":"FAILED","failureClass":"data-failure","remainingWork":["a11y scan"]}
+```
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" decision next --input next.json
 ```
 
 Signal tokens come from real output — `http-500`, `econnrefused`, `timeout`,
-`missing-env-var`, `brittle-selector`, `passed-on-retry`, `stale-test-data`. A static
+`missing-env-var`, `brittle-selector`, `passed-on-retry`, `stale-test-data`; the full list is
+`failure signals`, and an unknown token comes back in `unknown_signals` rather than being
+silently ignored. A runner that died or matched nothing before any test ran (wrong path, bad
+flag, empty filter) is `harness-invocation-error` / `no-tests-executed`. A static
 review or a dependency scan has no runtime output to draw a signal from — use
 `advisory-in-range`, `missing-auth-check`, `hardcoded-secret` or `policy-violation`
 instead of leaving `signals` empty, which routes to `unclassified-no-signals` regardless
@@ -134,17 +189,36 @@ Then act on the classification:
 
 ## When something blocks
 
+`uncertainty.json`:
+
+```json
+{
+  "question": "Should payment tests use real provider credentials?",
+  "status": "user-input-required",
+  "impact": "cannot safely execute a real transaction",
+  "affectedScope": [
+    "payment-e2e"
+  ],
+  "blocksCategories": [
+    "e2e"
+  ],
+  "nextAction": "ask the user which environment and credentials to use",
+  "owner": "user"
+}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" uncertainty raise --json '{
-  "question":"Should payment tests use real provider credentials?",
-  "status":"user-input-required",
-  "impact":"cannot safely execute a real transaction",
-  "affectedScope":["payment-e2e"],
-  "blocksCategories":["e2e"],
-  "nextAction":"ask the user which environment and credentials to use",
-  "owner":"user"
-}'
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec not-run --json '{"goal":"Payment E2E","status":"BLOCKED","reason":"...","testCategory":"e2e"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" uncertainty raise --input uncertainty.json
+```
+
+`not-run.json`:
+
+```json
+{"goal":"Payment E2E","status":"BLOCKED","reason":"...","testCategory":"e2e"}
+```
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec not-run --input not-run.json
 ```
 
 Then **keep going**. Run the unit suite, mock the provider at the API boundary, inspect

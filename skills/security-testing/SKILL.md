@@ -4,7 +4,7 @@ description: Test authentication, authorisation, session management, input valid
 when_to_use: "security testing", "test the auth", "can user A access user B's data", "dependency scan", "check for injection", "session handling test"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.10.0
+  system_version: 0.11.0
   role: specialist
 ---
 
@@ -19,12 +19,18 @@ Security testing without authorisation is an attack, regardless of intent.
 - **Needs explicit authorisation:** any active probing of a deployed host — yours or not.
 - **Never:** testing a target the user does not control, or has not told you to test.
 
-```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" auth check --json '{"action":"security_scan.active","target":"staging.example.com","userAuthorised":true,"authorisationQuote":"yes, scan staging"}'
+`auth.json`:
+
+```json
+{"action":"security_scan.active","target":"staging.example.com","userAuthorised":true,"authorisationQuote":"yes, scan staging"}
 ```
 
-Work against a local or explicitly authorised non-production instance. Unknown environment
-means production, which means stop and ask.
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" auth check --input auth.json
+```
+
+Work against a non-production environment (declared in the profile's `environments`) or a
+local one you started yourself. Unknown environment means production, which means stop and ask.
 
 ## 1. Authorisation — the highest-yield tests
 
@@ -133,3 +139,9 @@ Security findings need the exploitability path, not just the symptom:
 
 Severity `blocker` or `critical` means **surface it immediately**, before continuing other
 testing. Do not batch a data-exposure finding into an end-of-run report.
+
+## Test data
+
+Follow the [test data policy](../testing-orchestrator/policies/test-data-policy.md): synthetic by
+default, seeded, created per run, cleaned up, never real personal data without explicit
+authorisation and verified anonymisation.

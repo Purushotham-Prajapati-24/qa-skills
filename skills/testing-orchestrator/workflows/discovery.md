@@ -50,8 +50,14 @@ Counting test files is not measuring coverage. If you count files, set
 Before claiming a suite is usable, **run it once**. A test command in the README that
 does not execute is not coverage. Set `verified_runnable` accordingly.
 
+`exec.json`:
+
+```json
+{"goal":"Verify the existing suite runs at all","method":"existing-suite","testCategory":"smoke"}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --json '{"goal":"Verify the existing suite runs at all","method":"existing-suite","testCategory":"smoke"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --input exec.json
 ```
 
 ## 4. Record what you could not determine
@@ -71,6 +77,19 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" profile save --input profile.json
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" profile signals          # derives applicability signals from the profile
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session phase profile --note "repository profiled"
 ```
+
+`profile save --example` prints a valid profile. Two fields deserve attention:
+
+- **`environments`** — every environment you will touch, with `class` (`production` or
+  `non-production`) and `evidence` (the user's words, a deploy manifest). This is the only way
+  anything becomes non-production for `auth check` and `browser decide`; a URL that merely
+  looks like staging stays unknown, and unknown is treated as production. A deployed URL the
+  user names is `production` unless they say otherwise.
+- **`declared_signals`** — signals no other field can express (`responsive`, `i18n`,
+  `multi-browser`, `perf-sensitive`, …), each with evidence. Without them `profile signals`
+  cannot know a site is responsive, and applicability marks those categories not applicable.
+  `rag` and `deploy-config` are derived for you (an LLM plus a vector store; a declared
+  environment with a URL).
 
 ## Empty or unfamiliar repositories
 

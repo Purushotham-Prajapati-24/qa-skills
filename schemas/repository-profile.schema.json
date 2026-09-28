@@ -174,6 +174,35 @@
         "additionalProperties": false
       }
     },
+    "environments": {
+      "type": "array",
+      "description": "Environments the repository owner has classified. This is the only way an environment becomes non-production for the authorization gate and `browser decide`: a URL that merely looks like staging stays unknown, and unknown is treated as production.",
+      "items": {
+        "type": "object",
+        "required": ["name", "class", "evidence"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "url": { "type": "string" },
+          "class": { "type": "string", "enum": ["production", "non-production"] },
+          "evidence": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "Where the classification comes from: the user's own words, a deploy manifest, a config file." }
+        },
+        "additionalProperties": false
+      }
+    },
+    "declared_signals": {
+      "type": "array",
+      "description": "Applicability signals the other profile fields cannot express (responsive, i18n, rag, deploy-config, ...). Each must be a signal in the applicability catalog and must cite evidence.",
+      "items": {
+        "type": "object",
+        "required": ["signal", "evidence"],
+        "properties": {
+          "signal": { "type": "string", "minLength": 1 },
+          "evidence": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+          "note": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
     "risks": {
       "type": "array",
       "items": {

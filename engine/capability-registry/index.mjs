@@ -15,6 +15,7 @@
  */
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { readJson, updateJson } from '../core/fsjson.mjs';
 import { PACKAGE_ROOT, p, LAYOUT } from '../core/paths.mjs';
 
@@ -74,6 +75,19 @@ function runProbe(command) {
 }
 
 /**
+ * Whether `moduleName` resolves from `cwd` -- the repository under test, not this package.
+ * A command probe cannot tell a test runner from a library that shares its binary name.
+ */
+function probeNodeModule(moduleName, cwd = process.cwd()) {
+  try {
+    const resolved = createRequire(path.join(cwd, '__ast_probe__.js')).resolve(moduleName);
+    return { available: true, detail: `${moduleName} resolves: ${resolved}` };
+  } catch {
+    return { available: false, detail: `${moduleName} is not resolvable from ${cwd}` };
+  }
+}
+
+/**
  * Probe every provider this module can check. Agent-declared providers keep
  * whatever the agent last declared, or come back as `unknown`.
  *
@@ -95,6 +109,11 @@ export function probe({ now = new Date() } = {}) {
       case 'command': {
         const r = runProbe(def.probe.command);
         probed[name] = { available: r.available, method: `command: ${def.probe.command}`, detail: r.detail };
+        break;
+      }
+      case 'node-module': {
+        const r = probeNodeModule(def.probe.module);
+        probed[name] = { available: r.available, method: `node-module: ${def.probe.module}`, detail: def.notes && !r.available ? `${r.detail}. ${def.notes}` : r.detail };
         break;
       }
       case 'env': {

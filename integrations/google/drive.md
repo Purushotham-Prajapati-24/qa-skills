@@ -57,8 +57,14 @@ Keyed on `evidence_id + sha256`. The same artefact uploaded twice is the same fi
 hash differs, the artefact changed and that is worth noticing rather than silently
 overwriting.
 
+`write.json`:
+
+```json
+{"system":"google-docs","action":"drive.upload_evidence","idempotencyKey":"EV-2026-00021:sha256:…"}
+```
+
 ```bash
-node bin/ast.mjs write check --json '{"system":"google-docs","action":"drive.upload_evidence","idempotencyKey":"EV-2026-00021:sha256:…"}'
+node bin/ast.mjs write check --input write.json
 ```
 
 ## Failure modes

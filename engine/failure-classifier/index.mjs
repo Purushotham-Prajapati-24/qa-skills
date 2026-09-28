@@ -70,7 +70,10 @@ const RULES = [
   },
   {
     class: 'test-defect',
-    any: ['brittle-selector', 'hardcoded-date', 'test-order-dependency', 'assertion-typo', 'obsolete-expectation'],
+    // harness-invocation-error / no-tests-executed: the runner died or matched nothing before
+    // any test ran (a wrong path, a bad flag, a filter that selects zero tests). That run says
+    // nothing about the product, and before these existed there was no token to say so.
+    any: ['brittle-selector', 'hardcoded-date', 'test-order-dependency', 'assertion-typo', 'obsolete-expectation', 'harness-invocation-error', 'no-tests-executed'],
     weight: 0.75,
     note: 'The test is wrong. Fix it and re-run; this is not a product signal.',
   },
@@ -106,6 +109,25 @@ const RULES = [
 ];
 
 export const CLASSES = [...new Set(RULES.map((r) => r.class))].concat(['unclassified-no-signals', 'unclassified']);
+export const KNOWN_SIGNALS = [...new Set(RULES.flatMap((r) => r.any))].sort();
+
+/**
+ * Tokens the vocabulary does not know. They used to be dropped silently, so a typo or an
+ * invented token looked exactly like a real signal that matched nothing.
+ */
+export function unknownSignals(signals = []) {
+  return signals.map((s) => String(s).toLowerCase().trim()).filter((s) => s && !KNOWN_SIGNALS.includes(s));
+}
+
+function unknownCaveat(unknown) {
+  if (!unknown.length) return [];
+  const classNames = unknown.filter((u) => CLASSES.includes(u));
+  return [
+    `caveat: unknown signal token(s) ignored: ${unknown.join(', ')}.`
+      + (classNames.length ? ` ${classNames.join(', ')} is a class, not a signal -- supply the observation that led you to it.` : '')
+      + ' Known tokens: `ast failure signals`.',
+  ];
+}
 
 /**
  * @param {object} input
@@ -141,11 +163,13 @@ export function classify({ signals = [], evidenceIds = [], history = [], status 
     })
     .filter(Boolean);
 
+  const unknown = unknownSignals(normalised);
+
   if (matches.length === 0) {
     return {
       class: 'unclassified',
       confidence: 0.4,
-      signals: normalised,
+      signals: [...normalised.filter((s) => !unknown.includes(s)), ...unknownCaveat(unknown)],
       evidence_refs: evidenceIds,
     };
   }
@@ -194,11 +218,18 @@ export function classify({ signals = [], evidenceIds = [], history = [], status 
   return {
     class: top.rule.class,
     confidence: Number(confidence.toFixed(2)),
-    signals: [...top.hits, ...caveats.map((c) => `caveat: ${c}`)],
+    signals: [...top.hits, ...caveats.map((c) => `caveat: ${c}`), ...unknownCaveat(unknown)],
     evidence_refs: evidenceIds,
   };
 }
 
 export function rules() {
   return RULES;
+}
+
+/** Signal vocabulary grouped by the class each token points to, for `ast failure signals`. */
+export function signalsByClass() {
+  const out = {};
+  for (const r of RULES) out[r.class] = [...(out[r.class] ?? []), ...r.any];
+  return out;
 }

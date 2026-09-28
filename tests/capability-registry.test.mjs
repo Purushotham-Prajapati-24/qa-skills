@@ -41,16 +41,26 @@ test('declaring a provider false makes the dependent capability resolve as unava
  * every time, not just in a table this specific call site might not read.
  */
 test('a capability resolving true for a system with no executable adapter still says so', () => {
+  // Google Docs is still manual-only (Jira gained an adapter in 0.11.0). local-doc-mirror
+  // always probes available, which is exactly the "available but not executable" case.
+  probe();
+  const r = resolve('docs.read');
+  assert.equal(r.available, true, 'the always-available fallback genuinely resolves');
+  assert.equal(r.executable, false, 'available and executable are different claims');
+  assert.match(r.reason, /No executable adapter exists for "docs"/);
+  assert.match(r.reason, /Perform this call by hand/);
+});
+
+test('jira verbs no longer carry the manual-only warning once the adapter exists', () => {
   process.env.JIRA_BASE_URL = 'https://example.atlassian.net';
   process.env.JIRA_EMAIL = 'agent@example.com';
   process.env.JIRA_API_TOKEN = 'not-a-real-token';
   try {
     probe();
     const r = resolve('jira.read_ticket');
-    assert.equal(r.available, true, 'the env-var fallback probe genuinely resolves');
-    assert.equal(r.executable, false, 'available and executable are different claims');
-    assert.match(r.reason, /No executable adapter exists for "jira"/);
-    assert.match(r.reason, /Perform this call by hand/);
+    assert.equal(r.available, true);
+    assert.equal(r.executable, null);
+    assert.doesNotMatch(r.reason, /No executable adapter/);
   } finally {
     delete process.env.JIRA_BASE_URL;
     delete process.env.JIRA_EMAIL;

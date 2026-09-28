@@ -109,6 +109,7 @@
     "repository_context": {
       "type": "object"
     },
+    "quarantined_tests": { "type": "array", "items": { "type": "string" }, "description": "Tests the flakiness engine proved flaky; their passes are excluded from what was proven." },
     "goals": {
       "type": "array",
       "items": {

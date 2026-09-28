@@ -115,6 +115,15 @@ export function create({
       state.put('executions', executionId, exec, 'execution');
     }
   }
+  // The same back-link for evidence: each cited item records what it now supports, so
+  // "what does EV-x back?" is answerable from the evidence record itself.
+  for (const evId of evidence) {
+    const ev = state.get('evidence', evId);
+    if (ev && !(ev.supports ?? []).includes(id)) {
+      ev.supports = [...(ev.supports ?? []), id];
+      state.put('evidence', evId, ev, 'evidence');
+    }
+  }
   state.telemetry({ event: 'finding', finding_id: id, kind, severity, confidence, duplicate_of: rec.duplicate_of ?? null });
   return rec;
 }

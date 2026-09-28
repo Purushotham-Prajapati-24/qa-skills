@@ -74,8 +74,14 @@ node bin/ast.mjs trace query why-this-method EXEC-2026-00003
 
 This is the failure the system exists to prevent, so it leaves a trail:
 
+`claim.json`:
+
+```json
+{"status":"PASSED","evidenceIds":["EV-2026-00031"]}
+```
+
 ```bash
-node bin/ast.mjs evidence verify --json '{"status":"PASSED","evidenceIds":["EV-2026-00031"]}'
+node bin/ast.mjs evidence verify --input claim.json
 node bin/ast.mjs metrics | grep false_confidence
 ```
 
@@ -145,7 +151,16 @@ It should print a `deny` decision.
 
 ```bash
 node bin/ast.mjs finding list | grep fingerprint
-node bin/ast.mjs write check --json '{"system":"github","action":"github.create_issue","idempotencyKey":"<fingerprint>"}'
+```
+
+`write.json`:
+
+```json
+{"system":"github","action":"github.create_issue","idempotencyKey":"<fingerprint>"}
+```
+
+```bash
+node bin/ast.mjs write check --input write.json
 ```
 
 Duplicates mean the fingerprint differed. It hashes `(component, normalised title, expected,

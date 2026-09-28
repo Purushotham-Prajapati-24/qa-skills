@@ -43,7 +43,7 @@ export function readJson(file, fallback = undefined) {
  * the UTF-8 BOM below: this file did not lie about its encoding, it is not this tool's job
  * to reject a file merely for spelling text a different, equally standard way.
  */
-function decodeText(buf) {
+export function decodeText(buf) {
   if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xfe) {
     return buf.toString('utf16le').replace(/^﻿/, '');
   }

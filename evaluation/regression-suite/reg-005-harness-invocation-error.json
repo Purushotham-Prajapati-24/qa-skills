@@ -1,0 +1,17 @@
+{
+  "id": "reg-005",
+  "title": "Test runner invoked wrongly (MODULE_NOT_FOUND before any test ran) is a test-defect",
+  "context": "Field trial 3, AgentDesk. EXEC-2026-00001: node --test was given a directory and died with MODULE_NOT_FOUND before running any test.",
+  "observed_failure": "No signal token described a harness-invocation error. The agent tried module-not-found and test-defect; both silently returned unclassified, with no warning that the tokens were unknown.",
+  "source_session": "SESSION-0001 (AgentDesk)",
+  "source_decision": "EXEC-2026-00001",
+  "given": {
+    "failure_signals": ["harness-invocation-error"]
+  },
+  "expect": {
+    "failure_class": "test-defect"
+  },
+  "reasoning_notes": [
+    "A harness that never reached a test says nothing about the product. Unknown signal tokens now come back as unknown_signals with a hint instead of being dropped silently."
+  ]
+}

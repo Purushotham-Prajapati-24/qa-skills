@@ -4,7 +4,7 @@ description: Choose and run the right browser testing method — agent-driven ex
 when_to_use: "explore the app for UI bugs", "test this page", "should I use Playwright MCP or a script", "create regression tests for this flow", "capture a trace", "the UI is broken"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.10.0
+  system_version: 0.11.0
   role: specialist
 ---
 
@@ -60,8 +60,14 @@ Full matrix and rationale: [browser-decision.md](browser-decision.md).
   exit code. An agent session is neither.
 - **`ui_known <= 0.25` forbids method B.** Explore before you write selectors.
 - **`existing_automation <= 0.15` forbids C and E.** There is nothing to run.
-- **Production forbids A and D.** Open-ended agent interaction with production can trigger
-  real side effects. Overriding this needs explicit user authorisation.
+- **Production forbids A and D, and an undeclared environment counts as production.** Open-ended
+  agent interaction with production can trigger real side effects; overriding this needs explicit
+  user authorisation. Say where the UI runs — `"environment": "non-production"` for localhost or
+  a disposable preview, `"production"` for a live site — or pass `"target": "<url>"` and let the
+  CLI look it up in the profile's `environments`. Leaving it out is treated as production.
+- **Production + an unseen UI escalates.** With `ui_known <= 0.25` on production every method is
+  forbidden. Read the source to learn the UI (raising `ui_known` honestly), or ask the user to
+  authorise exploration. Do not pick a forbidden method.
 - **A missing capability removes its method.** Never simulate a browser you do not have.
 
 ## Capabilities, not tool names
@@ -88,8 +94,14 @@ DISCOVER  →  VALIDATE  →  STABILIZE  →  AUTOMATE  →  REGRESS  →  EVOLV
 
 Exploration that leaves nothing behind was half a job. After exploring, ask:
 
+`automate.json`:
+
+```json
+{"factors":{"repeatability":0.8,"business_criticality":0.9,"environment_stability":0.8,"expected_runtime_minutes":3}}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" browser should-automate --json '{"factors":{"repeatability":0.8,"business_criticality":0.9,"environment_stability":0.8,"expected_runtime_minutes":3}}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" browser should-automate --input automate.json
 ```
 
 Converts only when the scenario is repeatable, valuable, stable **and** fast. Thresholds

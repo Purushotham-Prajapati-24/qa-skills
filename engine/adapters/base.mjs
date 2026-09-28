@@ -345,7 +345,7 @@ export async function performWrite({
       gates_passed: ['capability', 'authorization', 'ledger'],
       caller_should:
         `The gates have passed. Perform this with your ${resolved.provider} tools using the content above, then run ` +
-        `\`ast adapter complete --ticket ${ticket.ticket} --json '<the provider response>'\`. ` +
+        `\`ast adapter complete --ticket ${ticket.ticket} --input response.json\` (the provider's response, saved to a file). ` +
         'Until you do, nothing is recorded and the write counts as unconfirmed.',
     });
   }

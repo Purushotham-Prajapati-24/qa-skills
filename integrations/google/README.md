@@ -86,8 +86,14 @@ you had.
 Keyed on execution ID. If `EXEC-2026-00142` is already in the log, do not append it again.
 Re-running the reporting step must be safe — otherwise a retried report doubles the record.
 
+`write.json`:
+
+```json
+{"system":"google-docs","action":"docs.update_testing_log","idempotencyKey":"EXEC-2026-00142"}
+```
+
 ```bash
-node bin/ast.mjs write check --json '{"system":"google-docs","action":"docs.update_testing_log","idempotencyKey":"EXEC-2026-00142"}'
+node bin/ast.mjs write check --input write.json
 ```
 
 ## Versioning

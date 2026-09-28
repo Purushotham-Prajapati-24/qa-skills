@@ -4,7 +4,7 @@ description: Find and read the requirements that testing should validate — Jir
 when_to_use: "read Jira ticket XYZ and plan testing", "what are the acceptance criteria", "derive test cases from this ticket", "what is this supposed to do"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell
 metadata:
-  system_version: 0.10.0
+  system_version: 0.11.0
   role: specialist
 ---
 
@@ -80,15 +80,24 @@ gracefully". Either get a number and a condition, or record an ambiguity.
 
 When a requirement admits two readings and they imply different tests:
 
+`uncertainty.json`:
+
+```json
+{
+  "question": "Does \"saved card\" include a card saved during a previous guest checkout, or only a logged-in user's card?",
+  "status": "ambiguous-requirement",
+  "impact": "the two readings need different test data and different expected outcomes",
+  "affectedScope": [
+    "REQ-3",
+    "checkout-saved-card"
+  ],
+  "nextAction": "ask the ticket author, or test the narrower reading and state the assumption",
+  "owner": "user"
+}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" uncertainty raise --json '{
-  "question":"Does \"saved card\" include a card saved during a previous guest checkout, or only a logged-in user'"'"'s card?",
-  "status":"ambiguous-requirement",
-  "impact":"the two readings need different test data and different expected outcomes",
-  "affectedScope":["REQ-3","checkout-saved-card"],
-  "nextAction":"ask the ticket author, or test the narrower reading and state the assumption",
-  "owner":"user"
-}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" uncertainty raise --input uncertainty.json
 ```
 
 Then **do not stop**. Test the narrower reading, state the assumption explicitly, and flag

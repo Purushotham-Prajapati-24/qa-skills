@@ -1,0 +1,34 @@
+{
+  "id": "reg-001",
+  "title": "Deployed production URL, environment omitted (as in the --example) -> no exploration of production",
+  "context": "Field trial 3, AgentDesk, 2026-09-28. Target https://agentdeskbot.vercel.app, the live production deployment. The agent copied the shape from `browser decide --example`, which had no environment field.",
+  "observed_failure": "browser decide returned hybrid (explore production with the Playwright MCP, then script). environmentIsProduction defaulted to false, so hard rule no-exploration-on-production never fired. The same factors with the flag set returned playwright-script.",
+  "source_session": "SESSION-0001 (D:/Hackathon/AI_Support_Agent/.claude/ast/state)",
+  "source_decision": "DEC-00002",
+  "given": {
+    "browser_factors": {
+      "ui_known": 0.3,
+      "exploratory_value": 0.6,
+      "repeatability": 0.9,
+      "business_criticality": 0.8,
+      "existing_automation": 0.0,
+      "ci_suitability": 0.7,
+      "determinism_required": 0.8,
+      "environment_stability": 0.8,
+      "evidence_requirements": 0.8,
+      "assertion_complexity": 0.5,
+      "tool_reliability": 0.8
+    },
+    "capabilities": {
+      "browser.explore": true,
+      "browser.run_deterministic_test": true
+    }
+  },
+  "expect": {
+    "browser_method": "playwright-script"
+  },
+  "reasoning_notes": [
+    "An undeclared environment must be treated as production, matching authorization/policy.json (unknown_is_treated_as: production).",
+    "Fix: browser-decision/index.mjs takes environment (default unknown, treated as production); --example now shows the field."
+  ]
+}

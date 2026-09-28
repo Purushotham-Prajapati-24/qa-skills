@@ -67,8 +67,14 @@ command you could have run yourself.
 
 `exec finish` runs this automatically; you can run it directly:
 
+`claim.json`:
+
+```json
+{"status":"PASSED","evidenceIds":["EV-2026-00031"]}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence verify --json '{"status":"PASSED","evidenceIds":["EV-2026-00031"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence verify --input claim.json
 ```
 
 `PASSED`, `FAILED`, `COMPLETED` and `PARTIAL` all claim something was executed, so all

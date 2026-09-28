@@ -39,7 +39,7 @@ import * as processCompleteness from '../engine/evaluation-engine/process-comple
 import * as adapters from '../engine/adapters/index.mjs';
 import { compute as computeMetrics } from '../engine/evaluation-engine/metrics.mjs';
 import { validate as validateSchema } from '../engine/schema/validate.mjs';
-import { classify } from '../engine/failure-classifier/index.mjs';
+import { classify, unknownSignals, signalsByClass as failureSignalsByClass } from '../engine/failure-classifier/index.mjs';
 
 /* ---------------------------------------------------------------- arg parse */
 
@@ -102,6 +102,17 @@ function payload(flags, shouldAlias = true) {
  * explicit value in the input still wins, since that's how a skill overrides
  * a specific verb (e.g. to test a blocked path) without re-probing everything.
  */
+/**
+ * The environment `browser decide` should assume: an explicit `environment` or
+ * `environmentIsProduction` wins; else a `target` is looked up in the profile's
+ * `environments`; else it stays unknown, which the engine treats as production.
+ */
+function environmentFor(body) {
+  if (body.environment !== undefined || body.environmentIsProduction !== undefined || !body.target) return {};
+  const declared = auth.declaredClassFromProfile(body.target, state.loadProfile());
+  return declared ? { environment: declared.class } : {};
+}
+
 function withResolvedCapabilities(explicit = {}) {
   const resolved = caps.resolveAll().available;
   return { ...resolved, ...explicit };
@@ -130,8 +141,20 @@ const COMMANDS = {
 
   /* ---- capabilities ---- */
   'caps probe': {
-    help: 'Detect which capability providers are actually available.',
-    run: () => caps.probe(),
+    help: 'Detect which capability providers are actually available. Prints a summary; --verbose prints every capability with its candidates.',
+    // The full resolution was ~30 KB of JSON, most of it candidate lists an agent never
+    // reads at this step. `caps resolve <verb>` gives the detail for one verb on demand.
+    run: ({ flags }) => {
+      const full = caps.probe();
+      if (flags.verbose) return full;
+      return {
+        checked_at: full.checked_at,
+        providers: Object.fromEntries(Object.entries(full.providers).map(([k, v]) => [k, v.available === null ? 'NOT DECLARED' : v.available])),
+        available_capabilities: Object.entries(full.available).filter(([, v]) => v).map(([k]) => k),
+        unavailable_capabilities: full.unavailable,
+        next: 'Declare MCP/in-app providers you can see with `caps declare <provider> true|false`; `caps resolve <verb>` shows why a verb resolved as it did.',
+      };
+    },
   },
   'caps declare': {
     help: 'Declare an MCP/builtin provider availability: caps declare <provider> <true|false> [--note "..."]',
@@ -177,7 +200,13 @@ const COMMANDS = {
   'session show': { help: 'Print the current session state.', run: () => state.requireSession() },
   'session phase': {
     help: 'Move to a phase: session phase execute --note "..."',
-    run: ({ positional, flags }) => state.setPhase(positional[2], flags.note),
+    run: ({ positional, flags }) => {
+      const out = state.setPhase(positional[2], flags.note);
+      if (positional[2] !== 'discover' && !state.loadProfile()) {
+        return { ...out, warning: 'No repository profile is stored. Every later decision (signals, applicability, environment classification) reads it; run `profile save` before relying on them.' };
+      }
+      return out;
+    },
   },
   'session next': {
     help: 'Set the next action: session next "Run the API suite"',
@@ -191,9 +220,59 @@ const COMMANDS = {
     help: 'Run the recovery protocol and print what to do next.',
     run: () => state.recover(),
   },
+  'session goal': {
+    help: 'Record a goal outcome: session goal G-01 [--criterion 2] --status PASSED --evidence EV-2026-00004[,EV-...] [--exec EXEC-...] [--note "..."]. '
+      + 'Goals start with placeholder statuses; the report shows unassessed ones as "not assessed". PASSED/FAILED/COMPLETED/PARTIAL go through the evidence gate like exec finish.',
+    run: ({ positional, flags }) => {
+      const goalId = positional[2];
+      if (!goalId || !flags.status) throw new Error('Usage: session goal G-01 [--criterion N] --status <STATUS> [--evidence EV-...,EV-...]');
+      const evidenceIds = flags.evidence ? String(flags.evidence).split(',').map((x) => x.trim()).filter(Boolean) : [];
+      const gate = evidence.verifyClaim({ status: flags.status, evidenceIds, statement: flags.note ?? '' });
+      const status = gate.permitted ? flags.status : gate.downgrade_to;
+      const goal = state.assessGoal({
+        goalId,
+        criterion: flags.criterion ? Number(flags.criterion) : null,
+        status,
+        evidence: evidenceIds,
+        executionId: flags.exec ?? null,
+        note: flags.note ?? '',
+      });
+      return { goal, claimed: flags.status, recorded: status, downgraded: !gate.permitted, gate_reasons: gate.reasons };
+    },
+  },
 
   /* ---- repository profile ---- */
-  'profile save': { help: 'Persist a repository profile: profile save --input profile.json', run: ({ flags }) => state.saveProfile(payload(flags, false)) },
+  'profile save': {
+    help: 'Persist a repository profile: profile save --input profile.json. See "profile save --example" for a valid shape.',
+    example: {
+      profile_version: '1.1.0',
+      generated_at: '2026-09-28T10:00:00.000Z',
+      repository: { root: '.', name: 'shop', default_branch: 'main' },
+      architecture: {
+        frontend: { present: true, stack: ['React', 'Next.js'], paths: ['src/app'] },
+        backend: { present: true, stack: ['Next.js route handlers'], paths: ['src/app/api'] },
+      },
+      technologies: [
+        { name: 'Next.js', kind: 'framework', version: '16.2.6', evidence: ['package.json#dependencies.next'] },
+        { name: 'node:test', kind: 'test-framework', evidence: ['package.json#scripts.test'] },
+      ],
+      apis: [{ kind: 'rest', route_count: 12, auth_required: true }],
+      testing_frameworks: [{ name: 'node:test', levels: ['unit'], run_command: 'npm test', verified_runnable: false }],
+      existing_coverage: { test_file_count: 16, measured: false },
+      environments: [
+        { name: 'production', url: 'https://shop.example.com', class: 'production', evidence: ['user: "shop.example.com is the live site"'] },
+        { name: 'local', url: 'http://localhost:3000', class: 'non-production', evidence: ['package.json#scripts.dev'] },
+      ],
+      declared_signals: [{ signal: 'responsive', evidence: ['src/app/page.tsx uses md:/lg: breakpoint classes'] }],
+      gaps: ['No coverage report; coverage is unmeasured'],
+      provenance: { skill_version: '0.11.0', created_at: '2026-09-28T10:00:00.000Z', created_by: 'agent' },
+    },
+    run: ({ flags }) => {
+      const profile = payload(flags, false);
+      applicability.signalsFromProfile(profile);
+      return state.saveProfile(profile);
+    },
+  },
   'profile show': { help: 'Print the stored repository profile.', run: () => state.loadProfile() ?? { error: 'No profile stored. Run repository-intelligence first.' } },
   'profile signals': {
     help: 'Derive applicability signals from the stored profile.',
@@ -245,7 +324,13 @@ const COMMANDS = {
 
   /* ---- applicability ---- */
   'applicability eval': {
-    help: 'Compute the test applicability matrix: applicability eval --input input.json',
+    help: 'Compute the test applicability matrix: applicability eval --input input.json. See "applicability eval --example"; signals come from `profile signals`.',
+    example: {
+      signals: ['ui', 'web-ui', 'http-api', 'auth', 'sessions', 'responsive'],
+      coverage: { unit: 'partial', e2e: 'none' },
+      unmetPrerequisites: ['no test credentials for the staging tenant'],
+      budgetMinutes: 60,
+    },
     run: ({ flags }) => {
       const body = payload(flags);
       return applicability.evaluate({ ...body, capabilities: withResolvedCapabilities(body.capabilities) });
@@ -261,6 +346,9 @@ const COMMANDS = {
     // adjacent commands with opposite payload shapes and opposite failure modes): this
     // command discards anything outside a top-level "factors" key silently rather than
     // erroring, so this example exists precisely to show the shape it actually needs.
+    // `environment` is in the example on purpose: when it was absent, an agent copying the
+    // example against a production URL got exploration methods the production rule forbids.
+    // "unknown" is what the engine assumes anyway (and treats as production).
     example: {
       factors: {
         ui_known: 0.2,
@@ -269,10 +357,11 @@ const COMMANDS = {
         business_criticality: 0.9,
         existing_automation: 0.3,
       },
+      environment: 'unknown',
     },
     run: ({ flags }) => {
       const body = payload(flags);
-      return browser.decide({ ...body, capabilities: withResolvedCapabilities(body.capabilities) });
+      return browser.decide({ ...body, ...environmentFor(body), capabilities: withResolvedCapabilities(body.capabilities) });
     },
   },
   'browser should-automate': {
@@ -283,7 +372,19 @@ const COMMANDS = {
 
   /* ---- decisions ---- */
   'decide': {
-    help: 'Record a decision: decide --input decision.json',
+    help: 'Record a decision: decide --input decision.json. See "decide --example". Input names differ from the stored record (options -> candidate_options, selected -> selected_option).',
+    example: {
+      question: 'Which browser method for the checkout flow?',
+      category: 'tool-selection',
+      options: [
+        { id: 'playwright-script', label: 'B: deterministic Playwright spec' },
+        { id: 'hybrid', label: 'D: explore with the browser MCP, then script' },
+      ],
+      selected: 'hybrid',
+      reason: ['browser decide selected hybrid: ui_known 0.2, repeatability 0.85', 'target is localhost, declared non-production in the profile'],
+      confidence: 0.7,
+      reversible: true,
+    },
     run: ({ flags }) => decisions.record(payload(flags)),
   },
   'decision assess': {
@@ -291,7 +392,7 @@ const COMMANDS = {
     run: ({ positional, flags }) => decisions.assess(positional[2], { verdict: flags.verdict, note: flags.note ?? '' }),
   },
   'decision next': {
-    help: 'Ask what to do after a result: decision next --input {"status":"FAILED","failureClass":"..."}',
+    help: 'Ask what to do after a result: decision next --input next.json, where next.json is {"status":"FAILED","failureClass":"...","remainingWork":["..."]}',
     run: ({ flags }) => decisions.nextAction(payload(flags)),
   },
   'decision list': { help: 'List decision records.', run: () => state.list('decisions') },
@@ -379,7 +480,7 @@ const COMMANDS = {
     },
   },
   'evidence verify': {
-    help: 'Check whether a status claim is supported: evidence verify --input {"status":"PASSED","evidenceIds":[...]}',
+    help: 'Check whether a status claim is supported: evidence verify --input claim.json, where claim.json is {"status":"PASSED","evidenceIds":["EV-..."]}',
     run: ({ flags }) => evidence.verifyClaim(payload(flags)),
   },
   'evidence amend': {
@@ -393,13 +494,32 @@ const COMMANDS = {
   'evidence list': { help: 'List evidence items.', run: () => state.list('evidence') },
 
   /* ---- execution ---- */
-  'exec start': { help: 'Open an execution record: exec start --input exec.json', run: ({ flags }) => execution.start(payload(flags)) },
+  'exec start': {
+    help: 'Open an execution record: exec start --input exec.json. See "exec start --example". Add "target": {"url": "...", "deployed_commit": "..."} when testing a deployed system.',
+    example: {
+      goal: 'Read-only smoke of the staging deployment',
+      method: 'playwright-script',
+      testCategory: 'smoke',
+      command: 'npx playwright test smoke --reporter=junit',
+      environment: 'staging',
+      target: { url: 'https://staging.example.com' },
+    },
+    run: ({ flags }) => execution.start(payload(flags)),
+  },
   'exec finish': {
-    help: 'Finalise an execution: exec finish EXEC-2026-00001 --input result.json',
+    help: 'Finalise an execution: exec finish EXEC-2026-00001 --input result.json. See "exec finish --example". '
+      + '"junit": "<path>" turns a JUnit XML report into per-test results, so passing tests in a failed run still count as proven.',
+    example: {
+      status: 'FAILED',
+      statusReason: '9 of 12 smoke checks passed; robots.txt and sitemap point at the wrong origin (2 tests), one unsettled.',
+      evidence: ['EV-2026-00002', 'EV-2026-00004'],
+      junit: 'test-results/junit.xml',
+      signals: ['wrong-value-rendered'],
+    },
     run: ({ positional, flags }) => execution.finish(positional[2], payload(flags)),
   },
   'exec not-run': {
-    help: 'Document work that was NOT executed: exec not-run --input {"goal":"...","status":"BLOCKED","reason":"..."}',
+    help: 'Document work that was NOT executed: exec not-run --input not-run.json, where not-run.json is {"goal":"...","status":"BLOCKED","reason":"..."}',
     run: ({ flags }) => execution.recordNonExecution(payload(flags)),
   },
   'exec list': { help: 'List executions.', run: () => state.list('executions') },
@@ -407,12 +527,43 @@ const COMMANDS = {
 
   /* ---- failure ---- */
   'failure classify': {
-    help: 'Classify a failure: failure classify --input {"signals":["http-500"]}',
-    run: ({ flags }) => classify(payload(flags)),
+    help: 'Classify a failure: failure classify --input signals.json, where signals.json is {"signals":["http-500"],"evidenceIds":["EV-..."]}. Known signal tokens: `failure signals`.',
+    run: ({ flags }) => {
+      const body = payload(flags);
+      const result = classify(body);
+      const unknown = unknownSignals(body.signals ?? []);
+      return unknown.length ? { ...result, unknown_signals: unknown } : result;
+    },
+  },
+  'failure signals': {
+    help: 'List the signal tokens the failure classifier understands, grouped by the class they point to.',
+    run: () => failureSignalsByClass(),
   },
 
   /* ---- findings ---- */
-  'finding add': { help: 'Record a finding: finding add --input finding.json', run: ({ flags }) => defects.create(payload(flags)) },
+  'finding add': {
+    help: 'Record a finding: finding add --input finding.json. See "finding add --example".',
+    example: {
+      title: 'Sitemap URLs point at a login-protected preview deployment',
+      kind: 'defect',
+      severity: 'major',
+      confidence: 0.9,
+      component: 'src/lib/site.ts',
+      summary: 'Every sitemap <loc> uses the per-deployment host instead of the production domain.',
+      reproduction: {
+        preconditions: ['anonymous visitor'],
+        steps: ['GET /sitemap.xml', 'read the <loc> values'],
+        expected: 'URLs on the production origin',
+        actual: 'URLs on the per-deployment origin, which answers 302 to SSO',
+        reproducible: 'always',
+        attempts: 2,
+      },
+      impact: 'Search engines are sent to pages they cannot index.',
+      evidence: [],
+      recommendedAction: 'Set NEXT_PUBLIC_SITE_URL for the production environment and redeploy.',
+    },
+    run: ({ flags }) => defects.create(payload(flags)),
+  },
   'finding promote': {
     help: 'Check whether a finding may be filed: finding promote FIND-00001 [--authorised] [--quote "..."] [--assignee name]',
     run: ({ positional, flags }) => defects.assessPromotion(positional[2], {
@@ -426,7 +577,19 @@ const COMMANDS = {
   'finding list': { help: 'List findings, most severe first.', run: () => defects.bySeverity() },
 
   /* ---- uncertainty ---- */
-  'uncertainty raise': { help: 'Raise an uncertainty: uncertainty raise --input u.json', run: ({ flags }) => uncertainty.raise(payload(flags)) },
+  'uncertainty raise': {
+    help: 'Raise an uncertainty: uncertainty raise --input u.json. See "uncertainty raise --example".',
+    example: {
+      question: 'May authenticated flows be tested, and with which test account?',
+      status: 'user-input-required',
+      impact: 'No coverage of any signed-in feature',
+      affectedScope: ['dashboard'],
+      blocksCategories: ['authn-authz', 'e2e'],
+      nextAction: 'Provide a throwaway test account or a staging URL',
+      owner: 'user',
+    },
+    run: ({ flags }) => uncertainty.raise(payload(flags)),
+  },
   'uncertainty resolve': {
     help: 'Resolve one: uncertainty resolve U-00001 --answer "..."',
     run: ({ positional, flags }) => uncertainty.resolve(positional[2], { answer: flags.answer, resolvedBy: flags.by ?? 'user' }),
@@ -439,13 +602,22 @@ const COMMANDS = {
 
   /* ---- authorization + external writes ---- */
   'auth check': {
-    help: 'Authorization gate: auth check --input {"action":"github.create_issue","userAuthorised":true}',
-    run: ({ flags }) => auth.check(payload(flags)),
+    help: 'Authorization gate: auth check --input auth.json, where auth.json is {"action":"github.create_issue","target":"owner/repo","userAuthorised":true,"authorisationQuote":"..."}',
+    run: ({ flags }) => {
+      const body = payload(flags);
+      if (!body.environmentClass && body.target) {
+        const declared = auth.declaredClassFromProfile(body.target, state.loadProfile());
+        if (declared) body.environmentClass = declared.class;
+      }
+      return auth.check(body);
+    },
   },
   'auth policy': { help: 'Print the authorization policy.', run: () => auth.policy() },
   'auth classify-env': {
     help: 'Classify a host for the non-production-only gate: auth classify-env https://staging.example.com [--declared non-production]',
-    run: ({ positional, flags }) => auth.classifyEnvironment(positional[2] ?? '', flags.declared ?? null),
+    run: ({ positional, flags }) => (flags.declared
+      ? auth.classifyEnvironment(positional[2] ?? '', flags.declared)
+      : auth.resolveEnvironment(positional[2] ?? '', state.loadProfile())),
   },
   'write check': {
     help: 'Duplicate-suppression check before an external write.',
@@ -459,6 +631,10 @@ const COMMANDS = {
 
   /* ---- analysis ---- */
   'flaky analyse': { help: 'Analyse per-test pass/fail history.', run: () => flakiness.analyse() },
+  'flaky quarantine': {
+    help: 'File a test-quality-issue finding for every test proven flaky (>= 3 mixed runs at one commit). exec finish runs this automatically when it receives per-test results.',
+    run: () => flakiness.quarantine(),
+  },
   'trace query': {
     help: 'Traceability query: trace query what-remains-untested | what-validates REQ-1 | why-this-method EXEC-...',
     run: ({ positional }) => trace.query(positional[2], positional[3] ?? null),
@@ -559,6 +735,39 @@ const COMMANDS = {
       authorisation: { userAuthorised: Boolean(flags.authorised), authorisationQuote: flags.quote ?? '' },
     }),
   },
+  'jira preflight': {
+    help: 'Check the Jira REST credentials (JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN) before any write.',
+    run: () => adapters.preflight('jira'),
+  },
+  'jira read': {
+    help: 'Read from Jira: jira read ticket --key SHOP-412 | jira read search --jql "project = SHOP AND updated >= -7d" [--limit 20]. Descriptions come back as text, with acceptance criteria extracted when they are a heading.',
+    run: ({ positional, flags }) => {
+      const jira = adapters.getAdapter('jira');
+      if (positional[2] === 'ticket') return jira.readTicket({ key: flags.key });
+      if (positional[2] === 'search') return jira.search({ jql: flags.jql, limit: flags.limit ? Number(flags.limit) : 20 });
+      throw new Error(`Unknown read "${positional[2]}". One of: ticket, search`);
+    },
+  },
+  'jira file-issue': {
+    help: 'File a finding as a Jira issue, through every gate: jira file-issue FIND-00001 --project SHOP [--type Bug] [--authorised --quote "..."] [--dry-run]',
+    run: ({ positional, flags }) => adapters.getAdapter('jira').createIssueFromFinding({
+      findingId: positional[2],
+      project: flags.project,
+      issueType: flags.type ?? 'Bug',
+      decisionId: flags.decision ?? null,
+      dryRun: Boolean(flags['dry-run']),
+      authorisation: { userAuthorised: Boolean(flags.authorised), authorisationQuote: flags.quote ?? '' },
+    }),
+  },
+  'jira comment': {
+    help: 'Comment on a Jira issue: jira comment --key SHOP-412 --input body.json [--authorised --quote "..."] [--dry-run]. body.json is {"body":"plain text"}; it is converted to ADF.',
+    run: ({ flags }) => adapters.getAdapter('jira').comment({
+      key: flags.key, body: payload(flags).body,
+      idempotencyKey: flags.idempotency, decisionId: flags.decision ?? null,
+      dryRun: Boolean(flags['dry-run']),
+      authorisation: { userAuthorised: Boolean(flags.authorised), authorisationQuote: flags.quote ?? '' },
+    }),
+  },
   'adapter complete': {
     help: 'Finish a delegated (MCP) write: adapter complete --ticket WT-... --input response.json',
     run: ({ flags }) => {
@@ -576,7 +785,7 @@ const COMMANDS = {
   },
   'adapter systems': {
     help: 'List systems with an executable adapter.',
-    run: () => ({ implemented: adapters.SYSTEMS, contracts_only: ['jira', 'google-docs', 'google-drive'] }),
+    run: () => ({ implemented: adapters.SYSTEMS, contracts_only: ['google-docs', 'google-drive'] }),
   },
 
   /* ---- integrity ---- */

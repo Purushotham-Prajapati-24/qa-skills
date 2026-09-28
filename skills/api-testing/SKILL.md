@@ -4,7 +4,7 @@ description: Test HTTP, GraphQL and gRPC APIs — status codes, response shapes,
 when_to_use: "test the API", "test these endpoints", "did the schema change break anything", "test the GraphQL API", "validate the OpenAPI contract"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.10.0
+  system_version: 0.11.0
   role: specialist
 ---
 
@@ -82,8 +82,14 @@ Use the repository's existing API test setup if one exists — supertest, pytest
 RestAssured, `.http` files. Only reach for raw `curl` when nothing exists, and then say
 that the checks were ad hoc rather than committed.
 
+`exec.json`:
+
+```json
+{"goal":"Checkout API contract and authz","method":"api-client","testCategory":"api","command":"npm run test:api","environment":"local-docker"}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --json '{"goal":"Checkout API contract and authz","method":"api-client","testCategory":"api","command":"npm run test:api","environment":"local-docker"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --input exec.json
 ```
 
 Capture full request/response pairs as evidence. **Redact headers** — an `Authorization`
@@ -111,3 +117,9 @@ authorisation — regardless of the HTTP verb.
 - Testing with an admin token throughout, which makes every authorisation bug invisible.
 - Treating a 500 as a test failure without checking the server log for the actual cause.
 - Hardcoding IDs that a fresh database will not have.
+
+## Test data
+
+Follow the [test data policy](../testing-orchestrator/policies/test-data-policy.md): synthetic by
+default, seeded, created per run, cleaned up, never real personal data without explicit
+authorisation and verified anonymisation.

@@ -6,12 +6,12 @@ completeness.
 
 **Current phase:** core complete and exercised end to end; integrations specified, bound where
 a provider exists.
-**Version:** 0.10.0 · **Last validated:** 2026-09-19
+**Version:** 0.11.0 · **Last validated:** 2026-09-28
 
 ## Validation status
 
 ```
-node --test "tests/*.test.mjs"     300 passed, 0 failed
+node --test "tests/*.test.mjs"     340 passed, 0 failed
 node bin/ast.mjs eval run          41/41 checks across 15 benchmark cases
 node scripts/validate-repo.mjs     0 problems
 node scripts/demo-session.mjs      full pipeline exercised end to end
@@ -35,7 +35,7 @@ Working, tested, exercised by the demo session.
 | Defect engine + fingerprinting | Duplicate suppressed across wording changes, verified in demo |
 | Uncertainty register + partitioning | 3 of 4 scenarios runnable with a blocker open |
 | Failure classifier | Non-product causes outrank `product-defect` on a tie |
-| Flakiness analysis | Refuses to label flaky below 3 runs |
+| Flakiness analysis | Refuses to label flaky below 3 runs; a test proven flaky is quarantined automatically (a `test-quality-issue` finding, and its passes stop counting as proof) |
 | Capability registry | 37 verbs, 13 providers, three-state availability |
 | Authorization + write ledger | Prohibited-by-default list; assignment refused without a named account |
 | Traceability graph | `what-remains-untested` correctly reports REQ-3 uncovered |
@@ -48,6 +48,7 @@ Working, tested, exercised by the demo session.
 | Plugin + marketplace manifests | Match the verified plugin layout |
 | **npx installer** | `bin/install.mjs`; 7 tests install into a throwaway repo and assert the CLI runs, every link resolves and no skill still points at the source layout |
 | Repository self-check | Catches broken links, hard-coded MCP names, dangling references |
+| **Jira adapter (executable)** | `engine/adapters/jira.mjs` (0.11.0): REST v3 reads with ADF-to-text and acceptance-criteria extraction, gated writes, delegated writes confirmed by REST read-back; transitions stay prohibited |
 | **GitHub adapter (executable)** | `engine/adapters/github.mjs`; 29 tests assert each gate refuses **before** the provider is called |
 | **Enforced write protocol** | `performWrite` is the only path to a ledger entry, and it runs capability -> authorisation -> ledger -> render -> perform -> parse -> record in order |
 | **Delegated-write tickets** | An MCP-resolved write cannot be recorded without a single-use, hour-limited ticket proving the gates ran |
@@ -57,11 +58,9 @@ Working, tested, exercised by the demo session.
 
 | Component | State | What is missing |
 | --- | --- | --- |
-| Jira integration | Contract specified; REST fallback probes for env vars; `caps resolve jira.*` now carries `executable: false` and says so in `reason`, so a resolved-available Jira verb cannot be mistaken for one with code behind it | No executable adapter module yet — the agent follows `integrations/jira/adapter.md` by hand. ADF parsing also unimplemented. This is the next obvious piece, now that `performWrite` exists to build on. |
 | Change intelligence | Skill written with concrete commands | No `ast change analyse` subcommand; the agent runs `git`/`gh` itself |
 | Requirement analysis | Skill written | No structured requirement store beyond what a plan carries |
 | Test generation | Guidance in every specialist skill | No scaffolding command; the agent writes tests directly, which is probably correct |
-| Flakiness | Analysis implemented | Nothing automatically quarantines or reports a flaky test |
 
 ## DESIGNED BUT NOT IMPLEMENTED
 
@@ -95,10 +94,9 @@ Nothing.
 | Issue | Impact |
 | --- | --- |
 | The benchmark cannot verify input gathering | It exercises decision machinery against fixed inputs. Garbage in still produces confident garbage out. Mitigated by the profile requiring evidence for every claim. |
-| Decision accuracy is self-assessed | Treat the agent's own verdicts as weak evidence. `decision_assessment_rate` exists to expose a small sample. |
+| Decision accuracy is self-assessed | Treat the agent's own verdicts as weak evidence. `decision_assessment_rate` exposes a small sample, and `validate` now warns when no decision was assessed at all. |
 | Redaction cannot recognise a secret shaped like ordinary text | Defence in depth, not a guarantee |
 | The hook guard is pattern-based | A creative command can evade it. It is a backstop, not the authorisation system. |
-| No automatic quarantine of flaky tests | Analysis is implemented; acting on it is manual |
 | `traceability` only sees declared requirements | Stated in the query's own output. Undeclared expectations remain the largest untested surface. |
 
 ## Next recommended stage

@@ -59,10 +59,25 @@ who seems responsible. The adapter refuses without a user-named account.
 ticket plus the rendered content; you perform the call and finish with
 `ast adapter complete --ticket WT-…`. Until then nothing is recorded.
 
-Systems with an executable adapter: `ast adapter systems`. Jira and Google Docs have
-written contracts but no module yet — for those, follow
-[../../../integrations/jira/adapter.md](../../../integrations/jira/adapter.md) by hand and
-record the outcome with `ast write record`.
+Systems with an executable adapter: `ast adapter systems` — GitHub (`ast github ...`) and Jira
+(`ast jira ...`, see [../../../integrations/jira/adapter.md](../../../integrations/jira/adapter.md)).
+Google Docs has a written contract but no module yet — follow
+[../../../integrations/google/docs.md](../../../integrations/google/docs.md) by hand and record
+the outcome with `ast write record`.
+
+## 3b. Assess your own decisions
+
+Go back through the decision records whose consequence you can now see — the browser method,
+the depth, what you chose not to test — and say how each turned out:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" decision list
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" decision assess DEC-00002 --verdict correct --note "the script found the SEO defect; exploration was never needed"
+```
+
+Use `unknown` when the outcome is not observable yet — an honest verdict that still counts
+toward `decision_assessment_rate`. `validate` warns when a session recorded decisions and
+assessed none.
 
 ## 4. Run the evidence-auditor before you generate the report
 
@@ -76,13 +91,19 @@ Launch it (Task tool, `evidence-auditor`) before every report generation. Then r
 it ran, so the omission is visible on any session that skips it instead of looking identical
 to one that didn't:
 
-```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input '{
+`evidence.json`:
+
+```json
+{
   "kind": "evidence-audit",
   "summary": "evidence-auditor reviewed N claims; found <M issues | nothing unsupported>",
   "epistemicClass": "observed",
-  "excerpt": "<the auditor'"'"'s findings, verbatim>"
-}'
+  "excerpt": "<the auditor's findings, verbatim>"
+}
+```
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input evidence.json
 ```
 
 Recorded the audit under the wrong `kind` (e.g. `other`) and only noticed after

@@ -42,15 +42,26 @@ function checkCondition(expr, value) {
  * @param {object} input
  * @param {Record<string, number>} input.factors  Factor name -> value in [0,1].
  * @param {Record<string, boolean>} [input.capabilities] Capability verb -> available.
- * @param {boolean} [input.environmentIsProduction=false]
+ * @param {'production'|'non-production'|'unknown'} [input.environment='unknown']
+ *   Unknown is treated as production, matching authorization/policy.json. Only a
+ *   declaration (here, or in the profile's `environments`) makes a target non-production.
+ * @param {boolean} [input.environmentIsProduction]  Legacy boolean; wins over `environment` when supplied.
  * @param {string} [input.scenario] Free text, echoed into the rationale.
  */
 export function decide({
   factors = {},
   capabilities = {},
-  environmentIsProduction = false,
+  environment = 'unknown',
+  environmentIsProduction,
   scenario = '',
 } = {}) {
+  let envClass = environment ?? 'unknown';
+  if (environmentIsProduction === true) envClass = 'production';
+  else if (environmentIsProduction === false) envClass = 'non-production';
+  if (!['production', 'non-production', 'unknown'].includes(envClass)) {
+    throw new Error(`environment must be "production", "non-production" or "unknown", got ${JSON.stringify(environment)}`);
+  }
+  const treatedAsProduction = envClass !== 'non-production';
   const unknown = Object.keys(factors).filter((f) => !M.factors[f]);
   if (unknown.length) {
     // Never tell the caller to edit matrix.json: an unrecognised name here is almost
@@ -68,7 +79,7 @@ export function decide({
     }
   }
 
-  const ruleInputs = { ...factors, environment_is_production: environmentIsProduction ? 1 : 0 };
+  const ruleInputs = { ...factors, environment_is_production: treatedAsProduction ? 1 : 0 };
   const forbidden = new Map();
   const firedRules = [];
 
@@ -128,6 +139,9 @@ export function decide({
   let escalate = false;
 
   if (scenario) reason.push(`Scenario: ${scenario}`);
+  if (envClass === 'unknown') {
+    reason.push('Environment not declared, so it is treated as production. If the target is local or staging, pass "environment": "non-production" -- or declare it in the repository profile\'s `environments` -- to allow exploration.');
+  }
 
   // Rule 1: cheapest reliable evidence first. If the repo already covers this,
   // run that before inventing anything.
@@ -198,6 +212,7 @@ export function decide({
     selected: finalEscalate ? null : selected.id,
     escalate: finalEscalate,
     ...(finalEscalate && selected ? { top_candidate: selected.id } : {}),
+    environment: { class: envClass, treated_as_production: treatedAsProduction },
     confidence,
     margin,
     reason,

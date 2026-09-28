@@ -3,6 +3,83 @@
 Semantic versioning. See [docs/versioning.md](docs/versioning.md) for what is versioned
 independently — document schemas and policy files carry their own versions.
 
+## [0.11.0] - 2026-09-28
+
+Driven by field trial 3 — the first run of the skills against a deployed URL
+(AgentDesk, `https://agentdeskbot.vercel.app`, `D:\QATesting\FIELD_TRIAL_3_AGENTDESK.md`) —
+and by the gap reports drafted on 2026-09-18.
+
+### Changed (behaviour)
+
+- **`browser decide` treats an undeclared environment as production.** It used to assume
+  non-production whenever nothing was said, so an agent copying `--example` against a live
+  site was steered to open-ended MCP exploration of production — the opposite of
+  `authorization/policy.json`'s `unknown_is_treated_as: production`. It now takes
+  `environment: production | non-production | unknown` (default `unknown`, treated as
+  production; the legacy `environmentIsProduction` boolean still wins when stated), or a
+  `target` URL that the CLI looks up in the profile's `environments`. **If you drive
+  exploration against localhost or a disposable preview, say so**: `"environment":
+  "non-production"`, or declare it in the profile. Three benchmark cases and the demo relied on
+  the old default; their *inputs* now state it, their expectations are unchanged.
+
+### Added
+
+- **Profile `environments` and `declared_signals`** (repository-profile 1.1.0). `environments`
+  is the one place an environment becomes non-production, with evidence; `auth check`,
+  `auth classify-env` and `browser decide` read it by name or hostname. `declared_signals`
+  lets a profile carry any catalog signal the other fields cannot express (`responsive`,
+  `i18n`, …); `rag` (LLM + vector store) and `deploy-config` are now derived. Before, the
+  skill said "fix the profile, not the verdict" for signals no profile field could produce.
+- **`evaluation/regression-suite/` is live.** `eval run` loads it next to the designed cases.
+  Five cases from the three field trials, each run against the engine version that produced
+  the field failure and seen failing there first. A case may supply `given.profile`, so the
+  profile-to-signal mapping is tested too. Eval: 20 cases, 47 checks.
+- **Jira adapter** (`engine/adapters/jira.mjs`, `ast jira preflight|read|file-issue|comment`).
+  REST v3 over Node's built-in `fetch`; ticket and JQL reads return descriptions as text (ADF
+  converted) with acceptance criteria extracted from a heading; creates and comments run every
+  write gate; transitions stay prohibited; writes delegated to the Atlassian connector are
+  confirmed by a REST read-back. Jira is no longer a manual-only system.
+- **`exec finish` accepts `junit: <path>`** and records per-test results. Passing tests inside
+  a run that failed overall now appear in "What was proven", labelled as such.
+- **Automatic flaky-test quarantine.** When per-test history reaches ≥ 3 mixed runs at one
+  commit, `exec finish` files one `test-quality-issue` finding, and the report stops counting
+  that test's passes as proof. `ast flaky quarantine` does it on demand.
+- **`exec start` accepts `target: {url, deployed_commit?}`.** Results against a deployed system
+  get their own provenance line; a dirty *local* tree is no longer attached to live-site results.
+- **`ast session goal`** records goal and criterion outcomes through the evidence gate, and rolls
+  criteria up. Unassessed goals render as "not assessed", not as their placeholder status.
+- **Executions record `runtime`** (os, arch, node) automatically.
+- **`ast failure signals`**, plus `harness-invocation-error` and `no-tests-executed` (a runner
+  that died or matched nothing before any test ran is a test-defect).
+- **`--example` payloads** for `profile save`, `decide`, `applicability eval`, `exec start`,
+  `exec finish`, `finding add`, `uncertainty raise`.
+- **A test data policy** (`skills/testing-orchestrator/policies/test-data-policy.md`), linked
+  from the six skills that create data.
+
+### Fixed
+
+- `caps probe` reported `playwright-cli` available whenever the `playwright` *library* was
+  installed; `npx playwright test` then did something else entirely. It now requires
+  `@playwright/test` to resolve from the repository under test. The probe's output is a 1.5 KB
+  summary by default (was ~30 KB); `--verbose` prints the full resolution.
+- `failure classify` silently dropped unknown signal tokens; it now names them
+  (`unknown_signals`) and says when a class name was passed as a signal.
+- Every documented CLI payload is a ```json block plus `--input <file>.json` (66 examples in
+  32 files, remediation item 14). `--input '{...}'` never worked — `--input` takes a path.
+  `validate-repo` now fails on either form. The CLI's own help text and the delegated-write
+  instruction had the same problem.
+- Findings back-link into each cited evidence item's `supports[]`.
+- The vague-claim warning also catches "all passed", "no failures", "suite is green".
+- `validate` warns when decisions were recorded and none assessed; `reporting.md` asks for it.
+- `session phase` warns when leaving discovery with no profile stored.
+
+### Not done in this release
+
+- Drafts 01 and 08 (commit the benchmark app; add defects that need concurrency or timing):
+  `sample-ecommerce-app/` is a separate repository with uncommitted changes, and publishing it
+  is the owner's decision.
+- Google Docs still has a contract and no executable adapter.
+
 ## [0.10.0] - 2026-09-19
 
 ### Fixed

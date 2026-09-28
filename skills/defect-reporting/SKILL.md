@@ -4,7 +4,7 @@ description: Turn a test failure or observation into an actionable defect report
 when_to_use: "write up this bug", "create a GitHub issue for this", "report this defect", "is this worth filing"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell
 metadata:
-  system_version: 0.10.0
+  system_version: 0.11.0
   role: specialist
 ---
 
@@ -15,8 +15,14 @@ an hour and costs you their trust in every future report.
 
 ## Before writing anything: is it a defect?
 
+`signals.json`:
+
+```json
+{"signals":["assertion-mismatch","http-500"],"evidenceIds":["EV-2026-00021"]}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --json '{"signals":["assertion-mismatch","http-500"],"evidenceIds":["EV-2026-00021"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --input signals.json
 ```
 
 The classifier deliberately ranks non-product causes above `product-defect` on a tie. Rule
@@ -156,7 +162,16 @@ ticket and the rendered content, and you finish it:
 
 ```bash
 # perform the call with your own GitHub MCP tools, then:
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" adapter complete --ticket WT-… --json '<the provider response>'
+```
+
+`response.json`:
+
+```json
+<the provider response>
+```
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" adapter complete --ticket WT-… --input response.json
 ```
 
 Nothing is recorded until you do. `ast adapter pending` lists tickets left open.

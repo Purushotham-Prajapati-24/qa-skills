@@ -3,7 +3,6 @@
   "version": "1.1.0",
   "manual_only_systems": {
     "$comment": "A capability can resolve 'available: true' -- credentials or a connector are present -- with no executable module in engine/adapters/ behind it. That gap is the worst of both: an agent sees the verb resolve and may assume it can be invoked like github.*, then either hand-roll the call or, worse, infer the content from something else (a commit message, its own reading of the code) and report it as if it came from the system. Every system listed here gets that warning attached to every verb resolution. scripts/validate-repo.mjs cross-checks this list against engine/adapters/index.mjs so it cannot go stale in either direction: dropped here without the adapter shipping, or left here after it does.",
-    "jira": "No executable module yet; see integrations/jira/adapter.md and PROGRESS.md.",
     "docs": "No Google MCP server was available when this was built; see integrations/google/docs.md. Falls back to state/reports/.",
     "drive": "No Google MCP server was available when this was built; see integrations/google/drive.md."
   },
@@ -20,7 +19,7 @@
     "jira-rest": { "kind": "http", "probe": { "type": "env", "vars": ["JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN"] }, "notes": "Direct Jira Cloud REST v3 fallback when the connector is unavailable." },
     "mcp-playwright": { "kind": "mcp", "probe": { "type": "agent-declared" }, "notes": "@playwright/mcp. Tool names verified against microsoft/playwright-mcp: browser_navigate, browser_snapshot, browser_click, browser_take_screenshot, browser_console_messages, browser_network_requests." },
     "builtin-browser": { "kind": "builtin", "probe": { "type": "agent-declared" }, "notes": "The Claude Code in-app browser pane. Adequate for exploration and evidence capture; it is NOT a test runner." },
-    "playwright-cli": { "kind": "command", "probe": { "type": "command", "command": "npx --no-install playwright --version" } },
+    "playwright-cli": { "kind": "command", "probe": { "type": "node-module", "module": "@playwright/test" }, "notes": "Needs the Playwright Test runner (@playwright/test) resolvable from the repository under test. The `playwright` library on its own answers `playwright --version` but cannot run `playwright test`." },
     "mcp-google-drive": { "kind": "mcp", "probe": { "type": "agent-declared" } },
     "local-doc-mirror": {
       "kind": "builtin",

@@ -100,6 +100,9 @@ state.setPhase('classify');
 
 const browserChoice = browser.decide({
   scenario: 'Saved-card checkout flow was changed; existing Playwright coverage is partial and the new branch has not been examined.',
+  // The demo runs against local-docker. Undeclared environments are treated as production
+  // (0.11.0), which forbids the explore-then-automate path this walkthrough demonstrates.
+  environment: 'non-production',
   factors: {
     ui_known: 0.2, repeatability: 0.9, determinism_required: 0.7, exploratory_value: 0.8,
     ci_suitability: 0.6, business_criticality: 0.95, assertion_complexity: 0.7,
@@ -254,6 +257,52 @@ state.recordInterruption({ kind: 'user', note: 'user asked to prioritise the aut
 const recovery = state.recover();
 log('recovery ran', `${recovery.orphaned_executions.length} execution(s) marked INTERRUPTED`);
 
+// Resume: the interrupted scan is re-run from the start as a new execution, never "continued".
+const e4 = execution.start({ goal: 'Accessibility scan of the checkout pages (restarted after interruption)', method: 'static-analysis', testCategory: 'accessibility', git: GIT, environment: 'local', command: 'npx axe http://localhost:3000/checkout' });
+const ev4 = evidence.captureOutput({
+  argv: 'npx axe http://localhost:3000/checkout', cwd: '/repo', exitCode: 0, durationMs: 4100,
+  stdout: '0 violations found on /checkout (WCAG 2.1 AA ruleset)', summary: 'axe: 0 violations on /checkout',
+  executionId: e4.execution_id, git: GIT,
+});
+execution.finish(e4.execution_id, { status: 'PASSED', statusReason: 'axe WCAG 2.1 AA ruleset on /checkout at abc1234: 0 violations.', evidence: [ev4.evidence_id] });
+log('interrupted scan restarted', `${e4.execution_id} PASSED`);
+
+/* ------------------------------ 10b. waiting on the user, recorded as such */
+
+execution.recordNonExecution({
+  goal: 'Saved-card E2E with real provider credentials',
+  status: 'NEEDS_USER_INPUT',
+  reason: "Which sandbox account may be charged is the user's call, not the agent's.",
+  testCategory: 'e2e',
+  uncertainties: [u1.id],
+});
+log('needs user input', 'recorded, linked to ' + u1.id);
+
+/* --------------- 10c. per-test results from JUnit, and a flaky test quarantined */
+
+// Three runs of the same suite at the same commit; one test flips. The third run completes
+// a flaky history, and exec finish quarantines it without being asked.
+const junitRun = (flaky) => `<testsuites><testcase name="checkout renders saved cards" time="0.8"/>${flaky
+  ? '<testcase name="saved card survives a reload" time="2.9"><failure message="expected 1 saved card, found 0"/></testcase>'
+  : '<testcase name="saved card survives a reload" time="0.9"/>'}</testsuites>`;
+let quarantined = [];
+for (const [i, flaky] of [false, true, false].entries()) {
+  const ex = execution.start({ goal: `Checkout UI regression suite, run ${i + 1} of 3`, method: 'playwright-script', testCategory: 'regression', git: GIT, environment: 'local', command: 'npx playwright test checkout --reporter=junit' });
+  const junit = path.join(stateDir, `junit-run-${i + 1}.xml`);
+  fs.writeFileSync(junit, junitRun(flaky));
+  const evx = evidence.captureOutput({
+    argv: 'npx playwright test checkout --reporter=junit', cwd: '/repo', exitCode: flaky ? 1 : 0, durationMs: flaky ? 3700 : 1700,
+    stdout: flaky ? '1 passed, 1 failed' : '2 passed', summary: `playwright checkout suite, run ${i + 1}`, executionId: ex.execution_id, git: GIT,
+  });
+  const out = execution.finish(ex.execution_id, {
+    status: flaky ? 'FAILED' : 'PASSED',
+    statusReason: flaky ? '"saved card survives a reload" failed: expected 1 saved card, found 0.' : 'Both checkout UI tests passed at abc1234.',
+    evidence: [evx.evidence_id], junit, signals: flaky ? ['assertion-mismatch'] : [],
+  });
+  quarantined = out.quarantined ?? quarantined;
+}
+log('flaky test quarantined', quarantined.map((q) => `${q.test} -> ${q.finding_id}`).join(', ') || 'none');
+
 /* ------------------------------------------------- 11. external writes, honestly */
 
 const promo = defects.assessPromotion(finding.finding_id, { userAuthorised: true, authorisationQuote: 'yes, open a GitHub issue for that' });
@@ -287,15 +336,12 @@ log('merge refused by default', `allowed=${mergeAttempt.allowed} (${mergeAttempt
 state.update((s) => {
   s.remaining_work = [
     { item: 'Payment E2E against a provider sandbox', status: 'BLOCKED', reason: 'awaiting an environment decision', blocked_by: u1.id },
-    { item: 'Accessibility scan of the checkout pages', status: 'INTERRUPTED', reason: 'user redirected mid-run; must restart from the beginning' },
     { item: 'Migration rollback compatibility check', status: 'DEFERRED', reason: 'deferred for budget; the forward migration was verified' },
   ];
-  s.goals[0].status = 'PARTIAL';
-  s.goals[0].success_criteria[2].status = 'FAILED';
-  s.goals[0].success_criteria[2].evidence = [ev2.evidence_id];
-  s.goals[0].success_criteria[2].execution_id = e2.execution_id;
   return s;
 });
+// Goal outcomes go through the same evidence gate as executions (the CLI's `session goal`).
+state.assessGoal({ goalId: 'G-01', criterion: 3, status: 'FAILED', evidence: [ev2.evidence_id], executionId: e2.execution_id, note: 'FIND-00001' });
 state.setPhase('document');
 
 /* ---------------------------------------------------------------- 13. the report */

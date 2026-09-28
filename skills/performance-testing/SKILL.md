@@ -4,7 +4,7 @@ description: Measure and test performance — latency, throughput, load, stress,
 when_to_use: "performance testing", "load test", "is this fast enough", "stress test", "why is this slow", "check for a performance regression"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.10.0
+  system_version: 0.11.0
   role: specialist
 ---
 
@@ -20,10 +20,16 @@ Two hard prerequisites. Without either, stop and get it.
 ## Authorisation
 
 Load traffic is indistinguishable from an attack. Stress, spike and endurance tests need
-explicit authorisation **and** an isolated non-production target.
+explicit authorisation **and** a non-production environment (declared in the profile's `environments`) that nothing else shares.
+
+`auth.json`:
+
+```json
+{"action":"load_test.execute","target":"staging","userAuthorised":true,"authorisationQuote":"yes, load test staging"}
+```
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" auth check --json '{"action":"load_test.execute","target":"staging","userAuthorised":true,"authorisationQuote":"yes, load test staging"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" auth check --input auth.json
 ```
 
 Never point load at shared infrastructure without telling whoever owns it.
@@ -79,8 +85,14 @@ A slower number is not automatically a regression:
 3. Check for environmental causes — other processes, thermal throttling, a cold cache.
 4. Only then call it a regression, and state the delta with both numbers.
 
+`signals.json`:
+
+```json
+{"signals":["latency-above-baseline"],"evidenceIds":["EV-2026-00061"]}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --json '{"signals":["latency-above-baseline"],"evidenceIds":["EV-2026-00061"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --input signals.json
 ```
 
 The classifier caps confidence here deliberately: performance conclusions from one run are
@@ -90,14 +102,26 @@ unreliable.
 
 Performance metrics are execution evidence when they include the conditions:
 
+`evidence.json`:
+
+```json
+{
+  "kind": "performance-metric",
+  "summary": "GET /api/orders p95 412ms at 50rps (baseline 180ms at abc1234)",
+  "epistemicClass": "observed",
+  "executionId": "EXEC-2026-00012",
+  "artifactPath": "perf/orders-k6-summary.json",
+  "mediaType": "application/json",
+  "environment": {
+    "os": "windows",
+    "base_url": "http://localhost:3000",
+    "ci": false
+  }
+}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --json '{
-  "kind":"performance-metric",
-  "summary":"GET /api/orders p95 412ms at 50rps (baseline 180ms at abc1234)",
-  "epistemicClass":"observed","executionId":"EXEC-2026-00012",
-  "artifactPath":"perf/orders-k6-summary.json","mediaType":"application/json",
-  "environment":{"os":"windows","base_url":"http://localhost:3000","ci":false}
-}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input evidence.json
 ```
 
 A number without its conditions is not evidence. Always report: the target, the baseline,
@@ -110,3 +134,9 @@ the measured value, the concurrency, the data volume, the environment, and the r
 - Load testing through a browser — you measure the browser.
 - Testing against an empty database, then being surprised in production.
 - Declaring "no regression" from a single run within noise.
+
+## Test data
+
+Follow the [test data policy](../testing-orchestrator/policies/test-data-policy.md): synthetic by
+default, seeded, created per run, cleaned up, never real personal data without explicit
+authorisation and verified anonymisation.

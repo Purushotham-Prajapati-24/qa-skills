@@ -1,11 +1,20 @@
 # JiraAdapter — contract
 
-**Not implemented.** No executable module exists at `engine/adapters/jira.mjs` (see
-PROGRESS.md). `jira` is listed in `engine/capability-registry/capabilities.json`'s
-`manual_only_systems`, so `ast caps resolve jira.*` still reports `available: true` once
-credentials or the connector are present — but every resolution now also carries
-`executable: false` and a reason stating there is no code to drive it. Follow this contract
-by hand; record any write with `ast write record` the same way `performWrite` would have.
+**Implemented** in `engine/adapters/jira.mjs` (0.11.0) against Jira Cloud REST v3, with Node's
+built-in `fetch` and no dependencies. Credentials come from `JIRA_BASE_URL`, `JIRA_EMAIL`
+and `JIRA_API_TOKEN`; when the capability resolves to the Atlassian connector instead, writes
+are delegated with a ticket and confirmed by an independent REST read-back.
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" jira preflight
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" jira read ticket --key SHOP-412
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" jira read search --jql "project = SHOP AND updated >= -7d"
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" jira file-issue FIND-00001 --project SHOP --dry-run
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" jira comment --key SHOP-412 --input body.json --authorised --quote "yes, comment on SHOP-412"
+```
+
+`jira read ticket` returns the description as text (ADF converted) and `acceptance_criteria`
+extracted from an "Acceptance criteria" heading. A custom-field form is not guessed — see below.
 
 ## Shape
 
@@ -22,7 +31,7 @@ JiraAdapter
 
 | Verb | REST v3 | Notes |
 | --- | --- | --- |
-| `jira.search` | `GET /rest/api/3/search?jql=...` | JQL. Prefer a narrow query; `project = X` alone can return thousands. |
+| `jira.search` | `GET /rest/api/3/search/jql?jql=...` (the older `/search` endpoint was retired by Atlassian) | JQL. Prefer a narrow query; `project = X` alone can return thousands. |
 | `jira.read_ticket` | `GET /rest/api/3/issue/{key}?fields=...` | Request only the fields you need; `*all` is slow and noisy. |
 | (comments) | `GET /rest/api/3/issue/{key}/comment` | Often where the real decision is recorded. |
 | (changelog) | `GET /rest/api/3/issue/{key}?expand=changelog` | Useful for `historical_failures`. |

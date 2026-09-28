@@ -112,8 +112,10 @@ test('an execution carrying a real commit clears the no-git-provenance finding',
   assert.equal(findings.find((f) => f.check === 'no-git-provenance'), undefined);
 });
 
-test('a fully-compliant session (decisions recorded, no blocked work, commit present) raises nothing at all', () => {
+test('a fully-compliant session (decisions recorded and assessed, no blocked work, commit present) raises nothing at all', () => {
   // Guards against a check that fires unconditionally regardless of what actually happened.
+  // "Compliant" includes assessing at least one decision (0.11.0's no-decision-assessed).
+  for (const d of state.list('decisions')) decisions.assess(d.decision_id, { verdict: 'correct' });
   const findings = checkCompleteness();
   assert.deepEqual(findings, []);
 });

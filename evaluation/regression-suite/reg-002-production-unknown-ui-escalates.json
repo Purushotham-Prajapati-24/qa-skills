@@ -1,0 +1,27 @@
+{
+  "id": "reg-002",
+  "title": "Production target with a UI nobody has seen -> escalate, do not explore",
+  "context": "Field trial 3. On a production URL with ui_known <= 0.25, every method is forbidden: A and D by the production rule, B by the unknown-UI rule, C and E because nothing exists.",
+  "observed_failure": "An explicit environment field was silently ignored before 0.11.0 (only environmentIsProduction existed), so this input returned hybrid and the agent would have explored production.",
+  "source_session": "SESSION-0001 (AgentDesk)",
+  "given": {
+    "environment": "production",
+    "browser_factors": {
+      "ui_known": 0.2,
+      "exploratory_value": 0.8,
+      "repeatability": 0.85,
+      "business_criticality": 0.9,
+      "existing_automation": 0.0
+    },
+    "capabilities": {
+      "browser.explore": true,
+      "browser.run_deterministic_test": true
+    }
+  },
+  "expect": {
+    "escalate": true
+  },
+  "reasoning_notes": [
+    "Escalation is the right answer: the agent should read the source to raise ui_known, or ask the user to authorise exploration. It must not pick a forbidden method."
+  ]
+}

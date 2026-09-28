@@ -27,8 +27,14 @@ explains it; the JSON enforces it.
 
 Check before acting:
 
+`auth.json`:
+
+```json
+{"action":"github.create_issue","target":"owner/repo","userAuthorised":true,"authorisationQuote":"yes, open an issue"}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" auth check --json '{"action":"github.create_issue","target":"owner/repo","userAuthorised":true,"authorisationQuote":"yes, open an issue"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" auth check --input auth.json
 ```
 
 An action absent from the policy is **denied**. Add it deliberately rather than routing
@@ -45,8 +51,10 @@ they restate it after you have named the consequence.
 
 ## Environment classification
 
-An environment is non-production **only** when the repository profile says so. Unknown is
-treated as production.
+An environment is non-production **only** when the repository profile says so — an entry in
+its `environments` list with `class: "non-production"` and evidence. `auth check`,
+`auth classify-env` and `browser decide` look a `target` up there by name or hostname.
+Unknown is treated as production.
 
 > Mistaking staging for production costs a wasted question.
 > Mistaking production for staging costs an incident.
@@ -58,7 +66,8 @@ permission.
 
 Load traffic is indistinguishable from an attack; active security scanning is an
 intrusion attempt. Both need explicit authorisation from whoever owns the target, plus a
-non-production target. Never point either at a host you were not told to test.
+non-production environment (declared in the profile's `environments`). Never point either at
+a host you were not told to test.
 
 ## Forbidden patterns
 

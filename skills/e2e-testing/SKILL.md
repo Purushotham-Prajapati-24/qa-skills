@@ -4,7 +4,7 @@ description: Test complete user journeys against a running application — criti
 when_to_use: "end to end test", "test the whole checkout journey", "test the signup flow", "critical path testing", "pre-release testing"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.10.0
+  system_version: 0.11.0
   role: specialist
 ---
 
@@ -86,8 +86,14 @@ created**. That negative is where payment bugs live.
 
 ## Running and evidence
 
+`exec.json`:
+
+```json
+{"goal":"Guest checkout, card payment","method":"playwright-script","testCategory":"e2e","decisionId":"DEC-00007","command":"npx playwright test checkout --trace=on --reporter=json","environment":"local-docker"}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --json '{"goal":"Guest checkout, card payment","method":"playwright-script","testCategory":"e2e","decisionId":"DEC-00007","command":"npx playwright test checkout --trace=on --reporter=json","environment":"local-docker"}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec start --input exec.json
 npx playwright test checkout --trace=on --reporter=json
 ```
 
@@ -100,8 +106,14 @@ makes a CI failure diagnosable without reproducing it.
 E2E failures are the least trustworthy signal in the stack — there are many ways to fail
 that have nothing to do with the product. Classify before concluding:
 
+`signals.json`:
+
+```json
+{"signals":["timeout","element-not-found-after-wait"],"evidenceIds":["EV-2026-00021"]}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --json '{"signals":["timeout","element-not-found-after-wait"],"evidenceIds":["EV-2026-00021"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --input signals.json
 ```
 
 Then reproduce at a lower level. If an E2E failure can be reproduced by an API or
@@ -114,3 +126,9 @@ component test, **write that test** — it will be faster, clearer, and it will 
 - Sharing one account across parallel tests.
 - Asserting only the URL — pages render error states at the right URL all the time.
 - Declaring the journey "works" when only the happy path ran.
+
+## Test data
+
+Follow the [test data policy](../testing-orchestrator/policies/test-data-policy.md): synthetic by
+default, seeded, created per run, cleaned up, never real personal data without explicit
+authorisation and verified anonymisation.

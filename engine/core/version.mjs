@@ -17,9 +17,11 @@ export const ENGINE_VERSION = pkg.version;
 
 /** Version of each persisted document shape. Bump on breaking field changes. */
 export const DOC_VERSIONS = {
-  'repository-profile': '1.0.0',
+  // 1.1.0: optional `environments` and `declared_signals`. Additive.
+  'repository-profile': '1.1.0',
   'testing-plan': '1.0.0',
-  'session-state': '1.0.0',
+  // 1.1.0: optional assessed_at/note on goals and success criteria (`ast session goal`). Additive.
+  'session-state': '1.1.0',
   // 1.2.0: added optional `digest` (see reporting-engine's verify()), optional `grade` on
   // each evidence_index entry (see evidence-engine's anchored/asserted grading), and
   // optional `impact`/`blocking`/`raised_by_execution` on each uncertainty_details entry

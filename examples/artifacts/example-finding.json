@@ -1,6 +1,6 @@
 {
   "finding_id": "FIND-00001",
-  "timestamp": "2026-09-19T10:26:31.952Z",
+  "timestamp": "2026-09-28T07:08:46.402Z",
   "title": "Saved card belonging to another user is selectable and chargeable",
   "kind": "security-issue",
   "severity": "critical",
@@ -23,10 +23,10 @@
     "decided_by": "agent"
   },
   "provenance": {
-    "skill_version": "0.10.0",
+    "skill_version": "0.11.0",
     "skill_name": "defect-reporting",
-    "engine_version": "0.10.0",
-    "created_at": "2026-09-19T10:26:31.952Z",
+    "engine_version": "0.11.0",
+    "created_at": "2026-09-28T07:08:46.402Z",
     "created_by": "agent",
     "session_id": "SESSION-0001"
   },

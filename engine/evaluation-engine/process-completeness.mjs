@@ -66,6 +66,18 @@ export function check() {
     });
   }
 
+  // decision_accuracy is null and decision_assessment_rate is 0 until someone assesses a
+  // decision, and nothing in the loop used to ask for it. Advisory: some outcomes are not
+  // observable within one session, but "none of N" is worth saying out loud.
+  if (decisions.length > 0 && !decisions.some((d) => d.outcome?.verdict)) {
+    findings.push({
+      check: 'no-decision-assessed',
+      severity: 'advisory',
+      message: `${decisions.length} decision(s) recorded, none assessed. For each whose outcome is now visible, run `
+        + '`decision assess DEC-... --verdict correct|acceptable|suboptimal|wrong|unknown`; decision_accuracy stays null until you do.',
+    });
+  }
+
   const withGit = real.filter((e) => e.git?.commit);
   if (real.length > 0 && withGit.length === 0) {
     findings.push({

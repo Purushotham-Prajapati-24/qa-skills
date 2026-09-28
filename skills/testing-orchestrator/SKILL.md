@@ -4,7 +4,7 @@ description: Plan and run software testing for a repository, a pull request, a c
 when_to_use: "test this repo", "test this PR", "test the checkout flow", "what should we test", "create a test plan", "explore the app for bugs", "create regression tests", "read this Jira ticket and plan testing", "continue testing", "what's untested", "run QA on this"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.10.0
+  system_version: 0.11.0
   role: orchestrator
 ---
 
@@ -108,6 +108,7 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session start --request "<the user's ac
 | Escalate | When to stop and ask | [policies/escalation-policy.md](policies/escalation-policy.md) |
 
 Authorisation applies at every phase: [policies/authorization-policy.md](policies/authorization-policy.md).
+So does the [test data policy](policies/test-data-policy.md): synthetic, seeded, created per run, cleaned up.
 
 ## Delegating to specialist skills
 
@@ -190,15 +191,27 @@ deciding, you were defaulting.
 
 ## After every result
 
+`next.json`:
+
+```json
+{"status":"FAILED","failureClass":"...","remainingWork":["..."]}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" decision next --json '{"status":"FAILED","failureClass":"...","remainingWork":["..."]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" decision next --input next.json
 ```
 
 Never continue blindly after a failure. Classify first — a red result caused by a missing
 environment variable and one caused by a real defect demand opposite responses:
 
+`signals.json`:
+
+```json
+{"signals":["http-500","stale-test-data"]}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --json '{"signals":["http-500","stale-test-data"]}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --input signals.json
 ```
 
 ## Finishing

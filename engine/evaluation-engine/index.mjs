@@ -24,15 +24,23 @@ import * as auth from '../authorization/index.mjs';
 import { classify } from '../failure-classifier/index.mjs';
 
 const CASES_DIR = path.join(PACKAGE_ROOT, 'evaluation', 'benchmark-cases');
+// Cases derived from real sessions where the agent or the engine got something wrong.
+// Loaded alongside the designed cases so a policy edit that reintroduces a field failure
+// turns the suite red -- see evaluation/regression-suite/README.md.
+const REGRESSION_DIR = path.join(PACKAGE_ROOT, 'evaluation', 'regression-suite');
 const RUBRIC = path.join(PACKAGE_ROOT, 'evaluation', 'scoring', 'rubric.json');
 
-export function loadCases() {
-  if (!fs.existsSync(CASES_DIR)) return [];
+function casesIn(dir, suite) {
+  if (!fs.existsSync(dir)) return [];
   return fs
-    .readdirSync(CASES_DIR)
+    .readdirSync(dir)
     .filter((f) => f.endsWith('.json'))
     .sort()
-    .map((f) => ({ file: f, ...readJson(path.join(CASES_DIR, f)) }));
+    .map((f) => ({ file: f, suite, ...readJson(path.join(dir, f)) }));
+}
+
+export function loadCases() {
+  return [...casesIn(CASES_DIR, 'benchmark'), ...casesIn(REGRESSION_DIR, 'regression')];
 }
 
 function checkExpectation(actual, expectation, label) {
@@ -77,9 +85,14 @@ function runCase(c) {
     checks.push(checkExpectation(assessment.risk_score, c.expect?.risk_score, 'risk_score'));
   }
 
-  if (c.given?.signals) {
+  if (c.given?.profile) {
+    outputs.profile_signals = applicability.signalsFromProfile(c.given.profile);
+    checks.push(checkExpectation(outputs.profile_signals, c.expect?.profile_signals_include ? { includes: c.expect.profile_signals_include } : undefined, 'profile_signals_include'));
+  }
+
+  if (c.given?.signals || c.given?.profile) {
     const result = applicability.evaluate({
-      signals: c.given.signals,
+      signals: [...new Set([...(outputs.profile_signals ?? []), ...(c.given.signals ?? [])])],
       riskAssessment: outputs.risk ?? null,
       coverage: c.given.coverage ?? {},
       capabilities: c.given.capabilities ?? {},
@@ -96,7 +109,8 @@ function runCase(c) {
     const d = browser.decide({
       factors: c.given.browser_factors,
       capabilities: c.given.capabilities ?? {},
-      environmentIsProduction: c.given.environment_is_production ?? false,
+      environment: c.given.environment,
+      environmentIsProduction: c.given.environment_is_production,
       scenario: c.title,
     });
     outputs.browser = d;
@@ -136,6 +150,7 @@ function runCase(c) {
     id: c.id,
     title: c.title,
     file: c.file,
+    suite: c.suite,
     checks: applied,
     passed,
     total: applied.length,

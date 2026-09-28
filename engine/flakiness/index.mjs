@@ -8,6 +8,7 @@
  * A test is only called flaky when the SAME code produced both outcomes.
  */
 import * as state from '../state-engine/index.mjs';
+import * as defects from '../defect-engine/index.mjs';
 
 export const MIN_RUNS = 3;
 
@@ -125,4 +126,52 @@ export function analyse() {
 
 export function flakyTests() {
   return analyse().filter((a) => a.verdict === 'flaky');
+}
+
+const quarantineTitle = (name) => `Flaky test quarantined: ${name}`;
+
+/** Display name of a history key (`file::suite::name`). */
+export function testName(key) {
+  return String(key).split('::').pop();
+}
+
+/**
+ * Act on a `flaky` verdict instead of only reporting it: file one test-quality-issue
+ * finding per flaky test (once -- a second call finds the existing one), so the test is
+ * visibly quarantined. The report stops counting its passes as proof (see reporting-engine).
+ */
+export function quarantine() {
+  const existing = new Set(state.list('findings').map((f) => f.title));
+  const out = [];
+  for (const f of flakyTests()) {
+    const name = testName(f.test);
+    const title = quarantineTitle(name);
+    if (existing.has(title)) {
+      out.push({ test: name, status: 'already-quarantined' });
+      continue;
+    }
+    const evidence = [...new Set(f.history.flatMap((h) => state.get('executions', h.execution_id)?.evidence ?? []))];
+    const finding = defects.create({
+      title,
+      kind: 'test-quality-issue',
+      severity: 'minor',
+      confidence: f.confidence,
+      component: f.test.split('::').slice(0, 2).filter(Boolean).join(' / ') || name,
+      summary: f.reasons.join(' '),
+      reproduction: {
+        steps: [`Re-run "${name}" at commit ${f.history[0]?.commit ?? 'unknown'}`],
+        expected: 'The same outcome on every run at the same commit',
+        actual: `${Math.round(f.pass_rate * f.runs)} of ${f.runs} runs passed`,
+        reproducible: 'intermittent',
+        attempts: f.runs,
+      },
+      impact: 'Until it is fixed, a pass from this test proves nothing; the report excludes it from "What was proven".',
+      evidence,
+      recommendedAction: 'Find the nondeterminism (shared state, timing, order dependence, network) and fix the test. Do not add retries to hide it.',
+      skillName: 'regression-testing',
+    });
+    existing.add(title);
+    out.push({ test: name, status: 'quarantined', finding_id: finding.finding_id });
+  }
+  return out;
 }

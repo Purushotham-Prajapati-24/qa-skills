@@ -4,7 +4,7 @@ description: Test LLM-backed features, RAG pipelines and agent tool-calling — 
 when_to_use: "test the AI feature", "evaluate the RAG pipeline", "test prompt injection", "is the LLM output correct", "evaluate agent tool calls"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.10.0
+  system_version: 0.11.0
   role: specialist
 ---
 
@@ -114,13 +114,21 @@ change that quietly triples token usage is a real regression even when quality i
 
 ## Evidence
 
+`evidence.json`:
+
+```json
+{
+  "kind": "assertion-result",
+  "summary": "Golden set: 27/30 passed over 3 runs each (90%); 2 grounding failures, 1 refusal failure",
+  "epistemicClass": "observed",
+  "executionId": "EXEC-2026-00018",
+  "artifactPath": "evals/results-2026-09-16.json",
+  "mediaType": "application/json"
+}
+```
+
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --json '{
-  "kind":"assertion-result",
-  "summary":"Golden set: 27/30 passed over 3 runs each (90%); 2 grounding failures, 1 refusal failure",
-  "epistemicClass":"observed","executionId":"EXEC-2026-00018",
-  "artifactPath":"evals/results-2026-09-16.json","mediaType":"application/json"
-}'
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input evidence.json
 ```
 
 Record the model, the model version, the temperature, the prompt version and the run count.
@@ -135,3 +143,9 @@ you, the model identifier is as important as the commit SHA.
 > 0.87 — the 2 grounding failures both had the correct chunk retrieved, so the defect is in
 > generation, not retrieval. **Not tested:** prompt injection via uploaded files, and cost
 > per request.
+
+## Test data
+
+Follow the [test data policy](../testing-orchestrator/policies/test-data-policy.md): synthetic by
+default, seeded, created per run, cleaned up, never real personal data without explicit
+authorisation and verified anonymisation.
