@@ -1,390 +1,351 @@
-<p align="center">
-  <img src="docs/assets/hero-banner.jpg" alt="Autonomous Software Testing Banner" width="100%" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);" />
-</p>
+# Autonomous Software Testing
+
+Agent skills for Claude Code that test a repository the way a senior SDET would: work out
+what is actually worth testing, prove what you find, and be precise about what you did not
+do.
 
 <p align="center">
-  <strong>An evidence-driven, extensible autonomous software testing agent skill system for Claude Code.</strong><br>
-  <em>Tests software the way a senior SDET would: work out what is worth testing, prove what you find, and be precise about what you did not do.</em>
+  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node.js-%3E%3D20.6.0-43853D?style=flat-square&logo=node.js&logoColor=white" alt="Node version"></a>
+  <a href="#claude-code-plugin-marketplace"><img src="https://img.shields.io/badge/Claude%20Code-Plugin-6B4FBB?style=flat-square" alt="Claude Code Plugin"></a>
+  <a href="https://playwright.dev"><img src="https://img.shields.io/badge/Playwright-supported-2EAD33?style=flat-square&logo=playwright&logoColor=white" alt="Playwright"></a>
+  <a href="https://github.com/Purushotham-Prajapati-24/qa-skills/actions"><img src="https://img.shields.io/badge/Tests-340%20passing-success?style=flat-square" alt="Tests"></a>
+  <a href="evaluation/README.md"><img src="https://img.shields.io/badge/Benchmark-47%2F47%20passed-blue?style=flat-square" alt="Benchmark"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License"></a>
 </p>
 
-<p align="center">
-  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node.js-%3E%3D20.6.0-43853D?style=for-the-badge&logo=node.js&logoColor=white" alt="Node version"></a>
-  <a href="#as-a-claude-code-plugin"><img src="https://img.shields.io/badge/Claude%20Code-Plugin%20Ready-6B4FBB?style=for-the-badge&logo=anthropic&logoColor=white" alt="Claude Code Plugin"></a>
-  <a href="https://playwright.dev"><img src="https://img.shields.io/badge/Playwright-Automated-2EAD33?style=for-the-badge&logo=playwright&logoColor=white" alt="Playwright"></a>
-  <a href="https://github.com/Purushotham-Prajapati-24/qa-skills/actions"><img src="https://img.shields.io/badge/Tests-340%20Passing-success?style=for-the-badge&logo=github-actions&logoColor=white" alt="Tests"></a>
-  <a href="evaluation/README.md"><img src="https://img.shields.io/badge/Benchmark-41%2F41%20Passed-blue?style=for-the-badge&logo=checkmarx&logoColor=white" alt="Benchmark"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="License"></a>
-</p>
+> **"I did not observe a failure" is not "it works."**
+>
+> Asking *"did the test suite pass?"* measures the software under test, not the agent's
+> competence. A green run that asserts nothing, or skips the paths that matter, is worse
+> than a failed one. This system is built to make the agent's judgement, its honesty, and
+> the evidence behind every claim checkable — not just its output.
 
----
-
-> [!IMPORTANT]
-> ### 🛡️ The Core Philosophy
-> **`"I did not observe a failure" is not "it works."`**
-> 
-> Testing an agent by asking *"did the test suite pass?"* measures the software under test, not the agent's competence. A green test run that asserts nothing or skips critical paths is worse than a failed one. This framework measures the agent's **judgement**, its **honesty**, and the **verifiable evidence** behind every claim.
-
----
-
-## ⚡ Instant Setup (One Command)
-
-Install directly into **any repository** on any computer — no clone, no `npm install`, zero external runtime dependencies:
+## Install
 
 ```bash
 npx --yes github:Purushotham-Prajapati-24/qa-skills
 ```
 
-Then in Claude Code, invoke your autonomous testing suite:
+Then, in Claude Code:
 
 ```text
-"Test this repository."
+Test this repository.
 ```
 
-<details>
-<summary><b>🎯 Targeted Workflows & Prompts (Click to expand)</b></summary>
-<br>
+Other starting prompts that work:
 
-* 🔍 **Pull Request Testing**: *"Test PR #412 for security and regression risks."*
-* 🌐 **Browser Exploration**: *"Explore the checkout flow for UI bugs and generate automated regression specs."*
-* 📋 **Requirements & Planning**: *"Read SHOP-412 and create a risk-weighted test implementation plan."*
-* ⚡ **Session Recovery**: *"Continue the previous testing session."*
-* 📊 **Gap Analysis**: *"What remains untested in this repository?"*
+- `Test PR #412 for security and regression risk.`
+- `Explore the checkout flow for UI bugs and generate regression specs.`
+- `Read SHOP-412 and create a risk-weighted test plan.`
+- `Continue the previous testing session.`
+- `What remains untested in this repository?`
 
-</details>
+## What it actually does differently
 
----
+**A `PASSED` claim has to earn it.** A status of `PASSED` with no attached, hashed
+execution evidence is mechanically downgraded to `INCONCLUSIVE`. A non-zero exit code, or a
+test report that ran zero cases, contradicts a `PASSED` claim outright and is rejected
+regardless of what the agent says about it.
 
-## ✨ Why Autonomous Software Testing?
+**Testing depth is a scored decision, not a guess.** 47 test categories are evaluated
+against an applicability matrix; risk is scored across weighted factors with an explicit
+confidence band, so a thinly-evidenced "critical" is never treated the same as a
+thoroughly-evidenced one.
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>🛡️ Zero False Confidence</h3>
-      <p>A claim of <code>PASSED</code> without attached, hashed execution evidence is mechanically downgraded to <code>INCONCLUSIVE</code>. Non-zero exit codes and empty test suites (0 ran) are instantly rejected.</p>
-    </td>
-    <td width="50%" valign="top">
-      <h3>🧠 Deterministic Decision Engines</h3>
-      <p>47 testing categories evaluated against mathematical applicability matrices, 15-factor browser decision algorithms, and 3-tier risk confidence bands.</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>🔐 Guarded External Writes</h3>
-      <p>Destructive actions, issue filing, and PR transitions require explicit, per-session user authorisation, single-use delegated tickets, and independent <code>gh</code> read-backs.</p>
-    </td>
-    <td width="50%" valign="top">
-      <h3>⚡ Pure Zero-Dependency Architecture</h3>
-      <p>Lightning-fast native Node.js ESM. Includes atomic cross-process file locking (<code>wx</code> flag) and natural sorting (<code>DEC-100000</code> vs <code>DEC-99999</code>) for bulletproof subagent concurrency.</p>
-    </td>
-  </tr>
-</table>
+**External writes are gated and verified, not trusted.** Filing an issue, commenting, or
+otherwise touching something outside the sandbox requires explicit per-session
+authorisation, a single-use ticket, and an independent read-back confirming the write
+actually happened before it counts as `confirmed: true`.
 
----
+**The bookkeeping is a zero-dependency Node CLI, not agent memory.** IDs, schema
+validation, evidence hashing, cross-process file locking, and metrics all live in code —
+so they cannot drift the way an LLM's internal tally of "what I've done so far" can.
 
-## 🔄 The Autonomous Testing Lifecycle
-
-The system operates across a structured, multi-stage pipeline designed to eliminate hallucinations and blind assumptions:
+## The testing lifecycle
 
 ```mermaid
 flowchart TD
-    classDef startEnd fill:#1e1e2e,stroke:#89b4fa,stroke-width:2px,color:#cdd6f4;
-    classDef process fill:#181825,stroke:#b4befe,stroke-width:1px,color:#cdd6f4;
-    classDef decision fill:#313244,stroke:#f9e2af,stroke-width:2px,color:#f9e2af;
-    classDef success fill:#11111b,stroke:#a6e3a1,stroke-width:2px,color:#a6e3a1;
-    classDef danger fill:#11111b,stroke:#f38ba8,stroke-width:2px,color:#f38ba8;
-
-    A["🔍 1. Discovery & Profile\n(Stack, APIs, Auth, Existing Tests)"]:::startEnd --> B["⚖️ 2. Applicability Matrix\n(Evaluate 47 Testing Categories)"]:::process
-    B --> C["📊 3. Risk & Confidence Scoring\n(3-Tier Bands: High, Moderate, Low)"]:::process
-    C --> D["🔌 4. Capability Resolution\n(CLI, MCP Servers, Playwright Tools)"]:::process
-    D --> E["🧠 5. Decision Engine\n(Explore vs. Script vs. Unit vs. API)"]:::process
-    E --> F["⚙️ 6. Isolated Execution\n(Redacted Output, State Locking, Hashes)"]:::process
-    F --> G{"🛡️ 7. Evidence Content Gate\n(Exit Code? 0 Tests? Linked Execution?)"}:::decision
-    G -->|"✅ Validated"| H["📝 8. Inverted-Pyramid Report\n(Findings, Gaps, Actionable Next Steps)"]:::success
-    G -->|"❌ Rejected / Unevidenced"| I["⚠️ Downgraded to INCONCLUSIVE\n(Explicit False-Confidence Alarm)"]:::danger
+    A["1. Discover & profile\n(stack, APIs, auth, existing tests)"] --> B["2. Applicability matrix\n(which of 47 categories apply)"]
+    B --> C["3. Risk & confidence scoring"]
+    C --> D["4. Capability resolution\n(CLI, MCP servers, Playwright)"]
+    D --> E["5. Decision engine\n(explore vs. script vs. unit vs. API)"]
+    E --> F["6. Isolated execution\n(redacted output, locked state, hashes)"]
+    F --> G{"7. Evidence content gate\nexit code? zero cases? linked execution?"}
+    G -->|validated| H["8. Report\n(findings, gaps, next actions)"]
+    G -->|rejected| I["Downgraded to INCONCLUSIVE"]
     I --> H
 ```
 
----
+The agent does not walk this once — after every result it returns to "decide next" and
+re-enters wherever the evidence says it should.
 
-## 🏛️ Architecture: Bookkeeping as Code, Judgement as Prose
+## Architecture: bookkeeping is code, judgement is prose
 
-> **Bookkeeping done by LLM judgement drifts. Judgement encoded as rigid code becomes an inflexible checklist bot.**
-
-This system strictly separates mechanical bookkeeping from expert human/agent judgement:
-
-```
-┌────────────────────────────────────────────────────────┐
-│                      CLAUDE CODE                       │
-│    Reasoning, Semantic Exploration & Strategy (Prose)   │
-└───────────────────────────┬────────────────────────────┘
-                            │ Capabilities / CLI Calls
-┌───────────────────────────▼────────────────────────────┐
-│                    NODE ENGINE RUNTIME                 │
-│       Deterministic Bookkeeping & Verification (Code)  │
-│                                                        │
-│  • Session State & Atomic Locking  • Evidence Hashing  │
-│  • 47-Category Applicability       • Schema Validation │
-│  • Risk Confidence Bands           • External Ledger   │
-└────────────────────────────────────────────────────────┘
-```
-
-| 💻 Code Layer (`bin/ast.mjs`, `engine/`) | 🧠 Judgement Layer (`skills/`, `agents/`) |
-|---|---|
-| 🏷️ **Deterministic IDs & Schema Checks** | 🎯 **Deciding what is worth testing** |
-| 🛡️ **Evidence Verification Gates** | 🔎 **Interpreting semantic diffs** |
-| 🔒 **Atomic Concurrency & File Locks** | ⚖️ **Judging whether an anomaly is a defect** |
-| 📖 **Independent Read-Back Confirmation** | 🌊 **Choosing depth and exploration trade-offs** |
-
-*Read the comprehensive design: [ARCHITECTURE.md](ARCHITECTURE.md).*
-
----
-
-## 🛡️ The Three Non-Negotiable Rules
+Bookkeeping left to an LLM's judgement drifts. Judgement forced into rigid code becomes an
+inflexible checklist. This system keeps the two apart:
 
 ```
- ┌────────────────────────────────────────────────────────────────────────┐
- │ 1. NO CLAIM WITHOUT EVIDENCE                                           │
- │    Claiming PASSED without supporting execution evidence automatically │
- │    downgrades to INCONCLUSIVE. Non-zero exit codes contradict PASSED.  │
- ├────────────────────────────────────────────────────────────────────────┤
- │ 2. NO EXTERNAL WRITE WITHOUT EXPLICIT AUTHORISATION                    │
- │    Filing issues, mutating tickets, or running destructive commands    │
- │    requires per-session approval and independent read-back proof.      │
- ├────────────────────────────────────────────────────────────────────────┤
- │ 3. A BLOCKER STOPS ONE BRANCH, NEVER THE SESSION                       │
- │    Missing credentials? Mock boundaries, mark that scenario BLOCKED,   │
- │    and continue validating all other test categories.                  │
- └────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ CLAUDE CODE                                              │
+│ Reasoning, exploration, and strategy — prose             │
+└───────────────────────────┬──────────────────────────────┘
+                            │ capability verbs / CLI calls
+┌───────────────────────────▼──────────────────────────────┐
+│ NODE ENGINE (bin/ast.mjs, engine/)                       │
+│ Deterministic bookkeeping and verification — code        │
+│                                                          │
+│ session state · atomic locking · evidence hashing        │
+│ applicability & risk engines · schema validation         │
+└──────────────────────────────────────────────────────────┘
 ```
 
----
+| Code layer (`bin/ast.mjs`, `engine/`) | Judgement layer (`skills/`, `agents/`) |
+| --- | --- |
+| Deterministic IDs and schema checks | Deciding what is worth testing |
+| Evidence verification gate | Interpreting a semantic diff |
+| Atomic concurrency and file locks | Judging whether an anomaly is a real defect |
+| Independent read-back confirmation | Choosing depth and exploration trade-offs |
 
-## 📦 Installation Guide
+Full design: [ARCHITECTURE.md](ARCHITECTURE.md).
 
-### Option 1: Repository Scope (Default & Recommended)
-Installs cleanly into `.claude/` in the active project directory:
+## Three rules that override everything else
+
+1. **No claim without evidence.** A `PASSED` claim with no supporting execution evidence
+   downgrades to `INCONCLUSIVE` automatically. A non-zero exit code contradicts `PASSED`.
+2. **No external write without explicit authorisation.** Filing issues, mutating tickets,
+   or running destructive commands needs per-session approval and an independent
+   read-back, every time.
+3. **A blocker stops one branch, never the session.** Missing credentials or a broken
+   environment marks that one scenario `BLOCKED` and the rest of the plan keeps running.
+
+## Installation
+
+### Repository scope (default)
+
 ```bash
 npx --yes github:Purushotham-Prajapati-24/qa-skills
 ```
 
 ```text
 .claude/
-  ├── skills/    # 21 domain-specific skills loaded on-demand
-  ├── agents/    # 4 dedicated subagents for heavy context
-  └── ast/       # Zero-dependency Node runtime, CLI, engines & schemas
+  skills/    21 domain-specific skills, loaded on demand
+  agents/    4 subagents for context-heavy work
+  ast/       the zero-dependency Node runtime, CLI, engines, and schemas
 ```
 
-### Option 2: Workstation Scope (User-Wide)
-Make skills available to every repository on your machine:
+### Workstation scope
+
+Makes the skills available to every repository on the machine:
+
 ```bash
 npx --yes github:Purushotham-Prajapati-24/qa-skills --user
 ```
 
-### Option 3: Claude Code Plugin Marketplace
-Install directly as a plugin bundle:
+### Claude Code plugin marketplace
+
 ```bash
 /plugin marketplace add https://github.com/Purushotham-Prajapati-24/qa-skills
 /plugin install autonomous-software-testing
 ```
 
 <details>
-<summary><b>⚙️ Advanced Installation Flags (Click to expand)</b></summary>
-<br>
+<summary>Advanced install flags</summary>
 
 ```bash
 # Pin to a specific tagged release
 npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.11.0
 
-# Dry-run inspection (see what files change without writing)
+# See what would change without writing anything
 npx --yes github:Purushotham-Prajapati-24/qa-skills --dry-run
 
-# Partial install (only the skills you need)
+# Install only the skills you need
 npx --yes github:Purushotham-Prajapati-24/qa-skills --only unit-testing,api-testing,browser-testing
 
 # Wire safety hooks into .claude/settings.json
 npx --yes github:Purushotham-Prajapati-24/qa-skills --hooks
 
-# Force reinstallation (overwrites existing files)
+# Overwrite an existing install
 npx --yes github:Purushotham-Prajapati-24/qa-skills --force
 ```
 
 </details>
 
----
+Details, troubleshooting, and what each flag actually changes:
+[docs/installation.md](docs/installation.md).
 
-## 🧩 The 21 Specialist Skills & 4 Subagents
+## The 21 skills and 4 subagents
 
 ```
 skills/
-├── 🎯 Orchestration & Discovery
-│   ├── 🧭 testing-orchestrator       Loop governance, lifecycle policies, and recovery
-│   ├── 🔍 repository-intelligence    Stack profiling, config mapping, and test discovery
-│   ├── 📈 change-intelligence        Git diff analysis, churn scoring, and blast radius
-│   ├── 📝 requirement-analysis       User story extraction, acceptance criteria & gaps
-│   ├── ⚖️ risk-analysis              Risk engine scoring with 3-tier confidence bands
-│   └── 🗺️ test-strategy              Coverage budgeting, category pruning & test plans
-│
-├── 🧪 Execution Specialists
-│   ├── 📦 unit-testing               Harness baselining, isolation, and mutation checks
-│   ├── 🔗 integration-testing        Subsystem boundaries, contract checks, and mocks
-│   ├── 🌐 api-testing                REST/GraphQL contracts, boundary cases & schemas
-│   ├── 🗄️ database-testing           Migrations, idempotency, seed data, and rollbacks
-│   ├── 🎭 browser-testing            Playwright script authoring & browser-decision engine
-│   ├── 🖥️ ui-testing                 DOM interactions, state transitions, layout regressions
-│   ├── 🚀 e2e-testing                Multi-step golden user paths and transactions
-│   ├── 🔁 regression-testing         Safety nets, change-focused test selection
-│   ├── ♿ accessibility-testing      axe-core audits, WCAG compliance, keyboard traps
-│   ├── 🔒 security-testing           Auth bypass, IDOR, input sanitation, secret exposure
-│   ├── ⏱️ performance-testing        Endpoint latency baselines, queries, and N+1 leaks
-│   ├── 💻 compatibility-testing      Node versions, environments, OS differences
-│   └── 🤖 ai-testing                 Prompt regression, determinism checks, model drift
-│
-└── 📋 Analysis & Delivery
-    ├── 🐛 defect-reporting           Fingerprinted, reproducible defect reports
-    └── 📑 test-reporting             Inverted-pyramid executive & technical summaries
+  Orchestration & discovery
+    testing-orchestrator     loop governance, lifecycle policy, recovery
+    repository-intelligence  stack profiling, config mapping, test discovery
+    change-intelligence      diff analysis, churn scoring, blast radius
+    requirement-analysis     user-story extraction, acceptance criteria, gaps
+    risk-analysis            weighted risk scoring with confidence bands
+    test-strategy            coverage budgeting, category pruning, test plans
+
+  Execution specialists
+    unit-testing             harness baselining, isolation, mutation checks
+    integration-testing      subsystem boundaries, contract checks, mocks
+    api-testing              REST/GraphQL contracts, boundary cases, schemas
+    database-testing         migrations, idempotency, seed data, rollbacks
+    browser-testing          Playwright authoring and the browser-decision engine
+    ui-testing               DOM interactions, state transitions, layout regressions
+    e2e-testing              multi-step user paths and transactions
+    regression-testing       safety nets, change-focused test selection
+    accessibility-testing    axe-core audits, WCAG compliance, keyboard traps
+    security-testing         auth bypass, IDOR, input sanitation, secret exposure
+    performance-testing      endpoint latency baselines, N+1 queries
+    compatibility-testing    Node versions, environments, OS differences
+    ai-testing               prompt regression, determinism checks, model drift
+
+  Analysis & delivery
+    defect-reporting         fingerprinted, reproducible defect reports
+    test-reporting           the executive and technical report itself
 ```
 
-### 👥 Dedicated Context Subagents
-For tasks that would flood the primary conversation window, the orchestrator delegates to specialized subagents:
-* 🕵️ **`repository-analyst`**: Static analysis, AST extraction, and dependency graph mapping.
-* 🌐 **`browser-explorer`**: Interactive exploratory browser navigation and DOM verification.
-* ✍️ **`test-author`**: Authoring idiomatic, maintainable test files tailored to local conventions.
-* 🛡️ **`evidence-auditor`**: Independent verification of hashes, epistemic classes, and exit codes.
+Dedicated subagents, for work that would otherwise flood the main conversation:
 
----
+- **`repository-analyst`** — static analysis, AST extraction, dependency mapping
+- **`browser-explorer`** — interactive exploratory browser navigation and DOM checks
+- **`test-author`** — writes test files matching local conventions
+- **`evidence-auditor`** — independently re-checks hashes, epistemic classes, exit codes
 
-## 🧠 Core Decision Engines
+## The decision engines
 
-### 🎭 1. The Browser Decision Engine
-Blindly defaulting to an interactive browser MCP wastes tokens and leaves zero regression assets. The engine balances **15 factors** across **5 distinct strategies**:
+### Browser testing method
 
-```text
-Factors (Repeatability, UI Maturity, CI Gates, Cost)
-                    │
-                    ▼
-┌────────────────────────────────────────────────────────┐
-│                 BROWSER DECISION MATRIX                │
-├────────────────────────────────────────────────────────┤
-│ • playwright-script : Fast, deterministic CI assets    │
-│ • playwright-mcp    : Interactive exploration of new UI│
-│ • hybrid            : Explore via MCP, automate script │
-│ • existing-suite    : Run repo's existing browser tests│
-│ • do-not-test       : Omit if purely backend / cosmetic│
-└────────────────────────────────────────────────────────┘
-```
-*Full policy: [skills/browser-testing/browser-decision.md](skills/browser-testing/browser-decision.md).*
+Defaulting to an interactive browser MCP for everything wastes tokens and leaves no
+regression asset behind. The engine weighs 15 factors (repeatability, UI maturity, CI
+suitability, cost, ...) across 5 candidate strategies:
 
-### 📊 2. Risk Scoring & Confidence Bands
-A risk score without a confidence metric is dangerous false precision:
-* **Confidence Bands**: Assesses the share of weighted factors supported by evidence:
-  * 🟢 **High** ($\ge 66\%$): Robustly evidenced across all risk vectors.
-  * 🟡 **Moderate** ($33\% - 65\%$): Qualified risk level; highlights unevidenced assumptions.
-  * 🔴 **Low** ($< 33\%$): Explicit warning; prevents using the score to exclude test categories.
+| Method | When it wins |
+| --- | --- |
+| `playwright-script` | Fast, deterministic, produces a real CI asset |
+| `playwright-mcp` | Interactive exploration of a UI nobody has looked at yet |
+| `hybrid` | Explore first via MCP, then convert the stable path into a script |
+| `existing-suite` | The repository already has browser tests that cover this |
+| `do-not-test` | Purely backend or cosmetic; browser testing adds nothing here |
 
-### 🔬 3. Commit-Aware Flakiness Detection
-* **Single Commit**: Mixed test outcomes on the exact same commit hash prove **test flakiness**.
-* **Multiple Commits**: Mixed outcomes across commit boundaries indicate **behavioral regressions**.
-* **Unrecorded Commit**: Demands commit recording rather than fabricating flakiness conclusions.
+Full policy: [skills/browser-testing/browser-decision.md](skills/browser-testing/browser-decision.md).
 
----
+### Risk scoring and confidence bands
 
-## 💻 Zero-Dependency CLI Cheat-Sheet (`ast`)
+A risk score with no confidence attached is false precision. Confidence is the share of
+weighted factors actually backed by evidence:
+
+- **High** (≥ 66%): the level stands on its own.
+- **Moderate** (33–65%): qualified — read alongside which factors were unevidenced.
+- **Low** (< 33%): explicit warning; never use this alone to exclude a category.
+
+### Flakiness, tied to commit identity
+
+- Mixed outcomes on the *same* commit hash: real flakiness.
+- Mixed outcomes across *different* commits: a behavioural regression, not flakiness.
+- No commit recorded either way: the engine demands the commit rather than guessing.
+
+## CLI reference (`ast`)
 
 ```bash
-# ─── SESSION & LIFECYCLE ────────────────────────────────────────────────────────
-node bin/ast.mjs session resume            # Inspect & resume an in-progress session
-node bin/ast.mjs caps probe                # Probe local environment & providers
-node bin/ast.mjs caps declare <p> <bool>   # Declare agent-available MCP tools
+# Session and lifecycle
+node bin/ast.mjs session resume            # inspect and resume an in-progress session
+node bin/ast.mjs caps probe                # probe local environment and providers
+node bin/ast.mjs caps declare <verb> <bool>
 
-# ─── DECISION & REASONING ───────────────────────────────────────────────────────
-node bin/ast.mjs risk score --explain      # Calculate weighted risk & confidence band
-node bin/ast.mjs applicability eval        # Compute 47-category applicability matrix
-node bin/ast.mjs browser decide            # Solve optimal browser testing approach
-node bin/ast.mjs failure classify          # Classify failure causes before filing bugs
+# Decision and reasoning
+node bin/ast.mjs risk score --explain      # weighted risk score with confidence band
+node bin/ast.mjs applicability eval        # the 47-category applicability matrix
+node bin/ast.mjs browser decide            # pick a browser testing strategy
+node bin/ast.mjs failure classify          # classify a failure before filing a defect
 
-# ─── EVIDENCE & INTEGRITY ───────────────────────────────────────────────────────
-node bin/ast.mjs evidence verify           # Mechanical false-confidence check
-node bin/ast.mjs report generate           # Render executive & technical summary
-node bin/ast.mjs validate                  # Verify schema compliance & referential links
-node bin/ast.mjs metrics                   # Audit honesty & false-confidence metrics
-node bin/ast.mjs eval run                  # Run the 15 benchmark cases
+# Evidence and integrity
+node bin/ast.mjs evidence capture -- <cmd> # run a real command and hash its output
+node bin/ast.mjs evidence verify           # the mechanical false-confidence check
+node bin/ast.mjs report generate           # render the executive and technical report
+node bin/ast.mjs report verify <path|id>   # prove a report was actually produced by this system
+node bin/ast.mjs validate                  # schema compliance and referential integrity
+node bin/ast.mjs metrics                   # honesty and false-confidence metrics
+node bin/ast.mjs eval run                  # run the benchmark and regression suite
 ```
 
----
-
-## 🔌 Capability Verbs & Integrations
-
-Skills never hard-code MCP tool names. They reason in capability **verbs**:
-
-```
-github.create_issue  ──►  GitHub MCP?     [Not Authorised]
-                     └──►  gh CLI?         [Authenticated ✓]
-```
-
-* 🔐 **Read-Back Verification**: External writes are verified via independent `gh issue view` read-backs before entering the ledger as `confirmed: true`.
-* 🎫 **Single-Use Tickets**: MCP tool execution requires cryptographic tickets (`WT-...`) that expire after use.
-
-Read the integration specifications:
-* [integrations/github/](integrations/github/) — Executable adapter, write tickets, read-back checks
-* [integrations/jira/](integrations/jira/) — Atlassian connector & REST v3 mapping
-* [integrations/google/](integrations/google/) — Drive exports and local markdown documentation fallback
-
----
-
-## 🧪 Ground-Truth Benchmark Evaluation
-
-Testing an agent requires real software. This repository includes `sample-ecommerce-app` (ShopFlow), featuring **8 injected real-world defects** scored against `evaluation/benchmark-app/answer-key.json`:
+Any `--input`-taking command will print a worked example of its own payload:
 
 ```bash
-# Run the 15 benchmark validation cases
-node bin/ast.mjs eval run
-
-# Audit honesty metrics
-node bin/ast.mjs metrics
+node bin/ast.mjs risk score --example
 ```
 
-| Metric | Target | Purpose |
-|---|:---:|---|
-| `false_confidence_rate` | **0.00** | Alarms on any `PASSED` claim without valid execution evidence |
-| `authorization_compliance`| **1.00** | Zero unauthorized external writes or side effects |
-| `flaky_identification_quality` | **1.00** | Forbids asserting flakiness without evidence from 3+ runs |
-| `evidence_completeness` | **≥ 0.95** | High proportion of executions supported by verifiable evidence |
+## Capability verbs, not tool names
 
-*Benchmark documentation: [evaluation/README.md](evaluation/README.md).*
+Skills never hard-code an MCP tool name. They ask for a capability, and the registry
+resolves it against whatever is actually available:
 
----
+```
+github.create_issue  ->  GitHub MCP?  not authorised
+                     ->  gh CLI?      authenticated, used instead
+```
 
-## 🔬 Suite Verification
+External writes are verified via an independent read-back (e.g. `gh issue view`) before
+they enter the ledger as `confirmed: true`. MCP tool execution goes through single-use,
+expiring tickets rather than a standing grant.
 
-Run the entire verification suite locally in seconds:
+Integration specifications:
+[integrations/github/](integrations/github/) ·
+[integrations/jira/](integrations/jira/) ·
+[integrations/google/](integrations/google/)
+
+## Evaluation, grounded in real mistakes
+
+`node bin/ast.mjs eval run` runs 47 checks across 20 cases: 15 benchmark cases against a
+sample app with known, injected defects
+([evaluation/benchmark-app/answer-key.json](evaluation/benchmark-app/answer-key.json)),
+plus 5 regression cases seeded from real sessions where an agent using this system got a
+decision wrong. When a live run produces a bad call, its inputs become a case with the
+correct outcome asserted — the system's own mistakes are what keep it honest, not just
+hand-picked scenarios.
+
+```bash
+node bin/ast.mjs eval run        # decision engines against fixed, known-answer inputs
+node bin/ast.mjs metrics         # honesty metrics computed from a real session
+```
+
+| Metric | Target | What it catches |
+| --- | :---: | --- |
+| `false_confidence_rate` | 0.00 | Any `PASSED` claim without valid execution evidence |
+| `authorization_compliance` | 1.00 | Any unauthorised external write |
+| `flaky_identification_quality` | 1.00 | Calling something flaky from fewer than 3 runs |
+| `evidence_completeness` | ≥ 0.95 | Executions with no verifiable evidence behind them |
+
+The benchmark answers "does the decision machinery behave as designed?" It does not answer
+"did the agent gather the right inputs from a real repository?" — that needs a live run;
+see the walkthroughs in [examples/](examples/). Full documentation:
+[evaluation/README.md](evaluation/README.md).
+
+## Running the verification suite locally
 
 ```bash
 node --test "tests/*.test.mjs"     # 340 tests
-node bin/ast.mjs eval run          # 41 checks across 15 benchmark cases
-node scripts/validate-repo.mjs     # Links, schemas, and catalog cross-references
+node bin/ast.mjs eval run          # 47 checks across 20 cases
+node scripts/validate-repo.mjs     # links, schemas, and catalog cross-references
 ```
 
----
+## Documentation
 
-## 📚 Complete Documentation Index
+| Guide | Covers |
+| --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture, engine layout, data flow |
+| [docs/concepts.md](docs/concepts.md) | Epistemic classes, evidence hashing, core terms |
+| [docs/installation.md](docs/installation.md) | Install flags and troubleshooting |
+| [docs/status-model.md](docs/status-model.md) | The eleven statuses (`PASSED`, `BLOCKED`, ...) |
+| [docs/versioning.md](docs/versioning.md) | Schema versioning and compatibility |
+| [docs/mcp-configuration.md](docs/mcp-configuration.md) | Configuring Playwright, GitHub, Atlassian MCPs |
+| [docs/extending.md](docs/extending.md) | Adding a skill, an adapter, or a metric |
+| [docs/debugging.md](docs/debugging.md) | When a policy or decision matrix disagrees with you |
+| [docs/assumptions.md](docs/assumptions.md) | Stated assumptions and verified environments |
+| [SECURITY.md](SECURITY.md) | Safety boundaries, redaction, write gating |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Developer guide and PR workflow |
+| [PROGRESS.md](PROGRESS.md) | Implementation status, roadmap, known gaps |
 
-| Guide | Description |
-|---|---|
-| 📐 [ARCHITECTURE.md](ARCHITECTURE.md) | High-level system architecture, engine layout, and data flow |
-| 💡 [docs/concepts.md](docs/concepts.md) | Epistemic classes, evidence hashing, and core terminology |
-| 🚀 [docs/installation.md](docs/installation.md) | Detailed installation, custom flags, and troubleshooting |
-| 🚦 [docs/status-model.md](docs/status-model.md) | The eleven epistemic statuses (`PASSED`, `BLOCKED`, etc.) |
-| 🔢 [docs/versioning.md](docs/versioning.md) | Schema versioning and backward compatibility contracts |
-| 🔌 [docs/mcp-configuration.md](docs/mcp-configuration.md) | Configuring Playwright, GitHub, and Atlassian MCPs |
-| 🧩 [docs/extending.md](docs/extending.md) | How to add custom skills, integration adapters, or metrics |
-| 🐛 [docs/debugging.md](docs/debugging.md) | Diagnostics when policies or decision matrices disagree |
-| 📋 [docs/assumptions.md](docs/assumptions.md) | Stated assumptions, verified environments, and constraints |
-| 🔒 [SECURITY.md](SECURITY.md) | Safety boundaries, secret redaction, and write gating |
-| 🤝 [CONTRIBUTING.md](CONTRIBUTING.md) | Developer guide, coding standards, and PR workflows |
-| 📈 [PROGRESS.md](PROGRESS.md) | Implementation progress, roadmap, and benchmark calibration |
+## Licence
 
----
-
-## 📄 Licence
-
-Distributed under the **MIT Licence**. See [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE).
