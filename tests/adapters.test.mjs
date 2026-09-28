@@ -441,8 +441,9 @@ test('preflight distinguishes authentication from scope', async () => {
 /* -------------------------------------------------------------- registry */
 
 test('the registry is honest about which adapters exist', () => {
-  assert.deepEqual(adapters.SYSTEMS, ['github']);
-  assert.throws(() => adapters.getAdapter('jira'), /no executable module yet/);
+  // Jira gained an executable module in 0.11.0 (engine/adapters/jira.mjs); Google Docs has not.
+  assert.deepEqual(adapters.SYSTEMS, ['github', 'jira']);
+  assert.throws(() => adapters.getAdapter('docs'), /no executable module yet/);
 });
 
 /**

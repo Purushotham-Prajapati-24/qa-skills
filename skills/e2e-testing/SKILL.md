@@ -126,3 +126,9 @@ component test, **write that test** — it will be faster, clearer, and it will 
 - Sharing one account across parallel tests.
 - Asserting only the URL — pages render error states at the right URL all the time.
 - Declaring the journey "works" when only the happy path ran.
+
+## Test data
+
+Follow the [test data policy](../testing-orchestrator/policies/test-data-policy.md): synthetic by
+default, seeded, created per run, cleaned up, never real personal data without explicit
+authorisation and verified anonymisation.

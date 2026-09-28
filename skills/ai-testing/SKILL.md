@@ -143,3 +143,9 @@ you, the model identifier is as important as the commit SHA.
 > 0.87 — the 2 grounding failures both had the correct chunk retrieved, so the defect is in
 > generation, not retrieval. **Not tested:** prompt injection via uploaded files, and cost
 > per request.
+
+## Test data
+
+Follow the [test data policy](../testing-orchestrator/policies/test-data-policy.md): synthetic by
+default, seeded, created per run, cleaned up, never real personal data without explicit
+authorisation and verified anonymisation.

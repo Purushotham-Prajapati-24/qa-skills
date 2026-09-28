@@ -17,15 +17,16 @@ metadata:
 `auth.json`:
 
 ```json
-{"action":"db.read_non_production","environmentClass":"non-production"}
+{"action":"db.read_non_production","target":"local-db"}
 ```
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" auth check --input auth.json
 ```
 
-An environment is non-production only when the repository profile explicitly says so.
-Unknown counts as production. Work against a disposable instance:
+`target` is looked up in the profile's `environments`: an environment is non-production only
+when that list declares it so, with evidence. Unknown counts as production. Work against a
+disposable instance, and declare it there:
 
 ```bash
 docker compose -f docker-compose.test.yml up -d db
@@ -122,3 +123,9 @@ evidence and it is what makes a data claim verifiable.
 Database snapshots, query results and migration output are execution evidence. Record the
 schema version, the row counts and the exact SQL. **Redact any personal data** before it
 reaches a report — a report containing customer email addresses is itself a data incident.
+
+## Test data
+
+Follow the [test data policy](../testing-orchestrator/policies/test-data-policy.md): synthetic by
+default, seeded, created per run, cleaned up, never real personal data without explicit
+authorisation and verified anonymisation.

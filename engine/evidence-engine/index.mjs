@@ -267,8 +267,13 @@ export function verifyClaim({ status, evidenceIds = [], statement = '', executio
   }
 
   reasons.push(`Backed by ${items.length} evidence item(s), including execution evidence of kind(s): ${kinds.filter((k) => EXECUTION_EVIDENCE.has(k)).join(', ')}.`);
-  if (statement && /\bworks?\b|\bfine\b|\ball good\b|\bno issues?\b/i.test(statement) && !/\bTC-|\bEXEC-|assertion/i.test(statement)) {
-    reasons.push('WARNING: the statement is vague ("works"/"fine"). Rewrite it to name the scenario, the commit and the assertions that held.');
+  // "All passed" / "suite is green" / "no failures" are the same non-claim as "works": they
+  // say nothing about which scenario ran or what was asserted. A statement naming a record
+  // id, an assertion or a count ("9 of 12", "12/12") is specific enough to pass.
+  const VAGUE = /\bworks?\b|\bfine\b|\ball good\b|\bno issues?\b|\blooks? good\b|\ball (?:tests? |checks? )?pass(?:ed|es|ing)?\b|\b(?:suite|tests?|everything) (?:is |are )?(?:green|pass(?:ed|es|ing)?)\b|\bno failures?\b|\b0 fail(?:ed|ures?)?\b/i;
+  const SPECIFIC = /\bTC-|\bEXEC-|assertion|\b\d+\s*(?:of|\/)\s*\d+\b/i;
+  if (statement && VAGUE.test(statement) && !SPECIFIC.test(statement)) {
+    reasons.push('WARNING: the statement is vague ("works", "all passed", "no failures"). Rewrite it to name the scenario, the commit and the assertions that held.');
   }
   return { permitted: true, reasons };
 }

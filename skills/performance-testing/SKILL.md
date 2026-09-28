@@ -20,7 +20,7 @@ Two hard prerequisites. Without either, stop and get it.
 ## Authorisation
 
 Load traffic is indistinguishable from an attack. Stress, spike and endurance tests need
-explicit authorisation **and** an isolated non-production target.
+explicit authorisation **and** a non-production environment (declared in the profile's `environments`) that nothing else shares.
 
 `auth.json`:
 
@@ -134,3 +134,9 @@ the measured value, the concurrency, the data volume, the environment, and the r
 - Load testing through a browser — you measure the browser.
 - Testing against an empty database, then being surprised in production.
 - Declaring "no regression" from a single run within noise.
+
+## Test data
+
+Follow the [test data policy](../testing-orchestrator/policies/test-data-policy.md): synthetic by
+default, seeded, created per run, cleaned up, never real personal data without explicit
+authorisation and verified anonymisation.

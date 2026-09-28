@@ -631,6 +631,10 @@ const COMMANDS = {
 
   /* ---- analysis ---- */
   'flaky analyse': { help: 'Analyse per-test pass/fail history.', run: () => flakiness.analyse() },
+  'flaky quarantine': {
+    help: 'File a test-quality-issue finding for every test proven flaky (>= 3 mixed runs at one commit). exec finish runs this automatically when it receives per-test results.',
+    run: () => flakiness.quarantine(),
+  },
   'trace query': {
     help: 'Traceability query: trace query what-remains-untested | what-validates REQ-1 | why-this-method EXEC-...',
     run: ({ positional }) => trace.query(positional[2], positional[3] ?? null),
@@ -731,6 +735,39 @@ const COMMANDS = {
       authorisation: { userAuthorised: Boolean(flags.authorised), authorisationQuote: flags.quote ?? '' },
     }),
   },
+  'jira preflight': {
+    help: 'Check the Jira REST credentials (JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN) before any write.',
+    run: () => adapters.preflight('jira'),
+  },
+  'jira read': {
+    help: 'Read from Jira: jira read ticket --key SHOP-412 | jira read search --jql "project = SHOP AND updated >= -7d" [--limit 20]. Descriptions come back as text, with acceptance criteria extracted when they are a heading.',
+    run: ({ positional, flags }) => {
+      const jira = adapters.getAdapter('jira');
+      if (positional[2] === 'ticket') return jira.readTicket({ key: flags.key });
+      if (positional[2] === 'search') return jira.search({ jql: flags.jql, limit: flags.limit ? Number(flags.limit) : 20 });
+      throw new Error(`Unknown read "${positional[2]}". One of: ticket, search`);
+    },
+  },
+  'jira file-issue': {
+    help: 'File a finding as a Jira issue, through every gate: jira file-issue FIND-00001 --project SHOP [--type Bug] [--authorised --quote "..."] [--dry-run]',
+    run: ({ positional, flags }) => adapters.getAdapter('jira').createIssueFromFinding({
+      findingId: positional[2],
+      project: flags.project,
+      issueType: flags.type ?? 'Bug',
+      decisionId: flags.decision ?? null,
+      dryRun: Boolean(flags['dry-run']),
+      authorisation: { userAuthorised: Boolean(flags.authorised), authorisationQuote: flags.quote ?? '' },
+    }),
+  },
+  'jira comment': {
+    help: 'Comment on a Jira issue: jira comment --key SHOP-412 --input body.json [--authorised --quote "..."] [--dry-run]. body.json is {"body":"plain text"}; it is converted to ADF.',
+    run: ({ flags }) => adapters.getAdapter('jira').comment({
+      key: flags.key, body: payload(flags).body,
+      idempotencyKey: flags.idempotency, decisionId: flags.decision ?? null,
+      dryRun: Boolean(flags['dry-run']),
+      authorisation: { userAuthorised: Boolean(flags.authorised), authorisationQuote: flags.quote ?? '' },
+    }),
+  },
   'adapter complete': {
     help: 'Finish a delegated (MCP) write: adapter complete --ticket WT-... --input response.json',
     run: ({ flags }) => {
@@ -748,7 +785,7 @@ const COMMANDS = {
   },
   'adapter systems': {
     help: 'List systems with an executable adapter.',
-    run: () => ({ implemented: adapters.SYSTEMS, contracts_only: ['jira', 'google-docs', 'google-drive'] }),
+    run: () => ({ implemented: adapters.SYSTEMS, contracts_only: ['google-docs', 'google-drive'] }),
   },
 
   /* ---- integrity ---- */

@@ -110,6 +110,7 @@ export const DEFINITIONS = {
     formula: 'executions carrying commit + environment + command / executions with method != not-executed',
     direction: 'higher-is-better',
     why: 'A result nobody can re-run is an anecdote.',
+    blind_spot: 'Counts whether a run could be repeated, not whether a repeat on another OS or Node version would agree. Each execution records its runtime (os, arch, node); compare it before treating two results as the same.',
   },
 };
 

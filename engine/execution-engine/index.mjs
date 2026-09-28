@@ -13,8 +13,10 @@ import { verifyClaim } from '../evidence-engine/index.mjs';
 import { classify } from '../failure-classifier/index.mjs';
 import { inheritedGit } from '../core/git.mjs';
 import fs from 'node:fs';
+import os from 'node:os';
 import { decodeText } from '../core/fsjson.mjs';
 import { parseJUnit } from '../core/junit.mjs';
+import { quarantine } from '../flakiness/index.mjs';
 
 export function start({
   goal,
@@ -58,6 +60,7 @@ export function start({
   if (cwd) rec.cwd = cwd;
   if (environment) rec.environment = environment;
   if (target) rec.target = typeof target === 'string' ? { url: target } : target;
+  rec.runtime = { os: `${process.platform} ${os.release()}`, arch: process.arch, node: process.version };
   const gitInfo = inheritedGit(git, session);
   if (gitInfo) rec.git = gitInfo;
 
@@ -161,7 +164,10 @@ export function finish(executionId, {
     downgraded: finalStatus !== status,
     duration_ms: rec.duration_ms,
   });
-  return { record: rec, verdict, downgraded: finalStatus !== status };
+  // New per-test results can complete a flaky history (>= 3 mixed runs at one commit).
+  // Quarantine here rather than relying on the agent to remember a separate command.
+  const quarantined = testResults.length ? quarantine().filter((q) => q.status === 'quarantined') : [];
+  return { record: rec, verdict, downgraded: finalStatus !== status, ...(quarantined.length ? { quarantined } : {}) };
 }
 
 /**

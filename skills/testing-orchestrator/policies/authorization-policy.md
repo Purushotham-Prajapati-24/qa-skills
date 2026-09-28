@@ -66,7 +66,8 @@ permission.
 
 Load traffic is indistinguishable from an attack; active security scanning is an
 intrusion attempt. Both need explicit authorisation from whoever owns the target, plus a
-non-production target. Never point either at a host you were not told to test.
+non-production environment (declared in the profile's `environments`). Never point either at
+a host you were not told to test.
 
 ## Forbidden patterns
 

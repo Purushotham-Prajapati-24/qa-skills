@@ -117,3 +117,9 @@ authorisation — regardless of the HTTP verb.
 - Testing with an admin token throughout, which makes every authorisation bug invisible.
 - Treating a 500 as a test failure without checking the server log for the actual cause.
 - Hardcoding IDs that a fresh database will not have.
+
+## Test data
+
+Follow the [test data policy](../testing-orchestrator/policies/test-data-policy.md): synthetic by
+default, seeded, created per run, cleaned up, never real personal data without explicit
+authorisation and verified anonymisation.

@@ -30,6 +30,16 @@
     "command": { "type": "string", "description": "Exact command line, redacted." },
     "cwd": { "type": "string" },
     "environment": { "type": "string", "description": "Named environment, e.g. 'local-docker', 'staging'." },
+    "runtime": {
+      "type": "object",
+      "description": "Where the CLI ran when the execution opened. Captured automatically; two runs of the same command at the same commit on different runtimes are not the same result.",
+      "properties": {
+        "os": { "type": "string" },
+        "arch": { "type": "string" },
+        "node": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
     "target": {
       "type": "object",
       "description": "A deployed system tested over the network. Its code is whatever was deployed, which the local git commit does not identify.",

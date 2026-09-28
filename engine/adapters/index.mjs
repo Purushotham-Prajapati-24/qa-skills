@@ -6,14 +6,17 @@
  * changes, which is the same indirection principle as the capability registry itself.
  */
 import { createGitHubAdapter, preflight as githubPreflight } from './github.mjs';
+import { createJiraAdapter, preflight as jiraPreflight } from './jira.mjs';
 import { listTickets, readTicket, completeWrite, TICKET_TTL_MS, OUTCOME } from './base.mjs';
 
 const FACTORIES = {
   github: createGitHubAdapter,
+  jira: createJiraAdapter,
 };
 
 const PREFLIGHTS = {
   github: githubPreflight,
+  jira: jiraPreflight,
 };
 
 export const SYSTEMS = Object.keys(FACTORIES);
@@ -21,7 +24,7 @@ export const SYSTEMS = Object.keys(FACTORIES);
 export function getAdapter(system, options = {}) {
   const factory = FACTORIES[system];
   if (!factory) {
-    throw new Error(`No adapter for "${system}". Available: ${SYSTEMS.join(', ')}. Jira and Google Docs have written contracts under integrations/ but no executable module yet -- see PROGRESS.md.`);
+    throw new Error(`No adapter for "${system}". Available: ${SYSTEMS.join(', ')}. Google Docs has a written contract under integrations/ but no executable module yet -- see PROGRESS.md.`);
   }
   return factory(options);
 }

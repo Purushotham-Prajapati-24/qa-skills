@@ -108,6 +108,7 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session start --request "<the user's ac
 | Escalate | When to stop and ask | [policies/escalation-policy.md](policies/escalation-policy.md) |
 
 Authorisation applies at every phase: [policies/authorization-policy.md](policies/authorization-policy.md).
+So does the [test data policy](policies/test-data-policy.md): synthetic, seeded, created per run, cleaned up.
 
 ## Delegating to specialist skills
 

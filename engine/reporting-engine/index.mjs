@@ -21,6 +21,7 @@ import { listWrites } from '../authorization/index.mjs';
 import { compute } from '../evaluation-engine/metrics.mjs';
 import { open as openUncertainties, BLOCKING_STATUSES } from '../uncertainty-register/index.mjs';
 import { check as checkProcessCompleteness } from '../evaluation-engine/process-completeness.mjs';
+import { flakyTests, testName } from '../flakiness/index.mjs';
 
 const STATUS_ORDER = ['FAILED', 'BLOCKED', 'NEEDS_USER_INPUT', 'INCONCLUSIVE', 'INTERRUPTED', 'PARTIAL', 'DEFERRED', 'SKIPPED', 'NOT_APPLICABLE', 'PASSED', 'COMPLETED'];
 
@@ -257,6 +258,8 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
   if (riskAssessment) report.risk_assessment = riskAssessment;
   if (applicability.length) report.applicable_categories = applicability;
   if (session.goals?.length) report.goals = session.goals;
+  const quarantinedTests = flakyTests().map((f) => testName(f.test));
+  if (quarantinedTests.length) report.quarantined_tests = quarantinedTests;
 
   // The digest is computed over everything above -- including every field just
   // conditionally added -- and must be the LAST thing set before this record is stored or
@@ -464,9 +467,11 @@ export function render(r) {
   const proven = (r.detailed_results ?? []).filter((d) => ['PASSED', 'COMPLETED'].includes(d.status));
   // Individual tests that passed inside a run that did not pass overall. Each is a real,
   // evidenced result; hiding them because a sibling test failed understates what was shown.
+  // A quarantined (flaky) test's pass proves nothing, so it never counts here.
+  const flaky = new Set(r.quarantined_tests ?? []);
   const provenInsideFailedRuns = (r.detailed_results ?? [])
     .filter((d) => !['PASSED', 'COMPLETED'].includes(d.status) && d.passed_tests?.length)
-    .flatMap((d) => d.passed_tests.map((name) => ({ ...d, goal: `${name} _(passed; run ${d.status} overall: ${d.totals.passed}/${d.totals.total})_`, execution_id: `${d.execution_id}` })));
+    .flatMap((d) => d.passed_tests.filter((name) => !flaky.has(name)).map((name) => ({ ...d, goal: `${name} _(passed; run ${d.status} overall: ${d.totals.passed}/${d.totals.total})_`, execution_id: `${d.execution_id}` })));
   if (proven.length || provenInsideFailedRuns.length) {
     // This sentence must never assert a commit the report cannot actually name -- it did,
     // unconditionally, before git provenance was ever auto-captured (see core/git.mjs),
@@ -481,7 +486,13 @@ export function render(r) {
       : '_No commit was recorded for this session, so these results are not traceable to a fixed point in the codebase -- only to the evidence cited. Nothing else in this report is a claim that something works._';
     // A deployed target runs whatever was deployed; the local commit above says nothing about
     // it, and a dirty-tree warning attached to live-site results describes the wrong thing.
-    const rows = [...proven, ...provenInsideFailedRuns];
+    const rows = [
+      ...proven.map((d) => {
+        const hit = (d.passed_tests ?? []).filter((n) => flaky.has(n));
+        return hit.length ? { ...d, goal: `${d.goal} _(includes quarantined ${hit.join(', ')}; that pass is not counted)_` } : d;
+      }),
+      ...provenInsideFailedRuns,
+    ];
     const remote = rows.filter((d) => d.target?.url);
     const deployedNote = remote.length
       ? `_Rows marked "deployed" ran against ${[...new Set(remote.map((d) => d.target.url))].join(', ')}, testing whatever was deployed there. `

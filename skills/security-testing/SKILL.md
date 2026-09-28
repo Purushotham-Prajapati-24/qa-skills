@@ -29,8 +29,8 @@ Security testing without authorisation is an attack, regardless of intent.
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" auth check --input auth.json
 ```
 
-Work against a local or explicitly authorised non-production instance. Unknown environment
-means production, which means stop and ask.
+Work against a non-production environment (declared in the profile's `environments`) or a
+local one you started yourself. Unknown environment means production, which means stop and ask.
 
 ## 1. Authorisation — the highest-yield tests
 
@@ -139,3 +139,9 @@ Security findings need the exploitability path, not just the symptom:
 
 Severity `blocker` or `critical` means **surface it immediately**, before continuing other
 testing. Do not batch a data-exposure finding into an end-of-run report.
+
+## Test data
+
+Follow the [test data policy](../testing-orchestrator/policies/test-data-policy.md): synthetic by
+default, seeded, created per run, cleaned up, never real personal data without explicit
+authorisation and verified anonymisation.
