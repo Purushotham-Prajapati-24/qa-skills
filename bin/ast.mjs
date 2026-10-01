@@ -689,7 +689,15 @@ const COMMANDS = {
 
   /* ---- metrics + evaluation ---- */
   'metrics': { help: 'Compute evaluation metrics for the current state.', run: ({ flags }) => computeMetrics(payload(flags)) },
-  'eval run': { help: 'Run the benchmark suite: eval run [--only case-03]', run: ({ flags }) => evaluation.run({ only: flags.only ?? null }) },
+  'eval run': {
+    help: 'Run the benchmark and regression suites: eval run [--only case-03]. Exits 1 if any check fails.',
+    run: ({ flags }) => {
+      const result = evaluation.run({ only: flags.only ?? null });
+      // CI gates on the exit code; a red suite that exits 0 gates nothing.
+      if (result.failures.length) process.exitCode = 1;
+      return result;
+    },
+  },
   'eval cases': { help: 'List benchmark cases.', run: () => evaluation.loadCases().map((c) => ({ id: c.id, title: c.title, file: c.file })) },
 
   /* ---- adapters: the enforced external-write path ---- */
