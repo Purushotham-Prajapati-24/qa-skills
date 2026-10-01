@@ -12,7 +12,7 @@ a provider exists.
 
 ```
 node --test "tests/*.test.mjs"     340 passed, 0 failed
-node bin/ast.mjs eval run          41/41 checks across 15 benchmark cases
+node bin/ast.mjs eval run          47/47 checks across 20 cases (15 benchmark + 5 regression)
 node scripts/validate-repo.mjs     0 problems
 node scripts/demo-session.mjs      full pipeline exercised end to end
 ```
@@ -40,7 +40,7 @@ Working, tested, exercised by the demo session.
 | Authorization + write ledger | Prohibited-by-default list; assignment refused without a named account |
 | Traceability graph | `what-remains-untested` correctly reports REQ-3 uncovered |
 | Reporting engine | Inverted-pyramid report rendered from data; empty sections skipped, findings embedded in full, integrity self-audit |
-| Evaluation engine | 15 cases, 41 checks, 14 metrics with stated blind spots |
+| Evaluation engine | 20 cases (15 benchmark + 5 regression), 47 checks, 14 metrics with stated blind spots |
 | Secret redaction | Token shapes and sensitive keys, with a `SAFE_KEYS` allowlist |
 | 21 skills | Frontmatter and links validated; all under the 500-line guidance |
 | 4 subagents | `agents/*.md` |

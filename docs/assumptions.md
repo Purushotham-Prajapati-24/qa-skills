@@ -28,9 +28,9 @@ Note: `docs.claude.com/en/docs/claude-code/*` now **301-redirects** to
 
 | Assumption | Detail |
 | --- | --- |
-| Node ≥ 20.6 | ESM, `node:test`, `node --test` with a glob |
+| Node ≥ 20.6 | ESM, `node:test`. Verified on 20.6, 22 and 24 in CI (`.github/workflows/check.yml`) |
 | **Zero runtime dependencies** | Deliberate: the system must run offline with no `npm install`. The cost is a hand-written JSON Schema subset validator. |
-| `node --test "tests/*.test.mjs"` | The bare directory form (`node --test tests/`) fails on this Node version; the glob is required |
+| `node --test "tests/*.test.mjs"` | The bare directory form (`node --test tests/`) fails on this Node version; the glob is required, and expanding it needs Node ≥ 21. `npm test` (`scripts/run-tests.mjs`) passes the files explicitly, so the suite also runs on Node 20.6 |
 
 ### The JSON Schema subset
 

@@ -14,7 +14,8 @@
  *   - A COMMAND provider (the `gh` CLI) can be executed from here, so the whole protocol
  *     runs in one call.
  *   - An MCP provider cannot: this is a Node module, and MCP tools live in the agent's
- *     tool list. So the gates run here, a signed ticket is issued, the agent performs the
+ *     tool list. So the gates run here, a single-use ticket (an unguessable random id, not a
+ *     cryptographic signature) is issued, the agent performs the
  *     call, and `completeWrite` finishes the protocol. A ledger entry cannot be created
  *     without a ticket, and a ticket cannot be issued without passing the gates.
  *

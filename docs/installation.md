@@ -177,8 +177,8 @@ quietly dropping the obligation.
 ## Verify the installation
 
 ```bash
-node --test "tests/*.test.mjs"     # 340 tests
-node bin/ast.mjs eval run          # 15 benchmark cases, 41 checks
+npm test                           # 340 tests (node --test "tests/*.test.mjs" needs Node >= 21)
+node bin/ast.mjs eval run          # 20 cases (15 benchmark + 5 regression), 47 checks
 node scripts/validate-repo.mjs     # links, schemas, cross-references
 ```
 
@@ -213,6 +213,7 @@ yours and is not removed — delete it deliberately if you want to.
 | Symptom | Cause |
 | --- | --- |
 | `Cannot find module '…/tests'` | Use `node --test "tests/*.test.mjs"` — the bare directory form does not work on this Node version |
+| `Could not find '…/tests/*.test.mjs'` | Node 20 cannot expand the glob itself. Use `npm test`, which passes the files explicitly and works on Node ≥ 20.6 |
 | `Corrupt JSON … Unexpected token '\ufeff'` | A UTF-8 BOM. `readJson` strips it; if you see it elsewhere, write the file without a BOM |
 | `Unknown repository signal` | The signal is not declared in `engine/applicability-engine/catalog.json` — add it rather than removing the check |
 | `Risk factor "x" has a value but no basis` | Working as designed. An unexplained number is not a risk assessment |
