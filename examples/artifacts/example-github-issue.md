@@ -54,7 +54,7 @@ Any authenticated user can enumerate and charge other users' stored cards. Finan
 
 ## Evidence
 
-- **EV-2026-00002** (command-output, observed): api: 11/12 passed, 1 failed — `C:\Users\purus\AppData\Local\Temp\ast-demo-5lj6vO\evidence\blobs\output-2026-09-28T07-08-46-391Z-53500.txt`
+- **EV-2026-00002** (command-output, observed): api: 11/12 passed, 1 failed — `C:\Users\purus\AppData\Local\Temp\ast-demo-0111\evidence\blobs\output-2026-10-01T10-51-15-285Z-30972.txt`
 
 ## Recommended next action
 
@@ -66,5 +66,5 @@ Add an ownership check in server/payments/stripe.ts:52 before returning or using
 
 ---
 
-Filed by the Autonomous Software Testing agent — finding `FIND-00001`, session `SESSION-0001`, skill v0.11.0.
+Filed by the Autonomous Software Testing agent — finding `FIND-00001`, session `SESSION-0001`, skill v0.11.1.
 Fingerprint: `sha256:8e75ed09c720ff3b2d0d11c070217e76cd94e69c7cf0f2993e59016addb1f112` (used to prevent duplicate filings).

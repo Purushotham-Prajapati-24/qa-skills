@@ -153,7 +153,7 @@ npx --yes github:Purushotham-Prajapati-24/qa-skills --user
 
 ```bash
 # Pin to a specific tagged release
-npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.11.0
+npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.11.1
 
 # See what would change without writing anything
 npx --yes github:Purushotham-Prajapati-24/qa-skills --dry-run

@@ -1,7 +1,7 @@
 {
   "report_id": "REPORT-2026-00001",
   "report_version": "1.2.0",
-  "generated_at": "2026-09-28T07:08:46.559Z",
+  "generated_at": "2026-10-01T10:51:15.464Z",
   "session_id": "SESSION-0001",
   "executive_summary": {
     "headline": "**FAILED** — 8 executions run · 2 findings, worst critical · 3 planned items not run.",
@@ -62,7 +62,7 @@
       "INTERRUPTED": 1,
       "NEEDS_USER_INPUT": 1
     },
-    "total_duration_ms": 71,
+    "total_duration_ms": 73,
     "test_cases": 9
   },
   "detailed_results": [
@@ -110,8 +110,8 @@
       "method": "playwright-script",
       "status": "FAILED",
       "status_reason": "\"saved card survives a reload\" failed: expected 1 saved card, found 0.",
-      "duration_ms": 11,
-      "wall_clock_ms": 11,
+      "duration_ms": 12,
+      "wall_clock_ms": 12,
       "command_duration_ms": 3700,
       "evidence": [
         "EV-2026-00005"
@@ -226,8 +226,8 @@
       "method": "existing-suite",
       "status": "PASSED",
       "status_reason": "vitest suite executed against abc1234; 211 tests passed, 0 failed.",
-      "duration_ms": 13,
-      "wall_clock_ms": 13,
+      "duration_ms": 11,
+      "wall_clock_ms": 11,
       "command_duration_ms": 12480,
       "evidence": [
         "EV-2026-00001"
@@ -254,8 +254,8 @@
       "method": "static-analysis",
       "status": "PASSED",
       "status_reason": "axe WCAG 2.1 AA ruleset on /checkout at abc1234: 0 violations.",
-      "duration_ms": 10,
-      "wall_clock_ms": 10,
+      "duration_ms": 11,
+      "wall_clock_ms": 11,
       "command_duration_ms": 4100,
       "evidence": [
         "EV-2026-00003"
@@ -299,8 +299,8 @@
       "method": "playwright-script",
       "status": "PASSED",
       "status_reason": "Both checkout UI tests passed at abc1234.",
-      "duration_ms": 10,
-      "wall_clock_ms": 10,
+      "duration_ms": 12,
+      "wall_clock_ms": 12,
       "command_duration_ms": 1700,
       "evidence": [
         "EV-2026-00006"
@@ -327,7 +327,7 @@
       "kind": "command-output",
       "summary": "vitest: 211/211 passed",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-5lj6vO\\evidence\\blobs\\output-2026-09-28T07-08-46-371Z-53500.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-0111\\evidence\\blobs\\output-2026-10-01T10-51-15-265Z-30972.txt",
       "sha256": "sha256:08847719b18700defc4e5811a3e0be639fa4d8c92fcbdefd7cff7a429ac59e38"
     },
     {
@@ -335,7 +335,7 @@
       "kind": "command-output",
       "summary": "api: 11/12 passed, 1 failed",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-5lj6vO\\evidence\\blobs\\output-2026-09-28T07-08-46-391Z-53500.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-0111\\evidence\\blobs\\output-2026-10-01T10-51-15-285Z-30972.txt",
       "sha256": "sha256:6860525264278abb9c4fb263992a6bcbbfd9d5d8d074c9c5f1779db558c4b2b8"
     },
     {
@@ -343,7 +343,7 @@
       "kind": "command-output",
       "summary": "axe: 0 violations on /checkout",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-5lj6vO\\evidence\\blobs\\output-2026-09-28T07-08-46-462Z-53500.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-0111\\evidence\\blobs\\output-2026-10-01T10-51-15-363Z-30972.txt",
       "sha256": "sha256:bbacb4745aabb84bc3a3a939b8e07b53f73b807ba3f95e3389fb70e6445bcbaf"
     },
     {
@@ -351,7 +351,7 @@
       "kind": "command-output",
       "summary": "playwright checkout suite, run 1",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-5lj6vO\\evidence\\blobs\\output-2026-09-28T07-08-46-488Z-53500.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-0111\\evidence\\blobs\\output-2026-10-01T10-51-15-388Z-30972.txt",
       "sha256": "sha256:fcf6eedae0c5ae91968ac5863ca304acb9622c37abbe13ee82f26097765faef3"
     },
     {
@@ -359,7 +359,7 @@
       "kind": "command-output",
       "summary": "playwright checkout suite, run 2",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-5lj6vO\\evidence\\blobs\\output-2026-09-28T07-08-46-506Z-53500.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-0111\\evidence\\blobs\\output-2026-10-01T10-51-15-408Z-30972.txt",
       "sha256": "sha256:6ab2b01371879032854e860ae6e74ff4097a33e82e7fe0cddd4b44e165d74960"
     },
     {
@@ -367,7 +367,7 @@
       "kind": "command-output",
       "summary": "playwright checkout suite, run 3",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-5lj6vO\\evidence\\blobs\\output-2026-09-28T07-08-46-523Z-53500.txt",
+      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-0111\\evidence\\blobs\\output-2026-10-01T10-51-15-427Z-30972.txt",
       "sha256": "sha256:fcf6eedae0c5ae91968ac5863ca304acb9622c37abbe13ee82f26097765faef3"
     }
   ],
@@ -525,7 +525,7 @@
     }
   ],
   "metrics": {
-    "computed_at": "2026-09-28T07:08:46.580Z",
+    "computed_at": "2026-10-01T10:51:15.486Z",
     "sample_sizes": {
       "executions": 11,
       "decisions": 1,
@@ -690,10 +690,10 @@
     "evidence_auditor_run": false
   },
   "provenance": {
-    "skill_version": "0.11.0",
+    "skill_version": "0.11.1",
     "skill_name": "test-reporting",
-    "engine_version": "0.11.0",
-    "created_at": "2026-09-28T07:08:46.559Z",
+    "engine_version": "0.11.1",
+    "created_at": "2026-10-01T10:51:15.464Z",
     "created_by": "agent",
     "session_id": "SESSION-0001"
   },
@@ -1791,7 +1791,7 @@
         {
           "criterion": "A user cannot select another user's saved card",
           "status": "FAILED",
-          "assessed_at": "2026-09-28T07:08:46.553Z",
+          "assessed_at": "2026-10-01T10:51:15.459Z",
           "evidence": [
             "EV-2026-00002"
           ],
@@ -1804,5 +1804,5 @@
   "quarantined_tests": [
     "saved card survives a reload"
   ],
-  "digest": "sha256:77dd1156b97ed6133a4db9aa321f205006550614f9f5ae32c7e9456030ac4e42"
+  "digest": "sha256:676b8382b46abe7288be783da23c947b3471cbea9dc7d031b20a4e75f2b0dc7c"
 }

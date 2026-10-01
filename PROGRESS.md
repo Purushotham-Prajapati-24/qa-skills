@@ -6,7 +6,7 @@ completeness.
 
 **Current phase:** core complete and exercised end to end; integrations specified, bound where
 a provider exists.
-**Version:** 0.11.0 · **Last validated:** 2026-09-28
+**Version:** 0.11.1 · **Last validated:** 2026-10-01
 
 ## Validation status
 
@@ -49,7 +49,7 @@ Working, tested, exercised by the demo session.
 | **npx installer** | `bin/install.mjs`; 7 tests install into a throwaway repo and assert the CLI runs, every link resolves and no skill still points at the source layout |
 | Repository self-check | Catches broken links, hard-coded MCP names, dangling references |
 | **Regression suite from real sessions** | `evaluation/regression-suite/`: 5 cases from 3 field trials, loaded by `ast eval run`; each seen failing on the engine version that produced it |
-| **Jira adapter (executable)** | `engine/adapters/jira.mjs` (0.11.0): REST v3 reads with ADF-to-text and acceptance-criteria extraction, gated writes, delegated writes confirmed by REST read-back; transitions stay prohibited |
+| **Jira adapter (executable)** | `engine/adapters/jira.mjs`: REST v3 reads with ADF-to-text and acceptance-criteria extraction, gated writes, delegated writes confirmed by REST read-back; transitions stay prohibited |
 | **GitHub adapter (executable)** | `engine/adapters/github.mjs`; 29 tests assert each gate refuses **before** the provider is called |
 | **Enforced write protocol** | `performWrite` is the only path to a ledger entry, and it runs capability -> authorisation -> ledger -> render -> perform -> parse -> record in order |
 | **Delegated-write tickets** | An MCP-resolved write cannot be recorded without a single-use, hour-limited ticket proving the gates ran |

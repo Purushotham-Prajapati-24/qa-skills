@@ -12,7 +12,7 @@ hand-written approximation of it.
 
 | Session | Repository | Commit | PR | Generated | Skill |
 | --- | --- | --- | --- | --- | --- |
-| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-09-28 07:08:46Z | v0.11.0 |
+| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-10-01 10:51:15Z | v0.11.1 |
 
 ## Verdict
 
@@ -130,16 +130,16 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 | ID | Status | Goal | Method | Failure class | Wall clock | Command time |
 | --- | --- | --- | --- | --- | --- | --- |
 | EXEC-2026-00003 | FAILED | User A cannot select user B's saved card | api-client | authentication-failure (0.5) | 10 ms | 3120 ms |
-| EXEC-2026-00010 | FAILED | Checkout UI regression suite, run 2 of 3 | playwright-script | product-defect (0.59) | 11 ms | 3700 ms |
+| EXEC-2026-00010 | FAILED | Checkout UI regression suite, run 2 of 3 | playwright-script | product-defect (0.59) | 12 ms | 3700 ms |
 | EXEC-2026-00004 | BLOCKED | Payment E2E against the real provider | not-executed | — | 0 ms | — |
 | EXEC-2026-00008 | NEEDS_USER_INPUT | Saved-card E2E with real provider credentials | not-executed | — | 0 ms | — |
 | EXEC-2026-00001 | INCONCLUSIVE | Quick smoke of the checkout page | existing-suite | — | 7 ms | — |
 | EXEC-2026-00006 | INTERRUPTED | Accessibility scan of the checkout pages | static-analysis | — | — | — |
 | EXEC-2026-00005 | NOT_APPLICABLE | Localisation testing | not-executed | — | 0 ms | — |
-| EXEC-2026-00002 | PASSED | Baseline: full unit suite at head | existing-suite | — | 13 ms | 12480 ms |
-| EXEC-2026-00007 | PASSED | Accessibility scan of the checkout pages (restarted after interruption) | static-analysis | — | 10 ms | 4100 ms |
+| EXEC-2026-00002 | PASSED | Baseline: full unit suite at head | existing-suite | — | 11 ms | 12480 ms |
+| EXEC-2026-00007 | PASSED | Accessibility scan of the checkout pages (restarted after interruption) | static-analysis | — | 11 ms | 4100 ms |
 | EXEC-2026-00009 | PASSED | Checkout UI regression suite, run 1 of 3 | playwright-script | — | 10 ms | 1700 ms |
-| EXEC-2026-00011 | PASSED | Checkout UI regression suite, run 3 of 3 | playwright-script | — | 10 ms | 1700 ms |
+| EXEC-2026-00011 | PASSED | Checkout UI regression suite, run 3 of 3 | playwright-script | — | 12 ms | 1700 ms |
 
 | Status | Count |
 | --- | --- |
@@ -155,12 +155,12 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 
 | ID | Kind | Summary | Anchored? | Artifact |
 | --- | --- | --- | --- | --- |
-| EV-2026-00001 | command-output | vitest: 211/211 passed | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-5lj6vO\evidence\blobs\output-2026-09-28T07-08-46-371Z-53500.txt |
-| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-5lj6vO\evidence\blobs\output-2026-09-28T07-08-46-391Z-53500.txt |
-| EV-2026-00003 | command-output | axe: 0 violations on /checkout | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-5lj6vO\evidence\blobs\output-2026-09-28T07-08-46-462Z-53500.txt |
-| EV-2026-00004 | command-output | playwright checkout suite, run 1 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-5lj6vO\evidence\blobs\output-2026-09-28T07-08-46-488Z-53500.txt |
-| EV-2026-00005 | command-output | playwright checkout suite, run 2 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-5lj6vO\evidence\blobs\output-2026-09-28T07-08-46-506Z-53500.txt |
-| EV-2026-00006 | command-output | playwright checkout suite, run 3 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-5lj6vO\evidence\blobs\output-2026-09-28T07-08-46-523Z-53500.txt |
+| EV-2026-00001 | command-output | vitest: 211/211 passed | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-0111\evidence\blobs\output-2026-10-01T10-51-15-265Z-30972.txt |
+| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-0111\evidence\blobs\output-2026-10-01T10-51-15-285Z-30972.txt |
+| EV-2026-00003 | command-output | axe: 0 violations on /checkout | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-0111\evidence\blobs\output-2026-10-01T10-51-15-363Z-30972.txt |
+| EV-2026-00004 | command-output | playwright checkout suite, run 1 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-0111\evidence\blobs\output-2026-10-01T10-51-15-388Z-30972.txt |
+| EV-2026-00005 | command-output | playwright checkout suite, run 2 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-0111\evidence\blobs\output-2026-10-01T10-51-15-408Z-30972.txt |
+| EV-2026-00006 | command-output | playwright checkout suite, run 3 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-0111\evidence\blobs\output-2026-10-01T10-51-15-427Z-30972.txt |
 
 ### External writes
 
@@ -308,6 +308,6 @@ _Not measured this session (zero denominator, honestly excluded rather than show
 
 ---
 
-Produced by the Autonomous Software Testing skill system v0.11.0. Every status above is traceable to a record under `state/`.
+Produced by the Autonomous Software Testing skill system v0.11.1. Every status above is traceable to a record under `state/`.
 
-_Rendered from REPORT-2026-00001 · digest `sha256:77dd1156b97ed6133a4db9aa321f205006550614f9f5ae32c7e9456030ac4e42` · verify with `ast report verify`. A report with no digest line was not produced by this system._
+_Rendered from REPORT-2026-00001 · digest `sha256:676b8382b46abe7288be783da23c947b3471cbea9dc7d031b20a4e75f2b0dc7c` · verify with `ast report verify`. A report with no digest line was not produced by this system._

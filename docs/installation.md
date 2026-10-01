@@ -56,13 +56,13 @@ and warns if any skill still points at the old path.
 Tracking the default branch means you get changes as they land. To pin:
 
 ```bash
-npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.11.0
+npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.11.1
 ```
 
 Or install from a release tarball, which needs no git:
 
 ```bash
-npx --yes https://github.com/Purushotham-Prajapati-24/qa-skills/releases/download/v0.11.0/autonomous-software-testing-0.11.0.tgz
+npx --yes https://github.com/Purushotham-Prajapati-24/qa-skills/releases/download/v0.11.1/autonomous-software-testing-0.11.1.tgz
 ```
 
 ### If npx picks the wrong command

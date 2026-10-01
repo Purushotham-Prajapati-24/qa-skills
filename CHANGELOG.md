@@ -3,6 +3,46 @@
 Semantic versioning. See [docs/versioning.md](docs/versioning.md) for what is versioned
 independently — document schemas and policy files carry their own versions.
 
+## [0.11.1] - 2026-10-01
+
+Patch release. No engine, schema, or skill-content changes — release engineering and a
+documentation rewrite, both already on `master` before this version existed to name them.
+
+### Fixed
+
+- **The package-publish workflow could never have succeeded.** It had zero runs ever,
+  across every prior release: `npm ci` with no committed lockfile, `node --test`'s glob
+  form failing on Node 20 (the minimum `engines` version actually claims), and GitHub
+  Packages rejecting the unscoped package name. Every release through 0.11.0 produced a
+  real tag, GitHub Release, and `.tgz` asset — the "this also publishes a package" half
+  was silently dead the entire time. Now runs the full suite, `eval run`, `validate-repo`,
+  and the demo on Node 22, then publishes as `@purushotham-prajapati-24/autonomous-software-testing`;
+  triggers on `release: published` plus manual `workflow_dispatch`.
+- **`ast eval run` exited `0` even when checks failed**, so nothing could gate on it in CI.
+  It now exits `1` on any failing check.
+- **No CI ran on any PR or push to `master` before this release** — every prior merge,
+  including three tagged releases, was verified by whoever ran the suite locally and
+  reported it in the PR description, not by an independent run. A `Check` workflow now
+  runs the suite, `eval run`, `validate-repo`, and the demo on every push to `master` and
+  every PR, across Ubuntu (Node 20.6.0, 22, 24) and Windows (Node 22).
+- **`npm test` failed on Node 20.6.0**, the version `engines` claims as the minimum,
+  because `node --test "tests/*.test.mjs"` cannot expand that glob before Node 21.
+  `scripts/run-tests.mjs` now passes the file list explicitly, so `npm test` works on the
+  version this project actually says it supports. The glob form in docs still works on
+  Node 21+; a troubleshooting note points Node 20 users at `npm test` instead.
+- A code comment in `engine/adapters/base.mjs` called delegated-write tickets "signed" —
+  they are single-use random ids, never cryptographically signed. Corrected to avoid
+  overstating a security property this system does not actually provide.
+- Two stale "not implemented" rows removed from `PROGRESS.md`, and the Playwright
+  prerequisite note corrected.
+- `README.md` redesigned: dropped a hero banner that displayed fabricated metrics ("Test
+  Pass Rate 99.1%", "0 VULNS") next to garbled placeholder code — precisely the kind of
+  confident-looking, unverifiable claim this system exists to catch — and rewrote the rest
+  in the same plain register as the rest of this project's documentation. Updated every
+  number that had drifted (version pin, test count, and the benchmark section, which still
+  said "41 checks across 15 cases" and is now 47 checks across 20: 15 benchmark cases plus
+  5 regression cases seeded from real field-trial mistakes).
+
 ## [0.11.0] - 2026-09-28
 
 Driven by field trial 3 — the first run of the skills against a deployed URL
