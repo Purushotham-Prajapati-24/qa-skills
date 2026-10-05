@@ -8,11 +8,11 @@ hand-written approximation of it.
 -->
 # Testing Report · REPORT-2026-00001
 
-**FAILED** — 8 executions run · 2 findings, worst critical · 3 planned items not run.
+**FAILED** — 8 executions run · 2 findings, worst critical · 9 planned items not run.
 
 | Session | Repository | Commit | PR | Generated | Skill |
 | --- | --- | --- | --- | --- | --- |
-| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-10-01 10:51:15Z | v0.11.1 |
+| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-10-05 08:20:29Z | v0.12.0 |
 
 ## Verdict
 
@@ -90,6 +90,12 @@ _Read this before drawing any conclusion from the results above._
 - Payment E2E against the real provider — BLOCKED: STRIPE_SECRET_KEY is unset; refusing to transact against a live key.
 - Localisation testing — NOT_APPLICABLE: No i18n resources exist in the repository; nothing is translated.
 - Saved-card E2E with real provider credentials — NEEDS_USER_INPUT: Which sandbox account may be charged is the user's call, not the agent's.
+- security testing — DEFERRED: The 150-minute budget ran out before this applicable P1 category was reached. Recorded so it cannot vanish from the report.
+- input-validation testing — DEFERRED: The 150-minute budget ran out before this applicable P1 category was reached. Recorded so it cannot vanish from the report.
+- session-management testing — DEFERRED: The 150-minute budget ran out before this applicable P1 category was reached. Recorded so it cannot vanish from the report.
+- database testing — DEFERRED: The 150-minute budget ran out before this applicable P1 category was reached. Recorded so it cannot vanish from the report.
+- migration testing — DEFERRED: The 150-minute budget ran out before this applicable P1 category was reached. Recorded so it cannot vanish from the report.
+- data-integrity testing — DEFERRED: The 150-minute budget ran out before this applicable P1 category was reached. Recorded so it cannot vanish from the report.
 
 **Not applicable to this repository.**
 
@@ -105,6 +111,7 @@ _Read this before drawing any conclusion from the results above._
 | ID | Status | Question | What would resolve it | Owner |
 | --- | --- | --- | --- | --- |
 | U-00001 | user-input-required | Should payment E2E use a real provider sandbox key, or a mock at the HTTP boundary? | ask the user which environment and credentials to use | user |
+| U-00002 | deferred | Applicable high-priority categories not reached in this time-boxed pass: [REDACTED], input-validation, session-management, database, migration, data-integrity | schedule a follow-up pass: [REDACTED] sweep and input edge cases on staging; a disposable database for data and migration tests | user |
 
 _Questions owned by you are the only ones the agent cannot progress on its own._
 
@@ -133,10 +140,16 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 | EXEC-2026-00010 | FAILED | Checkout UI regression suite, run 2 of 3 | playwright-script | product-defect (0.59) | 12 ms | 3700 ms |
 | EXEC-2026-00004 | BLOCKED | Payment E2E against the real provider | not-executed | — | 0 ms | — |
 | EXEC-2026-00008 | NEEDS_USER_INPUT | Saved-card E2E with real provider credentials | not-executed | — | 0 ms | — |
-| EXEC-2026-00001 | INCONCLUSIVE | Quick smoke of the checkout page | existing-suite | — | 7 ms | — |
+| EXEC-2026-00001 | INCONCLUSIVE | Quick smoke of the checkout page | existing-suite | — | 9 ms | — |
 | EXEC-2026-00006 | INTERRUPTED | Accessibility scan of the checkout pages | static-analysis | — | — | — |
+| EXEC-2026-00012 | DEFERRED | security testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00013 | DEFERRED | input-validation testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00014 | DEFERRED | session-management testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00015 | DEFERRED | database testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00016 | DEFERRED | migration testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00017 | DEFERRED | data-integrity testing | not-executed | — | 0 ms | — |
 | EXEC-2026-00005 | NOT_APPLICABLE | Localisation testing | not-executed | — | 0 ms | — |
-| EXEC-2026-00002 | PASSED | Baseline: full unit suite at head | existing-suite | — | 11 ms | 12480 ms |
+| EXEC-2026-00002 | PASSED | Baseline: full unit suite at head | existing-suite | — | 12 ms | 12480 ms |
 | EXEC-2026-00007 | PASSED | Accessibility scan of the checkout pages (restarted after interruption) | static-analysis | — | 11 ms | 4100 ms |
 | EXEC-2026-00009 | PASSED | Checkout UI regression suite, run 1 of 3 | playwright-script | — | 10 ms | 1700 ms |
 | EXEC-2026-00011 | PASSED | Checkout UI regression suite, run 3 of 3 | playwright-script | — | 12 ms | 1700 ms |
@@ -150,17 +163,18 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 | NOT_APPLICABLE | 1 |
 | INTERRUPTED | 1 |
 | NEEDS_USER_INPUT | 1 |
+| DEFERRED | 6 |
 
 ### Evidence
 
 | ID | Kind | Summary | Anchored? | Artifact |
 | --- | --- | --- | --- | --- |
-| EV-2026-00001 | command-output | vitest: 211/211 passed | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-0111\evidence\blobs\output-2026-10-01T10-51-15-265Z-30972.txt |
-| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-0111\evidence\blobs\output-2026-10-01T10-51-15-285Z-30972.txt |
-| EV-2026-00003 | command-output | axe: 0 violations on /checkout | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-0111\evidence\blobs\output-2026-10-01T10-51-15-363Z-30972.txt |
-| EV-2026-00004 | command-output | playwright checkout suite, run 1 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-0111\evidence\blobs\output-2026-10-01T10-51-15-388Z-30972.txt |
-| EV-2026-00005 | command-output | playwright checkout suite, run 2 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-0111\evidence\blobs\output-2026-10-01T10-51-15-408Z-30972.txt |
-| EV-2026-00006 | command-output | playwright checkout suite, run 3 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-0111\evidence\blobs\output-2026-10-01T10-51-15-427Z-30972.txt |
+| EV-2026-00001 | command-output | vitest: 211/211 passed | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-ox4Iqp\evidence\blobs\output-2026-10-05T08-20-29-117Z-54140.txt |
+| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-ox4Iqp\evidence\blobs\output-2026-10-05T08-20-29-137Z-54140.txt |
+| EV-2026-00003 | command-output | axe: 0 violations on /checkout | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-ox4Iqp\evidence\blobs\output-2026-10-05T08-20-29-207Z-54140.txt |
+| EV-2026-00004 | command-output | playwright checkout suite, run 1 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-ox4Iqp\evidence\blobs\output-2026-10-05T08-20-29-232Z-54140.txt |
+| EV-2026-00005 | command-output | playwright checkout suite, run 2 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-ox4Iqp\evidence\blobs\output-2026-10-05T08-20-29-251Z-54140.txt |
+| EV-2026-00006 | command-output | playwright checkout suite, run 3 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-ox4Iqp\evidence\blobs\output-2026-10-05T08-20-29-268Z-54140.txt |
 
 ### External writes
 
@@ -233,6 +247,7 @@ _Excluded for lack of evidence — not scored, not guessed: user_impact, depende
 | unit | yes | P3 | substantial | 0.0891 | Signals present: any repository. Existing coverage "substantial" leaves a deficit of 0.2; addresses risk factor(s): change_magnitude, coverage_deficit. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
 | resilience | yes | P3 | unknown | 0.0829 | Signals present: external-integration. Existing coverage "unknown" leaves a deficit of 0.7; addresses risk factor(s): external_system_dependency. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
 | ci-cd | yes | P3 | unknown | 0.0597 | Relevant (signals: ci) but the required capability "ci.read_runs" is unavailable. Treat as BLOCKED, not as done. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
+| perf-baseline | yes | P3 | unknown | 0.0597 | Relevant (signals: http-api, web-ui) but the required capability "http.request" is unavailable. Treat as BLOCKED, not as done. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
 | visual | yes | P3 | unknown | 0.0459 | Relevant (signals: web-ui) but the required capability "browser.screenshot" is unavailable. Treat as BLOCKED, not as done. Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. Deferred: would exceed the 150-minute budget (already committed 145 minutes on higher- or equal-priority work). |
 | agent-tool-eval | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: agent-tools; missing: agent-tools). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
 | ai-llm | no | P3 | unknown | 0 | Repository shows no signal for this category (needs any of: llm; missing: llm). Risk alignment is tempered toward neutral: the risk assessment is moderate confidence (0.6176), so this priority should not be read as fully evidenced. |
@@ -308,6 +323,6 @@ _Not measured this session (zero denominator, honestly excluded rather than show
 
 ---
 
-Produced by the Autonomous Software Testing skill system v0.11.1. Every status above is traceable to a record under `state/`.
+Produced by the Autonomous Software Testing skill system v0.12.0. Every status above is traceable to a record under `state/`.
 
-_Rendered from REPORT-2026-00001 · digest `sha256:676b8382b46abe7288be783da23c947b3471cbea9dc7d031b20a4e75f2b0dc7c` · verify with `ast report verify`. A report with no digest line was not produced by this system._
+_Rendered from REPORT-2026-00001 · digest `sha256:da075c66331c8a1cf0a0eff0b259285ad7b9b320e4181427997a9e26eebbde9f` · verify with `ast report verify`. A report with no digest line was not produced by this system._

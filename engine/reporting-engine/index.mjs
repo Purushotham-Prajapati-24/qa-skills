@@ -803,3 +803,128 @@ export function verify(text) {
 
   return { rendered: true, report_id: reportId, digest: stored.digest };
 }
+
+
+/**
+ * Compare two stored report records and return a structured delta.
+ *
+ * With no arguments, compares the current (last) report against its predecessor
+ * via the `supersedes` chain. With two IDs, compares them directly.
+ *
+ * The diff is computed over stored JSON records (not rendered Markdown), so it is
+ * deterministic and ignores rendering noise. It shows:
+ *   - Added / removed / status-changed executions
+ *   - New / resolved / severity-changed findings
+ *   - Metric deltas (false_confidence_rate, evidence_completeness, etc.)
+ *   - Changes in blocked/not-tested lists
+ *
+ * @param {string} [newId]  The newer report ID. Defaults to session.last_report.
+ * @param {string} [oldId]  The older report ID. Defaults to newReport.supersedes.
+ * @returns {{ old_id, new_id, executions, findings, metrics, blocked_work, summary }}
+ */
+export function diff(newId, oldId) {
+  const session = state.requireSession();
+  const resolvedNew = newId ?? session.last_report;
+  if (!resolvedNew) throw new Error('No report to diff — no report has been generated in this session.');
+
+  const newReport = state.get('reports', resolvedNew);
+  if (!newReport) throw new Error(`Report ${resolvedNew} not found in state/reports/.`);
+
+  const resolvedOld = oldId ?? newReport.supersedes;
+  if (!resolvedOld) throw new Error(`Report ${resolvedNew} has no supersedes link and no older report was specified. Nothing to diff against.`);
+
+  const oldReport = state.get('reports', resolvedOld);
+  if (!oldReport) throw new Error(`Report ${resolvedOld} not found in state/reports/.`);
+
+  // --- Execution diff (keyed by execution_id) ---
+  const oldExecs = new Map((oldReport.detailed_results ?? []).map((e) => [e.execution_id, e]));
+  const newExecs = new Map((newReport.detailed_results ?? []).map((e) => [e.execution_id, e]));
+
+  const addedExecs = [];
+  const removedExecs = [];
+  const changedExecs = [];
+
+  for (const [id, e] of newExecs) {
+    if (!oldExecs.has(id)) {
+      addedExecs.push({ execution_id: id, status: e.status, category: e.category });
+    } else {
+      const old = oldExecs.get(id);
+      if (old.status !== e.status) {
+        changedExecs.push({ execution_id: id, old_status: old.status, new_status: e.status, category: e.category });
+      }
+    }
+  }
+  for (const [id, e] of oldExecs) {
+    if (!newExecs.has(id)) {
+      removedExecs.push({ execution_id: id, status: e.status, category: e.category });
+    }
+  }
+
+  // --- Finding diff (keyed by finding_id) ---
+  const oldFindings = new Map((oldReport.finding_details ?? []).map((f) => [f.finding_id, f]));
+  const newFindings = new Map((newReport.finding_details ?? []).map((f) => [f.finding_id, f]));
+
+  const addedFindings = [];
+  const resolvedFindings = [];
+  const changedFindings = [];
+
+  for (const [id, f] of newFindings) {
+    if (!oldFindings.has(id)) {
+      addedFindings.push({ finding_id: id, severity: f.severity, title: f.title ?? f.summary ?? id });
+    } else {
+      const old = oldFindings.get(id);
+      if (old.severity !== f.severity) {
+        changedFindings.push({ finding_id: id, old_severity: old.severity, new_severity: f.severity, title: f.title ?? f.summary ?? id });
+      }
+    }
+  }
+  for (const [id, f] of oldFindings) {
+    if (!newFindings.has(id)) {
+      resolvedFindings.push({ finding_id: id, severity: f.severity, title: f.title ?? f.summary ?? id });
+    }
+  }
+
+  // --- Metric diff ---
+  const oldMetrics = oldReport.integrity ?? {};
+  const newMetrics = newReport.integrity ?? {};
+  const metricDelta = {};
+  for (const key of ['false_confidence_rate', 'evidence_completeness', 'authorization_compliance', 'flaky_identification_quality']) {
+    const ov = oldMetrics[key];
+    const nv = newMetrics[key];
+    if (ov !== undefined && nv !== undefined && ov !== nv) {
+      metricDelta[key] = { old: ov, new: nv, delta: +(nv - ov).toFixed(4) };
+    }
+  }
+
+  // --- Blocked/not-tested diff ---
+  const oldBlocked = new Set((oldReport.blocked_work ?? []).map((b) => b.id ?? b.category ?? JSON.stringify(b)));
+  const newBlocked = new Set((newReport.blocked_work ?? []).map((b) => b.id ?? b.category ?? JSON.stringify(b)));
+  const newlyBlocked = [...newBlocked].filter((b) => !oldBlocked.has(b));
+  const unblocked = [...oldBlocked].filter((b) => !newBlocked.has(b));
+
+  // --- Overall status change ---
+  const overallChanged = oldReport.overall !== newReport.overall
+    ? { old: oldReport.overall, new: newReport.overall }
+    : null;
+
+  const summary = [];
+  if (addedExecs.length) summary.push(`${addedExecs.length} new execution(s)`);
+  if (removedExecs.length) summary.push(`${removedExecs.length} removed execution(s)`);
+  if (changedExecs.length) summary.push(`${changedExecs.length} status change(s)`);
+  if (addedFindings.length) summary.push(`${addedFindings.length} new finding(s)`);
+  if (resolvedFindings.length) summary.push(`${resolvedFindings.length} resolved finding(s)`);
+  if (unblocked.length) summary.push(`${unblocked.length} unblocked`);
+  if (newlyBlocked.length) summary.push(`${newlyBlocked.length} newly blocked`);
+  if (overallChanged) summary.push(`overall: ${overallChanged.old} → ${overallChanged.new}`);
+
+  return {
+    old_id: resolvedOld,
+    new_id: resolvedNew,
+    overall_change: overallChanged,
+    executions: { added: addedExecs, removed: removedExecs, status_changed: changedExecs },
+    findings: { added: addedFindings, resolved: resolvedFindings, severity_changed: changedFindings },
+    metrics: metricDelta,
+    blocked_work: { newly_blocked: newlyBlocked, unblocked },
+    summary: summary.length ? summary.join('; ') : 'No changes',
+  };
+}

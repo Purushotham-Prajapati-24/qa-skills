@@ -1,6 +1,6 @@
 {
   "decision_id": "DEC-00001",
-  "timestamp": "2026-10-01T10:51:15.233Z",
+  "timestamp": "2026-10-05T08:20:29.085Z",
   "category": "browser-method",
   "question": "How should the changed saved-card checkout UI be tested?",
   "candidate_options": [
@@ -48,10 +48,10 @@
     "browser-decision.matrix@1.0.0"
   ],
   "provenance": {
-    "skill_version": "0.11.1",
+    "skill_version": "0.12.0",
     "skill_name": "browser-testing",
-    "engine_version": "0.11.1",
-    "created_at": "2026-10-01T10:51:15.233Z",
+    "engine_version": "0.12.0",
+    "created_at": "2026-10-05T08:20:29.085Z",
     "created_by": "agent",
     "session_id": "SESSION-0001"
   },

@@ -93,6 +93,8 @@ const matrix = applicability.evaluate({
   capabilities: { 'browser.explore': true, 'browser.run_deterministic_test': true, 'database.query': true },
   budgetMinutes: 150,
 });
+// Persisted so the coverage floor (step 11b, and `validate --final`) can check breadth.
+state.saveApplicability(matrix);
 log('applicability evaluated', `${matrix.applicable.length} applicable, ${matrix.not_applicable.length} not, ${matrix.selected.length} selected`);
 state.setPhase('classify');
 
@@ -330,6 +332,35 @@ log('assignment without a name', `allowed=${assignAttempt.allowed}`);
 // agent cannot self-authorise around it even with userAuthorised: true.
 const mergeAttempt = auth.check({ action: 'github.merge_pr', target: '#418', userAuthorised: true });
 log('merge refused by default', `allowed=${mergeAttempt.allowed} (${mergeAttempt.level})`);
+
+/* ----------------- 11b. the coverage floor: no applicable category silently dropped */
+
+// The matrix was persisted in step 3. Every applicable P0/P1 category this session never
+// reached gets an explicit DEFERRED record tied to one uncertainty, which is what
+// `validate --final` demands -- otherwise the report would read as broad when it was not.
+const reached = new Set(state.list('executions').map((e) => e.test_category).filter(Boolean));
+const unreached = matrix.matrix
+  .filter((r) => r.applicable && (r.priority === 'P0' || r.priority === 'P1') && !reached.has(r.category))
+  .map((r) => r.category);
+if (unreached.length) {
+  const uFloor = uncertainty.raise({
+    question: `Applicable high-priority categories not reached in this time-boxed pass: ${unreached.join(', ')}`,
+    status: 'deferred',
+    impact: 'security, input and data behaviour of the payment path is untested until a follow-up pass runs',
+    affectedScope: unreached, blocksCategories: unreached,
+    nextAction: 'schedule a follow-up pass: security sweep and input edge cases on staging; a disposable database for data and migration tests',
+    owner: 'user',
+  });
+  for (const category of unreached) {
+    execution.recordNonExecution({
+      goal: `${category} testing`,
+      status: 'DEFERRED',
+      reason: 'The 150-minute budget ran out before this applicable P1 category was reached. Recorded so it cannot vanish from the report.',
+      testCategory: category, uncertainties: [uFloor.id],
+    });
+  }
+}
+log('coverage floor', unreached.length ? `${unreached.length} unreached P0/P1 categor${unreached.length === 1 ? 'y' : 'ies'} recorded DEFERRED` : 'every P0/P1 category reached');
 
 /* ----------------------------------------------------------- 12. remaining work */
 

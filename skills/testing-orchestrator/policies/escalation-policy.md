@@ -46,6 +46,10 @@ If `runnable` is non-empty, you are not blocked. You have one blocked branch.
 - Permission to *read* anything.
 - Reassurance. If the evidence supports the claim, make the claim.
 - Each item in a batch. Ask once, for the batch.
+- An in-bounds security technique on an authorised non-production target. Sending
+  XSS/SQLi-shaped strings, IDOR probes, malformed tokens, mass-assignment payloads and
+  the rest of the in-bounds list (`security-testing/SKILL.md` §8) is standard QA — proceed
+  and record findings. Only flag-and-stop techniques (§9) require stopping.
 
 ## How to ask
 

@@ -1,7 +1,7 @@
 /**
  * Test Applicability Engine.
  *
- * Answers "which of the 47 test categories are actually relevant here?" and,
+ * Answers "which of the 48 test categories are actually relevant here?" and,
  * just as importantly, records why each of the others is not. A category the
  * engine never considered is indistinguishable from one it silently dropped,
  * so the output always contains every category.
@@ -211,6 +211,11 @@ export function signalsFromProfile(profile) {
   if ((profile.apis ?? []).some((a) => a.kind === 'graphql')) out.add('graphql');
   if ((profile.apis ?? []).some((a) => a.kind === 'grpc')) out.add('grpc');
   if ((profile.apis ?? []).some((a) => a.auth_required)) out.add('auth');
+  // Any API surface or rendered UI accepts untrusted input, so input-validation and the
+  // input edge-case baseline are always relevant. Without this derivation `user-input` was
+  // never produced from a profile at all, so a bare-URL target silently skipped input and
+  // edge-case testing -- the single biggest coverage hole on black-box runs.
+  if ((profile.apis ?? []).length > 0 || profile.architecture?.frontend?.present) out.add('user-input');
   if (has('database')) out.add('database');
   if (has('cache')) out.add('cache');
   if (has('queue')) out.add('queue');

@@ -1,0 +1,24 @@
+{
+  "id": "reg-006",
+  "title": "Bare URL under-tested: an API/UI profile must derive user-input and reach input-validation and perf-baseline",
+  "context": "Field-trial feedback (2026-10-05): given only a website URL, the agent ran a thin pass. user-input was never derived from any profile, so input and edge-case testing were marked not applicable, and load/perf never applied at all because every perf category required a declared perf-sensitive signal.",
+  "observed_failure": "signalsFromProfile produced no user-input signal from an API or a frontend, so input-validation was not applicable; and no performance category existed below the perf-sensitive gate, so a reachable API got no performance coverage. A URL-only target silently skipped the two most common coverage holes.",
+  "source_session": "field-trial-url-under-coverage",
+  "given": {
+    "profile": {
+      "architecture": { "frontend": { "present": true, "stack": ["React"] } },
+      "apis": [{ "kind": "rest", "route_count": 8, "auth_required": true }],
+      "technologies": [{ "name": "React", "kind": "framework", "evidence": ["client bundle main.js"] }],
+      "environments": [{ "name": "staging", "url": "https://staging.example.test", "class": "non-production", "evidence": ["user said this is the staging site"] }]
+    }
+  },
+  "expect": {
+    "profile_signals_include": ["user-input", "web-ui", "http-api", "auth"],
+    "applicable_includes": ["input-validation", "perf-baseline", "security", "e2e"]
+  },
+  "reasoning_notes": [
+    "Any API surface or rendered UI accepts untrusted input, so user-input is derived and input-validation plus the edge-case baseline always apply.",
+    "perf-baseline applies to any reachable API or UI independent of a stated perf target; deep load/stress/soak still require perf-sensitive plus explicit authorisation and a non-production target.",
+    "e2e shows applicable even with no browser capability declared -- it resolves to BLOCKED, not not-applicable, so the gap is visible rather than silent."
+  ]
+}

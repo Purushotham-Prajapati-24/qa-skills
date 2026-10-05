@@ -1,6 +1,6 @@
 {
   "$comment": "The Test Applicability Matrix source data. Every category the system knows about is listed here with the repository signals that make it relevant. Adding a new testing capability starts by adding a row here -- not by editing engine code.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "signals": {
     "$comment": "Signals are facts about the repository, derived by repository-intelligence and asserted with evidence. They are the only input to applicability.",
     "ui": "Renders a user interface (web, mobile or desktop)",
@@ -60,6 +60,7 @@
     "responsive": { "label": "Responsive testing", "requires": ["responsive"], "cost": 25, "automation": "medium", "skill": "compatibility-testing", "capability": "browser.resize", "addresses": ["user_impact"], "prerequisites": ["runnable UI"] },
     "compatibility": { "label": "Compatibility testing", "requires": ["multi-browser", "container"], "match": "any", "cost": 40, "automation": "medium", "skill": "compatibility-testing", "addresses": ["dependency_complexity"], "prerequisites": ["a stated support matrix"] },
     "localization": { "label": "Localisation / i18n testing", "requires": ["i18n"], "cost": 30, "automation": "medium", "skill": "compatibility-testing", "addresses": ["user_impact"], "prerequisites": ["translation resources"] },
+    "perf-baseline": { "label": "Performance baseline", "requires": ["http-api", "web-ui"], "match": "any", "cost": 20, "automation": "high", "skill": "performance-testing", "capability": "http.request", "addresses": ["user_impact"], "prerequisites": ["a reachable instance"], "note": "A latency/throughput baseline applies to any reachable API or UI, independent of a stated perf target. Sustained load beyond a baseline (the load/stress/spike/endurance categories) still needs perf-sensitive plus explicit authorisation and a non-production target." },
     "performance": { "label": "Performance testing", "requires": ["perf-sensitive"], "cost": 60, "automation": "medium", "skill": "performance-testing", "addresses": ["user_impact", "business_criticality"], "prerequisites": ["an environment representative enough to measure"] },
     "load": { "label": "Load testing", "requires": ["perf-sensitive", "http-api"], "match": "all", "cost": 90, "automation": "medium", "skill": "performance-testing", "addresses": ["user_impact"], "prerequisites": ["isolated environment", "explicit authorisation -- load tests are a form of attack traffic"] },
     "stress": { "label": "Stress testing", "requires": ["perf-sensitive"], "cost": 90, "automation": "medium", "skill": "performance-testing", "addresses": ["irreversibility"], "prerequisites": ["isolated environment", "explicit authorisation"] },

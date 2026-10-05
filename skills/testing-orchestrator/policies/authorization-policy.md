@@ -62,6 +62,28 @@ Unknown is treated as production.
 `localhost`, `staging`, `sandbox` and similar are heuristics for a *warning*, not a
 permission.
 
+## Rules of engagement for security testing
+
+When the user authorises security testing on a target they control in a non-production
+environment, the following is settled — do not re-ask or hesitate:
+
+- **In-bounds techniques proceed without further clearance.** Sending XSS/SQLi-shaped
+  strings, requesting another user's resource by ID, sending malformed tokens, mass
+  assignment probes, rapid-fire login attempts (≤50), checking response headers, double-submit
+  / race conditions, Unicode and boundary inputs, and calling undocumented endpoints discovered
+  in client code are all standard QA practice. The full list is in `security-testing/SKILL.md`
+  §8.
+- **Flag-and-stop techniques are reported, never executed.** Secret replay, credential reuse,
+  destructive injection, SSRF exfiltration, DoS/resource exhaustion, session impersonation. The
+  full list is in `security-testing/SKILL.md` §9.
+- **Detection is always in-bounds; exploitation is not.** A finding that says "this field
+  reflects XSS input unescaped" is just as valid as "alert(1) fired" — and it does not require
+  executing JavaScript in a live context.
+
+The `security_scan.active` action is gated at level `explicit` — the user must authorise it
+this session. "Test everything on staging" with a non-production environment declaration is
+sufficient authorisation. Record the user's words as the `authorisationQuote`.
+
 ## Load and security testing
 
 Load traffic is indistinguishable from an attack; active security scanning is an

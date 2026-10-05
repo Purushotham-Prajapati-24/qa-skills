@@ -18,6 +18,7 @@
     "git": { "$ref": "common.schema.json#/definitions/gitRef" },
     "goal": { "type": "string", "minLength": 3 },
     "test_category": { "$ref": "common.schema.json#/definitions/testCategory" },
+    "feature": { "type": "string", "description": "Id of the functionality_inventory item this execution exercises. Lets the per-feature coverage floor confirm every critical feature was addressed." },
     "method": {
       "type": "string",
       "enum": [

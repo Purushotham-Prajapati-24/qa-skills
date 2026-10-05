@@ -6,13 +6,13 @@ completeness.
 
 **Current phase:** core complete and exercised end to end; integrations specified, bound where
 a provider exists.
-**Version:** 0.11.1 · **Last validated:** 2026-10-01
+**Version:** 0.12.0 · **Last validated:** 2026-10-05
 
 ## Validation status
 
 ```
-node --test "tests/*.test.mjs"     340 passed, 0 failed
-node bin/ast.mjs eval run          47/47 checks across 20 cases (15 benchmark + 5 regression)
+node --test "tests/*.test.mjs"     350 passed, 0 failed
+node bin/ast.mjs eval run          51/51 checks across 22 cases (16 benchmark + 6 regression)
 node scripts/validate-repo.mjs     0 problems
 node scripts/demo-session.mjs      full pipeline exercised end to end
 ```
@@ -40,7 +40,7 @@ Working, tested, exercised by the demo session.
 | Authorization + write ledger | Prohibited-by-default list; assignment refused without a named account |
 | Traceability graph | `what-remains-untested` correctly reports REQ-3 uncovered |
 | Reporting engine | Inverted-pyramid report rendered from data; empty sections skipped, findings embedded in full, integrity self-audit |
-| Evaluation engine | 20 cases (15 benchmark + 5 regression), 47 checks, 14 metrics with stated blind spots |
+| Evaluation engine | 22 cases (16 benchmark + 6 regression), 51 checks, 14 metrics with stated blind spots |
 | Secret redaction | Token shapes and sensitive keys, with a `SAFE_KEYS` allowlist |
 | 21 skills | Frontmatter and links validated; all under the 500-line guidance |
 | 4 subagents | `agents/*.md` |
@@ -48,8 +48,9 @@ Working, tested, exercised by the demo session.
 | Plugin + marketplace manifests | Match the verified plugin layout |
 | **npx installer** | `bin/install.mjs`; 7 tests install into a throwaway repo and assert the CLI runs, every link resolves and no skill still points at the source layout |
 | Repository self-check | Catches broken links, hard-coded MCP names, dangling references |
-| **Regression suite from real sessions** | `evaluation/regression-suite/`: 5 cases from 3 field trials, loaded by `ast eval run`; each seen failing on the engine version that produced it |
+| **Regression suite from real sessions** | `evaluation/regression-suite/`: 6 cases (5 from 3 field trials, 1 from the 2026-10-05 bare-URL feedback), loaded by `ast eval run`; each seen failing on the engine version that produced it |
 | **Jira adapter (executable)** | `engine/adapters/jira.mjs`: REST v3 reads with ADF-to-text and acceptance-criteria extraction, gated writes, delegated writes confirmed by REST read-back; transitions stay prohibited |
+| **Coverage floors** | `validate --final` fails when an applicable P0/P1 category has no execution, a high/critical `functionality_inventory` item has no tagged execution, or a profile with a UI/API has no inventory at all |
 | **GitHub adapter (executable)** | `engine/adapters/github.mjs`; 29 tests assert each gate refuses **before** the provider is called |
 | **Enforced write protocol** | `performWrite` is the only path to a ledger entry, and it runs capability -> authorisation -> ledger -> render -> perform -> parse -> record in order |
 | **Delegated-write tickets** | An MCP-resolved write cannot be recorded without a single-use, hour-limited ticket proving the gates ran |

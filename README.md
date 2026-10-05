@@ -8,8 +8,8 @@ do.
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node.js-%3E%3D20.6.0-43853D?style=flat-square&logo=node.js&logoColor=white" alt="Node version"></a>
   <a href="#claude-code-plugin-marketplace"><img src="https://img.shields.io/badge/Claude%20Code-Plugin-6B4FBB?style=flat-square" alt="Claude Code Plugin"></a>
   <a href="https://playwright.dev"><img src="https://img.shields.io/badge/Playwright-supported-2EAD33?style=flat-square&logo=playwright&logoColor=white" alt="Playwright"></a>
-  <a href="https://github.com/Purushotham-Prajapati-24/qa-skills/actions"><img src="https://img.shields.io/badge/Tests-340%20passing-success?style=flat-square" alt="Tests"></a>
-  <a href="evaluation/README.md"><img src="https://img.shields.io/badge/Benchmark-47%2F47%20passed-blue?style=flat-square" alt="Benchmark"></a>
+  <a href="https://github.com/Purushotham-Prajapati-24/qa-skills/actions"><img src="https://img.shields.io/badge/Tests-350%20passing-success?style=flat-square" alt="Tests"></a>
+  <a href="evaluation/README.md"><img src="https://img.shields.io/badge/Benchmark-51%2F51%20passed-blue?style=flat-square" alt="Benchmark"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License"></a>
 </p>
 
@@ -47,7 +47,7 @@ execution evidence is mechanically downgraded to `INCONCLUSIVE`. A non-zero exit
 test report that ran zero cases, contradicts a `PASSED` claim outright and is rejected
 regardless of what the agent says about it.
 
-**Testing depth is a scored decision, not a guess.** 47 test categories are evaluated
+**Testing depth is a scored decision, not a guess.** 48 test categories are evaluated
 against an applicability matrix; risk is scored across weighted factors with an explicit
 confidence band, so a thinly-evidenced "critical" is never treated the same as a
 thoroughly-evidenced one.
@@ -65,7 +65,7 @@ so they cannot drift the way an LLM's internal tally of "what I've done so far" 
 
 ```mermaid
 flowchart TD
-    A["1. Discover & profile\n(stack, APIs, auth, existing tests)"] --> B["2. Applicability matrix\n(which of 47 categories apply)"]
+    A["1. Discover & profile\n(stack, APIs, auth, existing tests)"] --> B["2. Applicability matrix\n(which of 48 categories apply)"]
     B --> C["3. Risk & confidence scoring"]
     C --> D["4. Capability resolution\n(CLI, MCP servers, Playwright)"]
     D --> E["5. Decision engine\n(explore vs. script vs. unit vs. API)"]
@@ -153,7 +153,7 @@ npx --yes github:Purushotham-Prajapati-24/qa-skills --user
 
 ```bash
 # Pin to a specific tagged release
-npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.11.1
+npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.12.0
 
 # See what would change without writing anything
 npx --yes github:Purushotham-Prajapati-24/qa-skills --dry-run
@@ -255,7 +255,7 @@ node bin/ast.mjs caps declare <verb> <bool>
 
 # Decision and reasoning
 node bin/ast.mjs risk score --explain      # weighted risk score with confidence band
-node bin/ast.mjs applicability eval        # the 47-category applicability matrix
+node bin/ast.mjs applicability eval        # the 48-category applicability matrix
 node bin/ast.mjs browser decide            # pick a browser testing strategy
 node bin/ast.mjs failure classify          # classify a failure before filing a defect
 
@@ -296,10 +296,10 @@ Integration specifications:
 
 ## Evaluation, grounded in real mistakes
 
-`node bin/ast.mjs eval run` runs 47 checks across 20 cases: 15 benchmark cases against a
+`node bin/ast.mjs eval run` runs 51 checks across 22 cases: 16 benchmark cases against a
 sample app with known, injected defects
 ([evaluation/benchmark-app/answer-key.json](evaluation/benchmark-app/answer-key.json)),
-plus 5 regression cases seeded from real sessions where an agent using this system got a
+plus 6 regression cases seeded from real sessions where an agent using this system got a
 decision wrong. When a live run produces a bad call, its inputs become a case with the
 correct outcome asserted — the system's own mistakes are what keep it honest, not just
 hand-picked scenarios.
@@ -324,8 +324,8 @@ see the walkthroughs in [examples/](examples/). Full documentation:
 ## Running the verification suite locally
 
 ```bash
-node --test "tests/*.test.mjs"     # 340 tests
-node bin/ast.mjs eval run          # 47 checks across 20 cases
+node --test "tests/*.test.mjs"     # 350 tests
+node bin/ast.mjs eval run          # 51 checks across 22 cases
 node scripts/validate-repo.mjs     # links, schemas, and catalog cross-references
 ```
 
