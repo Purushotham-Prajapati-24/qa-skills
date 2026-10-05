@@ -90,6 +90,14 @@ explicitly blocked, not silently skipped.
 
 ### Fixed
 
+- **The redactor masked ordinary words after `pass`.** The free-text `KEY: value` pattern
+  matched an open-ended `pass`, so `passed`, `PASSED`, `passes`, `bypass` and `compass`
+  followed by `:` or `=` lost their values. Every report with a downgraded claim read
+  `DOWNGRADED from PASSED: "[REDACTED]" claims ...`, and evidence excerpts such as
+  `tests passed: 87/87` lost their counts. `pass` now has to be a whole segment
+  (`db_pass`, `pass_hash`, `password(s)`, `passwd`, `passphrase`, `passcode`, `passport`), and
+  every secret-shaped key is still masked. A bare `pass: <value>` is still masked too, because
+  it cannot be told apart from a credential.
 - Browser evidence framing: browser-testing and execution now lead with the rule that
   screenshots/console/network are corroborating-only and cap claims at INCONCLUSIVE — capture
   API-level evidence to prove a behaviour. Corrects the old "console errors are highest-yield"

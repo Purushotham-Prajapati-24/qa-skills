@@ -12,7 +12,7 @@ hand-written approximation of it.
 
 | Session | Repository | Commit | PR | Generated | Skill |
 | --- | --- | --- | --- | --- | --- |
-| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-10-05 09:03:52Z | v0.12.0 |
+| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-10-05 09:07:29Z | v0.12.0 |
 
 ## Verdict
 
@@ -137,11 +137,11 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 
 | ID | Status | Goal | Method | Failure class | Wall clock | Command time |
 | --- | --- | --- | --- | --- | --- | --- |
-| EXEC-2026-00003 | FAILED | User A cannot select user B's saved card | api-client | authentication-failure (0.5) | 12 ms | 3120 ms |
+| EXEC-2026-00003 | FAILED | User A cannot select user B's saved card | api-client | authentication-failure (0.5) | 11 ms | 3120 ms |
 | EXEC-2026-00010 | FAILED | Checkout UI regression suite, run 2 of 3 | playwright-script | product-defect (0.59) | 11 ms | 3700 ms |
 | EXEC-2026-00004 | BLOCKED | Payment E2E against the real provider | not-executed | — | 0 ms | — |
 | EXEC-2026-00008 | NEEDS_USER_INPUT | Saved-card E2E with real provider credentials | not-executed | — | 0 ms | — |
-| EXEC-2026-00001 | INCONCLUSIVE | Quick smoke of the checkout page | existing-suite | — | 8 ms | — |
+| EXEC-2026-00001 | INCONCLUSIVE | Quick smoke of the checkout page | existing-suite | — | 9 ms | — |
 | EXEC-2026-00006 | INTERRUPTED | Accessibility scan of the checkout pages | static-analysis | — | — | — |
 | EXEC-2026-00012 | DEFERRED | security testing | not-executed | — | 0 ms | — |
 | EXEC-2026-00013 | DEFERRED | input-validation testing | not-executed | — | 0 ms | — |
@@ -151,10 +151,10 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 | EXEC-2026-00017 | DEFERRED | data-integrity testing | not-executed | — | 0 ms | — |
 | EXEC-2026-00018 | DEFERRED | perf-baseline testing | not-executed | — | 0 ms | — |
 | EXEC-2026-00005 | NOT_APPLICABLE | Localisation testing | not-executed | — | 0 ms | — |
-| EXEC-2026-00002 | PASSED | Baseline: full unit suite at head | existing-suite | — | 13 ms | 12480 ms |
+| EXEC-2026-00002 | PASSED | Baseline: full unit suite at head | existing-suite | — | 14 ms | 12480 ms |
 | EXEC-2026-00007 | PASSED | Accessibility scan of the checkout pages (restarted after interruption) | static-analysis | — | 11 ms | 4100 ms |
 | EXEC-2026-00009 | PASSED | Checkout UI regression suite, run 1 of 3 | playwright-script | — | 11 ms | 1700 ms |
-| EXEC-2026-00011 | PASSED | Checkout UI regression suite, run 3 of 3 | playwright-script | — | 12 ms | 1700 ms |
+| EXEC-2026-00011 | PASSED | Checkout UI regression suite, run 3 of 3 | playwright-script | — | 11 ms | 1700 ms |
 
 | Status | Count |
 | --- | --- |
@@ -171,12 +171,12 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 
 | ID | Kind | Summary | Anchored? | Artifact |
 | --- | --- | --- | --- | --- |
-| EV-2026-00001 | command-output | vitest: 211/211 passed | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-Zt8g7j\evidence\blobs\output-2026-10-05T09-03-52-168Z-15492.txt |
-| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-Zt8g7j\evidence\blobs\output-2026-10-05T09-03-52-190Z-15492.txt |
-| EV-2026-00003 | command-output | axe: 0 violations on /checkout | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-Zt8g7j\evidence\blobs\output-2026-10-05T09-03-52-269Z-15492.txt |
-| EV-2026-00004 | command-output | playwright checkout suite, run 1 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-Zt8g7j\evidence\blobs\output-2026-10-05T09-03-52-296Z-15492.txt |
-| EV-2026-00005 | command-output | playwright checkout suite, run 2 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-Zt8g7j\evidence\blobs\output-2026-10-05T09-03-52-316Z-15492.txt |
-| EV-2026-00006 | command-output | playwright checkout suite, run 3 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-Zt8g7j\evidence\blobs\output-2026-10-05T09-03-52-336Z-15492.txt |
+| EV-2026-00001 | command-output | vitest: 211/211 passed | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-wEFh3G\evidence\blobs\output-2026-10-05T09-07-29-471Z-45768.txt |
+| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-wEFh3G\evidence\blobs\output-2026-10-05T09-07-29-492Z-45768.txt |
+| EV-2026-00003 | command-output | axe: 0 violations on /checkout | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-wEFh3G\evidence\blobs\output-2026-10-05T09-07-29-568Z-45768.txt |
+| EV-2026-00004 | command-output | playwright checkout suite, run 1 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-wEFh3G\evidence\blobs\output-2026-10-05T09-07-29-596Z-45768.txt |
+| EV-2026-00005 | command-output | playwright checkout suite, run 2 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-wEFh3G\evidence\blobs\output-2026-10-05T09-07-29-615Z-45768.txt |
+| EV-2026-00006 | command-output | playwright checkout suite, run 3 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-wEFh3G\evidence\blobs\output-2026-10-05T09-07-29-633Z-45768.txt |
 
 ### External writes
 
@@ -327,4 +327,4 @@ _Not measured this session (zero denominator, honestly excluded rather than show
 
 Produced by the Autonomous Software Testing skill system v0.12.0. Every status above is traceable to a record under `state/`.
 
-_Rendered from REPORT-2026-00001 · digest `sha256:6e7415ea8caef43651bdd5bb5e4052121367037e6160db5382f5ef30d1397878` · verify with `ast report verify`. A report with no digest line was not produced by this system._
+_Rendered from REPORT-2026-00001 · digest `sha256:a263de0246f485ea41b1b0db96b372690aa62b94c09e761f07af5d4561f8c7cf` · verify with `ast report verify`. A report with no digest line was not produced by this system._

@@ -69,9 +69,12 @@ export function redactText(input) {
   if (typeof input !== 'string') return input;
   let out = input;
   for (const [re, replacement] of VALUE_PATTERNS) out = out.replace(re, replacement);
-  // `KEY=value` / `KEY: value` / `"KEY": "value"` where KEY looks sensitive.
+  // `KEY=value` / `KEY: value` / `"KEY": "value"` where KEY looks sensitive. `pass` must be
+  // a whole segment (db_pass, pass_hash, password(s), passwd, passphrase, passcode, passport) -- the
+  // KEY_HINTS lesson again: an open-ended `pass` matched `passed`/`PASSED`/`bypass`, so every
+  // downgrade reason read 'from PASSED: "[REDACTED]"' and test counts lost their values.
   out = out.replace(
-    /(["']?[A-Za-z0-9_.-]*(?:pass(?:word)?|secret|token|api[-_]?key|apikey|credential|bearer|private[-_]?key|client[-_]?secret|access[-_]?key)[A-Za-z0-9_.-]*["']?\s*[:=]\s*)(["']?)([^\s"',;)]{4,})\2/gi,
+    /(["']?[A-Za-z0-9_.-]*(?:(?<![a-z])pass(?:word|wd|phrase|code|port)?s?(?![a-z])|secret|token|api[-_]?key|apikey|credential|bearer|private[-_]?key|client[-_]?secret|access[-_]?key)[A-Za-z0-9_.-]*["']?\s*[:=]\s*)(["']?)([^\s"',;)]{4,})\2/gi,
     (_m, head, quote) => `${head}${quote}[REDACTED]${quote}`,
   );
   return out;

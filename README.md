@@ -8,7 +8,7 @@ do.
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node.js-%3E%3D20.6.0-43853D?style=flat-square&logo=node.js&logoColor=white" alt="Node version"></a>
   <a href="#claude-code-plugin-marketplace"><img src="https://img.shields.io/badge/Claude%20Code-Plugin-6B4FBB?style=flat-square" alt="Claude Code Plugin"></a>
   <a href="https://playwright.dev"><img src="https://img.shields.io/badge/Playwright-supported-2EAD33?style=flat-square&logo=playwright&logoColor=white" alt="Playwright"></a>
-  <a href="https://github.com/Purushotham-Prajapati-24/qa-skills/actions"><img src="https://img.shields.io/badge/Tests-359%20passing-success?style=flat-square" alt="Tests"></a>
+  <a href="https://github.com/Purushotham-Prajapati-24/qa-skills/actions"><img src="https://img.shields.io/badge/Tests-361%20passing-success?style=flat-square" alt="Tests"></a>
   <a href="evaluation/README.md"><img src="https://img.shields.io/badge/Benchmark-51%2F51%20passed-blue?style=flat-square" alt="Benchmark"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License"></a>
 </p>
@@ -324,7 +324,7 @@ see the walkthroughs in [examples/](examples/). Full documentation:
 ## Running the verification suite locally
 
 ```bash
-node --test "tests/*.test.mjs"     # 359 tests
+node --test "tests/*.test.mjs"     # 361 tests
 node bin/ast.mjs eval run          # 51 checks across 22 cases
 node scripts/validate-repo.mjs     # links, schemas, and catalog cross-references
 ```
