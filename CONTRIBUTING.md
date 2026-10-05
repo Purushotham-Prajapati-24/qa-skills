@@ -3,7 +3,7 @@
 ## Before anything
 
 ```bash
-node --test "tests/*.test.mjs"     # 350 tests
+node --test "tests/*.test.mjs"     # 359 tests
 node bin/ast.mjs eval run          # 22 cases (16 benchmark + 6 regression), 51 checks
 node scripts/validate-repo.mjs     # links, schemas, cross-references
 ```

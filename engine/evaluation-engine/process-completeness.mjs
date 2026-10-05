@@ -28,13 +28,35 @@
  */
 import * as state from '../state-engine/index.mjs';
 import { open as openUncertainties } from '../uncertainty-register/index.mjs';
+import { catalog } from '../applicability-engine/index.mjs';
 import { SYSTEM_VERSION } from '../core/version.mjs';
 
 const BLOCKED_LIKE = new Set(['BLOCKED', 'NEEDS_USER_INPUT']);
-// A category/feature counts as covered by a not-run only when the not-run documents a real
-// obstacle (BLOCKED/NEEDS_USER_INPUT/DEFERRED), never a bare SKIPPED -- otherwise coverage
-// could be waved away without either testing or justifying the gap.
 const JUSTIFIED_NOTRUN = new Set(['BLOCKED', 'NEEDS_USER_INPUT', 'DEFERRED']);
+
+/**
+ * Does this execution count toward a coverage floor? A real run always does, whatever its
+ * outcome -- a FAILED run is still testing. A not-run counts only when it documents a real
+ * obstacle (BLOCKED/NEEDS_USER_INPUT/DEFERRED) AND links the uncertainty saying what would
+ * unblock it. A bare SKIPPED, or a DEFERRED with nothing linked, waves the gap away without
+ * testing or justifying it, so it does not count.
+ */
+export function countsAsCoverage(e) {
+  if (e.method !== 'not-executed') return true;
+  return JUSTIFIED_NOTRUN.has(e.status) && (e.uncertainties ?? []).length > 0;
+}
+
+/**
+ * The matrix rows the category floor enforces: every applicable P0/P1 category, plus every
+ * applicable category the catalog marks `mandatory` (the security, input edge-case,
+ * accessibility and performance baselines) whatever its score -- a baseline that only bites
+ * when it happens to rank high is not a baseline.
+ */
+export function floorCategories(rows) {
+  const defs = catalog().categories;
+  return (rows ?? []).filter((r) => r.applicable
+    && (r.priority === 'P0' || r.priority === 'P1' || defs[r.category]?.mandatory === true));
+}
 
 /**
  * @returns {Array<{check: string, severity: 'advisory'|'blocking', message: string}>}
@@ -73,36 +95,30 @@ export function check() {
   // Coverage floor. The applicability matrix names which categories are relevant and how
   // important; nothing used to check that the important ones actually ran. A bare-URL session
   // could mark a dozen categories applicable, run three, and finish clean -- the exact silent
-  // under-coverage this check exists to stop. Every applicable P0/P1 category must have at
-  // least one execution: a real run (any outcome -- a FAILED run is still coverage), OR an
-  // explicit not-run recorded as BLOCKED/NEEDS_USER_INPUT/DEFERRED (which the check above then
-  // forces to carry an uncertainty). A mere SKIPPED not-run does not satisfy the floor, so a
-  // category cannot be waved away without either testing it or justifying the block.
+  // under-coverage this check exists to stop. See floorCategories() for what is enforced and
+  // countsAsCoverage() for what satisfies it.
   const matrix = state.loadApplicability();
   if (matrix?.matrix) {
-    const covered = new Set(
-      executions
-        .filter((e) => e.method !== 'not-executed' || JUSTIFIED_NOTRUN.has(e.status))
-        .map((e) => e.test_category)
-        .filter(Boolean),
-    );
-    const floor = matrix.matrix.filter((r) => r.applicable && (r.priority === 'P0' || r.priority === 'P1'));
-    const uncovered = floor.filter((r) => !covered.has(r.category));
+    const covered = new Set(executions.filter(countsAsCoverage).map((e) => e.test_category).filter(Boolean));
+    const uncovered = floorCategories(matrix.matrix).filter((r) => !covered.has(r.category));
     if (uncovered.length > 0) {
+      const defs = catalog().categories;
       findings.push({
         check: 'coverage-floor',
         severity: 'blocking',
-        message: `${uncovered.length} applicable high-priority categor${uncovered.length === 1 ? 'y has' : 'ies have'} `
-          + `no execution of any kind: ${uncovered.map((r) => `${r.category} (${r.priority})`).join(', ')}. `
-          + 'Each applicable P0/P1 category needs at least one execution -- a real run, or an explicit '
-          + '`exec not-run` with a BLOCKED/DEFERRED status and an uncertainty saying what would unblock it. '
-          + 'A high-priority category with no record at all is silent under-coverage.',
+        message: `${uncovered.length} applicable categor${uncovered.length === 1 ? 'y the floor enforces has' : 'ies the floor enforces have'} `
+          + `no qualifying execution: ${uncovered.map((r) => `${r.category} (${defs[r.category]?.mandatory ? `mandatory baseline, ${r.priority}` : r.priority})`).join(', ')}. `
+          + 'Each applicable P0/P1 category and each applicable mandatory baseline needs a real run, or an '
+          + '`exec not-run` with a BLOCKED/DEFERRED status that links an uncertainty saying what would unblock '
+          + 'it. A category with no such record is silent under-coverage.',
       });
     }
   } else if (real.length > 0) {
+    // Blocking, not advisory: if skipping `applicability eval` silenced the floor, the floor
+    // would be optional. Like every blocking gap it only fails `validate --final`.
     findings.push({
       check: 'no-applicability-matrix',
-      severity: 'advisory',
+      severity: 'blocking',
       message: 'No applicability matrix is persisted, so the coverage floor could not be checked. '
         + 'Run `ast applicability eval` during planning so breadth is verified before you finish -- '
         + 'without it, nothing can tell an applicable category that silently never ran from one that '
@@ -118,12 +134,12 @@ export function check() {
   const inventory = profile?.functionality_inventory ?? [];
   // The per-feature floor only bites when an inventory exists, so skipping the inventory used
   // to skip the floor too -- on a repository and on a URL alike. When the profile itself shows
-  // a feature surface (a frontend, an API, a critical component) and real work happened, a
-  // missing inventory is the gap, not a free pass.
+  // a feature surface (a frontend, an API, a critical component), a missing inventory is the
+  // gap, not a free pass -- whether or not anything has run yet.
   const hasFeatureSurface = Boolean(profile?.architecture?.frontend?.present)
     || (profile?.apis ?? []).length > 0
     || (profile?.critical_components ?? []).length > 0;
-  if (profile && hasFeatureSurface && inventory.length === 0 && real.length > 0) {
+  if (profile && hasFeatureSurface && inventory.length === 0) {
     findings.push({
       check: 'no-functionality-inventory',
       severity: 'blocking',
@@ -135,12 +151,7 @@ export function check() {
     });
   }
   if (inventory.length > 0) {
-    const coveredFeatures = new Set(
-      executions
-        .filter((e) => e.method !== 'not-executed' || JUSTIFIED_NOTRUN.has(e.status))
-        .map((e) => e.feature)
-        .filter(Boolean),
-    );
+    const coveredFeatures = new Set(executions.filter(countsAsCoverage).map((e) => e.feature).filter(Boolean));
     const mustCover = inventory.filter((it) => it.criticality === 'high' || it.criticality === 'critical');
     const uncovered = mustCover.filter((it) => !coveredFeatures.has(it.id));
     if (uncovered.length > 0) {
@@ -150,8 +161,8 @@ export function check() {
         message: `${uncovered.length} high/critical feature(s) from the functionality inventory have no execution `
           + `tagged to them: ${uncovered.map((it) => `${it.id} (${it.name})`).join(', ')}. `
           + '"Test each functionality end to end" means every critical feature needs at least one execution tagged '
-          + 'with its id (`exec start ... "feature": "<id>"`), or a justified not-run. Tag the runs you did, or '
-          + 'test the features you missed.',
+          + 'with its id (`exec start ... "feature": "<id>"`), or a BLOCKED/DEFERRED not-run that links an '
+          + 'uncertainty. Tag the runs you did, or test the features you missed.',
       });
     }
   }

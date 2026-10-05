@@ -40,7 +40,9 @@ A latency/throughput **baseline** applies to any reachable API or UI, independen
 perf target — it is part of the default sweep, not a special request. Capture p50/p95/p99 for
 the core endpoints and the main page loads, record the conditions, and you have the reference
 every later comparison needs. This is the `perf-baseline` category, and it is usually
-applicable on a bare URL where the deeper categories below are not.
+applicable on a bare URL where the deeper categories below are not. It is a `mandatory`
+baseline: when it is applicable, `validate --final` fails unless it ran or was recorded
+BLOCKED/DEFERRED with a linked uncertainty, whatever its priority score.
 
 The deeper categories (`load`, `stress`, `spike`, `endurance`) are a different thing: they
 drive sustained or hostile traffic and need a `perf-sensitive` signal, explicit authorisation,

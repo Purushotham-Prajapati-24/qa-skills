@@ -112,15 +112,18 @@ discover them at the end:
    happy-path scenario **and** at least one edge-case scenario (empty input, boundary,
    unauthorised actor).
 2. **Category floor.** Every applicable **P0/P1** category in the persisted applicability
-   matrix needs at least one execution — a real run, or an explicit `exec not-run` with a
-   `BLOCKED`/`DEFERRED` status and an uncertainty saying what would unblock it. A P0/P1
-   category with no record at all fails `--final`. So if load testing is applicable but you
-   lack authorisation, you do not skip it silently — you record it BLOCKED with the reason.
+   matrix, and every applicable **mandatory baseline** (`security`, `input-validation`,
+   `accessibility`, `perf-baseline`) whatever its priority, needs at least one execution — a
+   real run, or an explicit `exec not-run` with a `BLOCKED`/`DEFERRED` status whose
+   `uncertainties` links the uncertainty saying what would unblock it. A not-run with no
+   linked uncertainty does not count. So if the security sweep is applicable but you lack
+   authorisation, you do not skip it silently — you record it BLOCKED with the reason.
 
 `perf-baseline` is applicable to any reachable API or UI, independent of a stated perf
-target. Treat a latency/throughput baseline as part of the default sweep on an authorised
-non-production target; the deeper `load`/`stress`/`endurance` categories still need a
-`perf-sensitive` signal plus explicit authorisation.
+target, and as a mandatory baseline the floor enforces it: run a latency/throughput baseline
+on an authorised non-production target, or record why you could not. The deeper
+`load`/`stress`/`endurance` categories still need a `perf-sensitive` signal plus explicit
+authorisation.
 
 ## 7. Partition around blockers
 
@@ -160,11 +163,11 @@ Record this as a decision with the fan-out rationale:
 {
   "question": "Serial vs parallel execution",
   "options": [
-    {"id": "serial", "description": "One agent, 8 roles sequentially (~2h)"},
-    {"id": "parallel", "description": "Fan out to 3 browser-explorer subagents by app surface (~45min)"}
+    {"id": "serial", "label": "One agent, 8 roles sequentially (~2h)"},
+    {"id": "parallel", "label": "Fan out to 3 browser-explorer subagents by app surface (~45min)"}
   ],
-  "chosen": "parallel",
-  "reasons": ["8 independent roles with separate logins", "no shared mutable state between surfaces"],
+  "selected": "parallel",
+  "reason": ["8 independent roles with separate logins", "no shared mutable state between surfaces"],
   "confidence": 0.85,
   "reversible": true
 }
@@ -186,8 +189,11 @@ record why you did not fan out.
 ## 9. Golden-path journey (mandatory for multi-role systems)
 
 When the target involves **≥2 roles that interact** (e.g., host → guest → guard →
-supervisor → admin), the plan MUST contain at least one `must-test` e2e scenario tagged
-`journey:golden-path` that traverses the core value chain across roles.
+supervisor → admin), the plan MUST contain at least one `must-test` e2e scenario that
+traverses the core value chain across roles. Make it enforceable: add the chain to the
+profile's `functionality_inventory` as a `critical` `flow` (for example `FLOW-golden-path`),
+and tag the journey's executions with `"feature": "FLOW-golden-path"`. The per-feature floor
+then fails `validate --final` if the journey never ran.
 
 Steps:
 1. **Pick the core value chain** — the sequence of actions that produces the system's
@@ -203,11 +209,11 @@ Record this as a planning decision:
 {
   "question": "Golden-path journey scope",
   "options": [
-    {"id": "full-chain", "description": "All 5 roles in sequence"},
-    {"id": "core-3", "description": "Creator → actor → observer only"}
+    {"id": "full-chain", "label": "All 5 roles in sequence"},
+    {"id": "core-3", "label": "Creator → actor → observer only"}
   ],
-  "chosen": "full-chain",
-  "reasons": ["all roles interact on the same entity", "field trial showed single-role sweeps missed handoff bugs"],
+  "selected": "full-chain",
+  "reason": ["all roles interact on the same entity", "field trial showed single-role sweeps missed handoff bugs"],
   "confidence": 0.9,
   "reversible": true
 }

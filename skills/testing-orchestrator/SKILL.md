@@ -113,8 +113,9 @@ per-feature coverage, the same `validate --final` floors.
    quote)
 5. `profile signals`, then `applicability eval` — which persists the matrix. It returns what
    the signals support, not "everything"; if a category you expect is missing, enrich the
-   profile. The floors then make every applicable P0/P1 category and every critical feature
-   either run or be recorded BLOCKED with a reason.
+   profile. The floors then make every applicable P0/P1 category, every applicable mandatory
+   baseline and every critical feature either run or be recorded BLOCKED with a linked
+   uncertainty.
 
 Record the user's instruction as both the authorisation quote and the depth decision
 rationale. This eliminates multiple back-and-forth exchanges. The user said "test
@@ -198,10 +199,10 @@ Some categories are not optional when their trigger conditions are met.
 
 ### Security baseline — automatic when auth + user-input are both present
 
-If the applicability matrix marks `security-testing` as applicable AND the profile contains
-both an `auth` signal and at least one user-input surface (form, API accepting user-supplied
-fields), the following minimum sweep runs **before** the session can complete, without
-waiting for the agent to decide:
+When the applicability matrix marks `security` applicable (any of the `user-input`, `auth`,
+`secrets` or `pii` signals), the following minimum sweep runs **before** the session can
+complete, without waiting for the agent to decide. The probes that need a session (IDOR, auth
+bypass, rate limiting on login) apply when the profile also has `auth`:
 
 | Check | Probe | Evidence |
 | --- | --- | --- |
@@ -221,8 +222,11 @@ The sweep uses **benign, non-destructive payloads** only. It does not:
 Record each probe as an execution. Any finding of severity `critical` or `blocker` is surfaced
 **immediately** per the escalation policy — do not batch it.
 
-This is NOT optional. If the agent reaches `report generate` without evidence of these checks
-having run, `validate --final` flags it as a process gap.
+This is NOT optional, and the engine enforces it. `security`, `input-validation`,
+`accessibility` and `perf-baseline` are `mandatory` baselines in the applicability catalog:
+whenever one is applicable, `validate --final` fails unless it has an execution — or a
+BLOCKED/DEFERRED `exec not-run` that links an uncertainty — **whatever its priority score**.
+If you have no authorisation for the sweep, record it BLOCKED with the reason; do not skip it.
 
 ### Input edge-case baseline — automatic when user-input surfaces exist
 
@@ -243,9 +247,10 @@ consistently, and produces clear evidence.
 
 ### Accessibility baseline — automatic when a web UI is present
 
-If the applicability matrix marks `accessibility-testing` as applicable (i.e., the target
-has a web UI), run at minimum one automated axe scan on the primary page states (login,
-dashboard, main feature page) before the session can complete.
+If the applicability matrix marks `accessibility` as applicable (i.e., the target has a web
+UI), run at minimum one automated axe scan on the primary page states (login, dashboard, main
+feature page) before the session can complete. It is a `mandatory` baseline, so the coverage
+floor enforces it.
 
 This is a 30-second operation that catches heading hierarchy violations, missing labels,
 contrast failures, and ARIA attribute errors. It is not a substitute for manual keyboard
@@ -344,10 +349,12 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" report verify <the markdown_path just p
 and unfinished executions, and — only under `--final` — turns a blocking process gap into a
 failure rather than a warning. The blocking gaps now include two **coverage floors**:
 
-- **Category floor** — every applicable P0/P1 category in the persisted applicability matrix
-  must have an execution (a real run, or an `exec not-run` BLOCKED/DEFERRED with an
-  uncertainty). Run `applicability eval` during planning so the matrix is persisted for this
-  check; without it, the floor cannot verify breadth and says so.
+- **Category floor** — every applicable P0/P1 category in the persisted applicability matrix,
+  and every applicable `mandatory` baseline (`security`, `input-validation`, `accessibility`,
+  `perf-baseline`) whatever its priority, must have an execution: a real run, or an
+  `exec not-run` BLOCKED/DEFERRED whose `uncertainties` links the reason. Run
+  `applicability eval` during planning so the matrix is persisted; a session with real
+  executions and no persisted matrix fails `--final` too.
 - **Per-feature floor** — every `high`/`critical` item in the profile's
   `functionality_inventory` must have an execution tagged with its `feature` id. A profile
   that shows a UI, an API or a critical component but has **no** inventory fails too, so

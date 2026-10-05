@@ -562,7 +562,9 @@ const COMMANDS = {
     run: ({ positional, flags }) => execution.finish(positional[2], payload(flags)),
   },
   'exec not-run': {
-    help: 'Document work that was NOT executed: exec not-run --input not-run.json, where not-run.json is {"goal":"...","status":"BLOCKED","reason":"..."}',
+    help: 'Document work that was NOT executed: exec not-run --input not-run.json, where not-run.json is '
+      + '{"goal":"...","status":"BLOCKED","reason":"...","testCategory":"...","feature":"FEAT-...","uncertainties":["U-..."]}. '
+      + 'It counts toward the coverage floors only when status is BLOCKED/NEEDS_USER_INPUT/DEFERRED and an uncertainty is linked.',
     run: ({ flags }) => execution.recordNonExecution(payload(flags)),
   },
   'exec list': { help: 'List executions.', run: () => state.list('executions') },

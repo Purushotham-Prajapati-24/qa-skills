@@ -51,10 +51,13 @@ If pre-approval authority or a fallback path exists, use it to construct a compl
 even when the primary path is blocked. For example, if the normal invite flow is broken, try
 an admin-approved path to keep the downstream roles testable.
 
-Record cross-role journeys as a separate execution category (`testCategory: "e2e-journey"`,
-tagged `journey:golden-path`) so the report distinguishes per-role coverage from cross-role
-coverage. The plan must contain at least one `must-test` scenario with this tag when ≥2
-roles interact — see `planning.md` §9.
+Record the golden path as a `critical` `flow` in the profile's `functionality_inventory`
+(for example `{"id": "FLOW-golden-path", "name": "Invite to audited visit", "kind": "flow",
+"criticality": "critical", "roles": ["host", "guest", "guard", "admin"]}`), and run each
+journey as `testCategory: "e2e"` with `"feature": "FLOW-golden-path"`. The per-feature
+coverage floor then makes the journey mandatory at `validate --final`, and the report can
+tell per-role coverage apart from the cross-role chain. The plan must contain at least one
+`must-test` scenario for this flow when ≥2 roles interact — see `planning.md` §9.
 
 **Session management for multi-role journeys:**
 

@@ -18,17 +18,20 @@ explicitly blocked, not silently skipped.
   broad enough, so a session could mark a dozen categories not-applicable, run three, and
   finish clean. Now, under `--final`:
   - **Category floor** — every applicable **P0/P1** category in the persisted applicability
-    matrix must have at least one execution (a real run of any outcome, or an `exec not-run`
-    with a `BLOCKED`/`DEFERRED` status and an uncertainty). A high-priority category with no
-    record of any kind is a blocking failure.
+    matrix, and every applicable **mandatory baseline** (`security`, `input-validation`,
+    `accessibility`, `perf-baseline` — `mandatory: true` in the catalog) whatever its
+    priority, must have at least one execution: a real run of any outcome, or an
+    `exec not-run` with a `BLOCKED`/`NEEDS_USER_INPUT`/`DEFERRED` status that **links** an
+    uncertainty in its `uncertainties`. A not-run with nothing linked does not count.
   - **Per-feature floor** — every `high`/`critical` item in the profile's new
     `functionality_inventory` must have an execution tagged with its `feature` id.
   - **Missing inventory** — a profile that shows a UI, an API or a critical component but has
-    no `functionality_inventory` is itself a blocking gap. Without this, skipping the
-    inventory silently skipped the per-feature floor.
-  Both are advisory mid-session and only block under `--final`, matching the existing
-  process-gap split. A session that never ran `applicability eval` gets an advisory (the
-  floor cannot check what was never persisted) rather than a false pass.
+    no `functionality_inventory` is itself a blocking gap, whether or not anything has run.
+    Without this, skipping the inventory silently skipped the per-feature floor.
+  - **Missing matrix** — a session with real executions but no persisted applicability
+    matrix is a blocking gap, so skipping `applicability eval` cannot silence the floor.
+  All are warnings mid-session and only fail `--final`, matching the existing process-gap
+  split.
 - **Repository access gets the same breadth as a URL.** repository-intelligence now builds the
   `functionality_inventory` from routes and handlers (§16), records the locally started app as
   a `non-production` environment (§17), and declares code-revealed signals such as
@@ -46,8 +49,10 @@ explicitly blocked, not silently skipped.
 ### Added
 
 - **`perf-baseline` test category.** A latency/throughput baseline applies to any reachable
-  API or UI (`requires: http-api | web-ui`), independent of a stated perf target, so
-  performance coverage happens by default on a deployed target. The deeper `load`/`stress`/
+  API or UI (`requires: http-api | web-ui`), independent of a stated perf target. It is a
+  mandatory baseline, so whenever it is applicable the floor requires a run, or a BLOCKED/
+  DEFERRED record with a linked reason (no capability, no authorisation, out of budget). It
+  is never silently skipped, even when it scores low. The deeper `load`/`stress`/
   `spike`/`endurance` categories still require a `perf-sensitive` signal plus explicit
   authorisation and a non-production environment. The applicability catalog is now 48
   categories (catalog 1.1.0).
@@ -75,7 +80,9 @@ explicitly blocked, not silently skipped.
   escalation-policy state that in-bounds techniques on an authorised non-production target
   proceed without stopping; detection is always in-bounds, exploitation is not.
 - **Cross-role golden-path journeys.** e2e-testing and planning require at least one
-  `must-test` journey tagged `journey:golden-path` when ≥2 roles interact.
+  `must-test` journey when ≥2 roles interact, recorded as a `critical` `flow` in the
+  `functionality_inventory` (e.g. `FLOW-golden-path`) and run as `testCategory: "e2e"` with
+  that `feature` id, so the per-feature floor enforces it.
 - **Regression case reg-006** seeds this field failure: a bare-URL profile must derive
   `user-input` and reach `input-validation`, `perf-baseline`, `security` and `e2e`.
 - **Benchmark case-16**: a code-derived repository profile reaches the same running-system

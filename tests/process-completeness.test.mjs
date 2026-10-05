@@ -143,11 +143,37 @@ test('coverage floor: a lower-priority (P2/P3) applicable category never bites',
   assert.equal(checkCompleteness().find((c) => c.check === 'coverage-floor'), undefined);
 });
 
-test('coverage floor: an explicit not-run BLOCKED record satisfies the floor for that category', () => {
-  execution.recordNonExecution({ goal: 'Load test', status: 'BLOCKED', reason: 'no isolated environment', testCategory: 'load' });
+test('coverage floor: a DEFERRED not-run with no linked uncertainty does NOT satisfy the floor', () => {
+  // An open uncertainty exists elsewhere in this session, but this record links none --
+  // "some uncertainty exists" is not "this gap is justified".
+  execution.recordNonExecution({ goal: 'Load test', status: 'DEFERRED', reason: 'later', testCategory: 'load' });
   state.saveApplicability({ matrix: [{ category: 'load', applicable: true, priority: 'P0' }] });
-  // The blocked not-run counts as coverage; the matching uncertainty raised earlier keeps the
-  // blocked-without-uncertainty check quiet too, so the floor is genuinely satisfied.
+  const f = checkCompleteness().find((c) => c.check === 'coverage-floor');
+  assert.ok(f, 'an unlinked not-run must not count as coverage');
+  assert.match(f.message, /load \(P0\)/);
+});
+
+test('coverage floor: an explicit not-run BLOCKED record that links its uncertainty satisfies the floor', () => {
+  const u = uncertainty.raise({
+    question: 'Is there an isolated environment for load tests?',
+    impact: 'load traffic cannot be pointed at shared infrastructure',
+    affectedScope: ['load'],
+    nextAction: 'ask the owner for an isolated environment',
+  });
+  execution.recordNonExecution({ goal: 'Load test', status: 'BLOCKED', reason: 'no isolated environment', testCategory: 'load', uncertainties: [u.id] });
+  state.saveApplicability({ matrix: [{ category: 'load', applicable: true, priority: 'P0' }] });
+  assert.equal(checkCompleteness().find((c) => c.check === 'coverage-floor'), undefined);
+});
+
+test('coverage floor: an applicable mandatory baseline is enforced even at P3', () => {
+  state.saveApplicability({ matrix: [{ category: 'perf-baseline', applicable: true, priority: 'P3' }] });
+  const f = checkCompleteness().find((c) => c.check === 'coverage-floor');
+  assert.ok(f, 'perf-baseline is a mandatory baseline: low priority does not exempt it');
+  assert.match(f.message, /perf-baseline \(mandatory baseline, P3\)/);
+});
+
+test('coverage floor: a mandatory baseline that is NOT applicable is not demanded', () => {
+  state.saveApplicability({ matrix: [{ category: 'perf-baseline', applicable: false, priority: 'P3' }] });
   assert.equal(checkCompleteness().find((c) => c.check === 'coverage-floor'), undefined);
 });
 
@@ -234,6 +260,8 @@ test('CLI: "ast validate" reports a blocking process gap as a warning and stays 
 test('CLI: "ast validate --final" promotes the same gap to a failure', () => {
   const dir = freshState('promote');
   ast(['session', 'start', '--request', 'x'], dir);
+  // Persist a matrix with nothing the floor enforces, so the only gap under test is no-decisions.
+  astInput(['applicability', 'eval'], { signals: [] }, dir);
   const execOut = JSON.parse(astInput(['exec', 'start'], { goal: 'smoke', method: 'static-analysis' }, dir));
   astInput(['exec', 'finish', execOut.execution_id], { status: 'PASSED', statusReason: 'ok' }, dir);
   let out;
@@ -284,7 +312,7 @@ test('CLI: "ast validate --final" fails when an applicable high-priority categor
   }
   assert.ok(threw, '--final must exit non-zero when an applicable high-priority category never ran');
   assert.equal(out.valid, false);
-  assert.ok(out.problems.some((p) => /coverage floor|no execution of any kind/i.test(p)),
+  assert.ok(out.problems.some((p) => /no qualifying execution/i.test(p)),
     'the failure must name the coverage floor');
 });
 
@@ -315,9 +343,52 @@ test('CLI: "ast validate --final" fails when a critical inventory feature was ne
     'the failure must name the untested feature');
 });
 
+test('CLI: "ast validate --final" fails when real work ran but no applicability matrix was ever persisted', () => {
+  const dir = freshState('no-matrix');
+  ast(['session', 'start', '--request', 'x'], dir);
+  const execOut = JSON.parse(astInput(['exec', 'start'], { goal: 'smoke', method: 'static-analysis', git: null }, dir));
+  astInput(['decide'], {
+    question: 'How deep?', options: ['shallow', 'deep'], selected: 'shallow', reason: 'time-boxed', confidence: 0.7, reversible: true,
+  }, dir);
+  astInput(['exec', 'finish', execOut.execution_id], { status: 'PASSED', statusReason: 'ok' }, dir);
+  // Mid-session it is only a warning...
+  const mid = JSON.parse(ast(['validate'], dir));
+  assert.equal(mid.valid, true);
+  assert.ok(mid.warnings.some((w) => /No applicability matrix is persisted/.test(w)));
+  // ...but skipping `applicability eval` must not silence the floor at the finish line.
+  let out;
+  let threw = false;
+  try {
+    ast(['validate', '--final'], dir);
+  } catch (err) {
+    threw = true;
+    out = JSON.parse(err.stdout);
+  }
+  assert.ok(threw, '--final must fail when the coverage floor could never be checked');
+  assert.ok(out.problems.some((p) => /No applicability matrix is persisted/.test(p)));
+});
+
+test('CLI: "ast validate --final" fails on a UI/API profile with no inventory even before anything ran', () => {
+  const dir = freshState('inventory-first');
+  ast(['session', 'start', '--request', 'x'], dir);
+  astInput(['profile', 'save'], sampleProfile(), dir);
+  let out;
+  let threw = false;
+  try {
+    ast(['validate', '--final'], dir);
+  } catch (err) {
+    threw = true;
+    out = JSON.parse(err.stdout);
+  }
+  assert.ok(threw, 'a feature surface with no inventory is a gap whether or not anything has executed');
+  assert.ok(out.problems.some((p) => /functionality_inventory/.test(p)));
+});
+
 test('CLI: "ast validate --final" never promotes the advisory-only no-git-provenance finding', () => {
   const dir = freshState('git-advisory');
   ast(['session', 'start', '--request', 'x'], dir);
+  // Persist a matrix with nothing the floor enforces, so no blocking gap competes with the advisory.
+  astInput(['applicability', 'eval'], { signals: [] }, dir);
   // git: null, explicitly -- git is now auto-captured from this real repo checkout by
   // default (this test's whole point), so simulating "testing a target with no git
   // provenance" requires opting out explicitly rather than simply omitting the field.

@@ -128,13 +128,20 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence capture --exec EXEC-2026-00003
   --summary "XSS probe on registration name field" --script /tmp/ast-probe.sh
 ```
 
-Windows / PowerShell:
+Windows / PowerShell — two traps, both silent. `curl` is an alias for `Invoke-WebRequest` in
+Windows PowerShell 5.1, so call `curl.exe`. And 5.1 strips the double quotes inside a JSON
+argument passed to a native program: `curl.exe -d '{"name":"x"}'` sends `{name:x}`, which the
+server rejects as malformed — a 400 that looks like "input rejected" but tested nothing. Send
+the body from a file instead:
+
 ```powershell
 # Write the command to a file
 @'
-curl -s -X POST "https://api.example.com/register" `
-  -H "Content-Type: application/json" `
-  -d '{"name":"<img src=x onerror=alert(1)>","email":"test@example.test"}'
+$bodyFile = Join-Path $env:TEMP 'ast-probe-body.json'
+Set-Content -Path $bodyFile -Encoding ascii -NoNewline `
+  -Value '{"name":"<img src=x onerror=alert(1)>","email":"test@example.test"}'
+curl.exe -s -X POST "https://api.example.com/register" `
+  -H "Content-Type: application/json" --data-binary "@$bodyFile"
 '@ | Out-File -Encoding UTF8 "$env:TEMP\ast-probe.ps1"
 
 # Execute through the CLI — --script dispatches by extension
@@ -300,8 +307,12 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" uncertainty raise --input uncertainty.j
 `not-run.json`:
 
 ```json
-{"goal":"Payment E2E","status":"BLOCKED","reason":"...","testCategory":"e2e"}
+{"goal":"Payment E2E","status":"BLOCKED","reason":"...","testCategory":"e2e","feature":"FEAT-checkout","uncertainties":["U-00019"]}
 ```
+
+Link the uncertainty you just raised. A not-run counts toward the coverage floors only when
+it names its category (and `feature`, for an inventory item) and links an uncertainty — a
+bare BLOCKED or DEFERRED with nothing linked is treated as silently skipped.
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec not-run --input not-run.json

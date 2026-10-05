@@ -885,27 +885,34 @@ export function diff(newId, oldId) {
   }
 
   // --- Metric diff ---
-  const oldMetrics = oldReport.integrity ?? {};
-  const newMetrics = newReport.integrity ?? {};
+  // generate() stores computed metrics under `metrics.metrics`; only false_confidence_rate is
+  // also mirrored into `integrity`, so that is a fallback, not the source.
+  const metricsOf = (r) => ({ false_confidence_rate: r.integrity?.false_confidence_rate, ...(r.metrics?.metrics ?? {}) });
+  const oldMetrics = metricsOf(oldReport);
+  const newMetrics = metricsOf(newReport);
   const metricDelta = {};
-  for (const key of ['false_confidence_rate', 'evidence_completeness', 'authorization_compliance', 'flaky_identification_quality']) {
+  for (const key of new Set([...Object.keys(oldMetrics), ...Object.keys(newMetrics)])) {
     const ov = oldMetrics[key];
     const nv = newMetrics[key];
-    if (ov !== undefined && nv !== undefined && ov !== nv) {
-      metricDelta[key] = { old: ov, new: nv, delta: +(nv - ov).toFixed(4) };
-    }
+    if (ov === nv || ov === undefined || nv === undefined) continue;
+    metricDelta[key] = typeof ov === 'number' && typeof nv === 'number'
+      ? { old: ov, new: nv, delta: +(nv - ov).toFixed(4) }
+      : { old: ov, new: nv };
   }
 
-  // --- Blocked/not-tested diff ---
-  const oldBlocked = new Set((oldReport.blocked_work ?? []).map((b) => b.id ?? b.category ?? JSON.stringify(b)));
-  const newBlocked = new Set((newReport.blocked_work ?? []).map((b) => b.id ?? b.category ?? JSON.stringify(b)));
-  const newlyBlocked = [...newBlocked].filter((b) => !oldBlocked.has(b));
-  const unblocked = [...oldBlocked].filter((b) => !newBlocked.has(b));
+  // --- Blocked work diff (keyed by execution_id; a changed reason is not an unblock) ---
+  const oldBlocked = new Map((oldReport.blocked_work ?? []).map((b) => [b.execution_id, b]));
+  const newBlocked = new Map((newReport.blocked_work ?? []).map((b) => [b.execution_id, b]));
+  const newlyBlocked = [...newBlocked.values()].filter((b) => !oldBlocked.has(b.execution_id));
+  const unblocked = [...oldBlocked.values()].filter((b) => !newBlocked.has(b.execution_id));
+  const reasonChanged = [...newBlocked.values()]
+    .filter((b) => oldBlocked.has(b.execution_id) && oldBlocked.get(b.execution_id).reason !== b.reason)
+    .map((b) => ({ execution_id: b.execution_id, old_reason: oldBlocked.get(b.execution_id).reason, new_reason: b.reason }));
 
   // --- Overall status change ---
-  const overallChanged = oldReport.overall !== newReport.overall
-    ? { old: oldReport.overall, new: newReport.overall }
-    : null;
+  const oldOverall = oldReport.executive_summary?.overall_status;
+  const newOverall = newReport.executive_summary?.overall_status;
+  const overallChanged = oldOverall !== newOverall ? { old: oldOverall, new: newOverall } : null;
 
   const summary = [];
   if (addedExecs.length) summary.push(`${addedExecs.length} new execution(s)`);
@@ -913,8 +920,12 @@ export function diff(newId, oldId) {
   if (changedExecs.length) summary.push(`${changedExecs.length} status change(s)`);
   if (addedFindings.length) summary.push(`${addedFindings.length} new finding(s)`);
   if (resolvedFindings.length) summary.push(`${resolvedFindings.length} resolved finding(s)`);
+  if (changedFindings.length) summary.push(`${changedFindings.length} severity change(s)`);
   if (unblocked.length) summary.push(`${unblocked.length} unblocked`);
   if (newlyBlocked.length) summary.push(`${newlyBlocked.length} newly blocked`);
+  if (reasonChanged.length) summary.push(`${reasonChanged.length} blocked reason change(s)`);
+  const metricKeys = Object.keys(metricDelta);
+  if (metricKeys.length) summary.push(`${metricKeys.length} metric change(s): ${metricKeys.join(', ')}`);
   if (overallChanged) summary.push(`overall: ${overallChanged.old} → ${overallChanged.new}`);
 
   return {
@@ -924,7 +935,7 @@ export function diff(newId, oldId) {
     executions: { added: addedExecs, removed: removedExecs, status_changed: changedExecs },
     findings: { added: addedFindings, resolved: resolvedFindings, severity_changed: changedFindings },
     metrics: metricDelta,
-    blocked_work: { newly_blocked: newlyBlocked, unblocked },
+    blocked_work: { newly_blocked: newlyBlocked, unblocked, reason_changed: reasonChanged },
     summary: summary.length ? summary.join('; ') : 'No changes',
   };
 }

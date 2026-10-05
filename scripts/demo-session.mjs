@@ -38,6 +38,7 @@ const execution = await import('../engine/execution-engine/index.mjs');
 const defects = await import('../engine/defect-engine/index.mjs');
 const uncertainty = await import('../engine/uncertainty-register/index.mjs');
 const auth = await import('../engine/authorization/index.mjs');
+const completeness = await import('../engine/evaluation-engine/process-completeness.mjs');
 const reporting = await import('../engine/reporting-engine/index.mjs');
 const { query } = await import('../engine/traceability/index.mjs');
 
@@ -335,32 +336,33 @@ log('merge refused by default', `allowed=${mergeAttempt.allowed} (${mergeAttempt
 
 /* ----------------- 11b. the coverage floor: no applicable category silently dropped */
 
-// The matrix was persisted in step 3. Every applicable P0/P1 category this session never
-// reached gets an explicit DEFERRED record tied to one uncertainty, which is what
-// `validate --final` demands -- otherwise the report would read as broad when it was not.
-const reached = new Set(state.list('executions').map((e) => e.test_category).filter(Boolean));
-const unreached = matrix.matrix
-  .filter((r) => r.applicable && (r.priority === 'P0' || r.priority === 'P1') && !reached.has(r.category))
+// The matrix was persisted in step 3. Every category the floor enforces (applicable P0/P1,
+// plus applicable mandatory baselines) that this session never reached gets an explicit
+// DEFERRED record tied to one uncertainty -- the same rule `validate --final` applies, taken
+// from the engine rather than restated here, so the demo cannot drift from it.
+const reached = new Set(state.list('executions').filter(completeness.countsAsCoverage).map((e) => e.test_category).filter(Boolean));
+const unreached = completeness.floorCategories(matrix.matrix)
+  .filter((r) => !reached.has(r.category))
   .map((r) => r.category);
 if (unreached.length) {
   const uFloor = uncertainty.raise({
-    question: `Applicable high-priority categories not reached in this time-boxed pass: ${unreached.join(', ')}`,
+    question: `Categories the coverage floor enforces, not reached in this time-boxed session: ${unreached.join(', ')}`,
     status: 'deferred',
     impact: 'security, input and data behaviour of the payment path is untested until a follow-up pass runs',
     affectedScope: unreached, blocksCategories: unreached,
-    nextAction: 'schedule a follow-up pass: security sweep and input edge cases on staging; a disposable database for data and migration tests',
+    nextAction: 'schedule a follow-up session for the security sweep and input edge cases on staging, plus a disposable database for data and migration tests',
     owner: 'user',
   });
   for (const category of unreached) {
     execution.recordNonExecution({
       goal: `${category} testing`,
       status: 'DEFERRED',
-      reason: 'The 150-minute budget ran out before this applicable P1 category was reached. Recorded so it cannot vanish from the report.',
+      reason: 'The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.',
       testCategory: category, uncertainties: [uFloor.id],
     });
   }
 }
-log('coverage floor', unreached.length ? `${unreached.length} unreached P0/P1 categor${unreached.length === 1 ? 'y' : 'ies'} recorded DEFERRED` : 'every P0/P1 category reached');
+log('coverage floor', unreached.length ? `${unreached.length} unreached floor categor${unreached.length === 1 ? 'y' : 'ies'} recorded DEFERRED` : 'every floor category reached');
 
 /* ----------------------------------------------------------- 12. remaining work */
 
