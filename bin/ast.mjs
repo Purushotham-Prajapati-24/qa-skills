@@ -265,7 +265,7 @@ const COMMANDS = {
       ],
       declared_signals: [{ signal: 'responsive', evidence: ['src/app/page.tsx uses md:/lg: breakpoint classes'] }],
       gaps: ['No coverage report; coverage is unmeasured'],
-      provenance: { skill_version: '0.11.0', created_at: '2026-09-28T10:00:00.000Z', created_by: 'agent' },
+      provenance: { skill_version: '0.12.0', created_at: '2026-10-05T10:00:00.000Z', created_by: 'agent' },
     },
     run: ({ flags }) => {
       const profile = payload(flags, false);
@@ -333,7 +333,11 @@ const COMMANDS = {
     },
     run: ({ flags }) => {
       const body = payload(flags);
-      return applicability.evaluate({ ...body, capabilities: withResolvedCapabilities(body.capabilities) });
+      const result = applicability.evaluate({ ...body, capabilities: withResolvedCapabilities(body.capabilities) });
+      // Persist so the coverage floor in `validate --final` can check that every applicable
+      // P0/P1 category was actually addressed. Opt out with --no-save for a dry run.
+      if (!flags['no-save']) state.saveApplicability(result);
+      return result;
     },
   },
   'applicability catalog': { help: 'Show the category catalog and known signals.', run: () => applicability.catalog() },
@@ -400,13 +404,19 @@ const COMMANDS = {
   /* ---- evidence ---- */
   'evidence add': { help: 'Register evidence: evidence add --input evidence.json', run: ({ flags }) => evidence.add(payload(flags)) },
   'evidence capture': {
-    help: 'Run a command and register its real output as evidence: '
-      + 'evidence capture --exec EXEC-2026-00001 [--summary "..."] [--cwd dir] [--timeout ms] -- <command> [args...]',
+    help: 'Run a command and register its real output as evidence.\n'
+      + '  evidence capture --exec EXEC-2026-00001 [--summary "..."] [--cwd dir] [--timeout ms] -- <command> [args...]\n'
+      + '  evidence capture --exec EXEC-2026-00001 --script <file> [--summary "..."] [--cwd dir] [--timeout ms]\n'
+      + 'The --script form runs the file directly (shell:false) — no quote mangling, safe on Windows/PowerShell.\n'
+      + 'Supported: .js/.mjs (via node), .ps1 (via powershell), .sh (via bash), .py (via python).',
     run: ({ flags, rest }) => {
-      if (!rest.length) {
+      const hasScript = Boolean(flags.script);
+      if (!hasScript && !rest.length) {
         throw new Error(
-          'evidence capture requires a command after "--", e.g.: '
-          + 'ast evidence capture --exec EXEC-2026-00001 -- npm run lint',
+          'evidence capture requires a command after "--", or use --script <file>.\n'
+          + 'Examples:\n'
+          + '  ast evidence capture --exec EXEC-2026-00001 -- npm run lint\n'
+          + '  ast evidence capture --exec EXEC-2026-00001 --script test-auth.js',
         );
       }
       if (!flags.exec) {
@@ -418,28 +428,61 @@ const COMMANDS = {
 
       const cwd = flags.cwd ?? process.cwd();
       const timeout = Number(flags.timeout ?? 600_000);
-      const argvString = rest.join(' ');
       const isWin = process.platform === 'win32';
-      // shell: true on Windows matches the existing precedent in capability-registry/
-      // index.mjs -- it is what lets "npm" resolve to "npm.cmd". But per Node's own
-      // documentation, shell:true on Windows makes QUOTING the caller's job: cmd.exe
-      // splits on whitespace before spawnSync ever sees the string, so an unquoted
-      // absolute path containing a space (e.g. `process.execPath` itself, wherever Node
-      // is installed under "Program Files") silently mis-parses into "the command is
-      // 'C:\Program'", fails, and reports a real-looking exit code that never came from
-      // the intended program at all. Quote every element that contains whitespace;
-      // leave everything else untouched so the common case (bare names, unspaced paths)
-      // is not needlessly rewritten.
-      const winShellQuote = (a) => (/\s/.test(a) ? `"${a.replace(/"/g, '""')}"` : a);
-      const spawnCommand = isWin ? winShellQuote(rest[0]) : rest[0];
-      const spawnArgs = isWin ? rest.slice(1).map(winShellQuote) : rest.slice(1);
+
+      let spawnCommand, spawnArgs, argvString, useShell;
+
+      if (hasScript) {
+        // --script mode: run the file directly with shell:false.
+        // No cmd.exe or PowerShell tokenization — the quoting problem disappears
+        // structurally because there is no shell to re-split anything.
+        const scriptPath = path.resolve(cwd, flags.script);
+        if (!fs.existsSync(scriptPath)) {
+          throw new Error(`Script file not found: ${scriptPath}`);
+        }
+        const ext = path.extname(scriptPath).toLowerCase();
+        const runners = {
+          '.js': [process.execPath, [scriptPath]],
+          '.mjs': [process.execPath, [scriptPath]],
+          '.ps1': ['powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath]],
+          '.sh': ['bash', [scriptPath]],
+          '.py': [isWin ? 'python' : 'python3', [scriptPath]],
+        };
+        const runner = runners[ext];
+        if (!runner) {
+          throw new Error(
+            `Unsupported script extension "${ext}". Supported: ${Object.keys(runners).join(', ')}`,
+          );
+        }
+        [spawnCommand, spawnArgs] = runner;
+        argvString = `[script] ${flags.script}`;
+        useShell = false;
+      } else {
+        // -- <command> [args...] mode: original behaviour.
+        argvString = rest.join(' ');
+        // shell: true on Windows matches the existing precedent in capability-registry/
+        // index.mjs -- it is what lets "npm" resolve to "npm.cmd". But per Node's own
+        // documentation, shell:true on Windows makes QUOTING the caller's job: cmd.exe
+        // splits on whitespace before spawnSync ever sees the string, so an unquoted
+        // absolute path containing a space (e.g. `process.execPath` itself, wherever Node
+        // is installed under "Program Files") silently mis-parses into "the command is
+        // 'C:\Program'", fails, and reports a real-looking exit code that never came from
+        // the intended program at all. Quote every element that contains whitespace;
+        // leave everything else untouched so the common case (bare names, unspaced paths)
+        // is not needlessly rewritten.
+        const winShellQuote = (a) => (/\s/.test(a) ? `"${a.replace(/"/g, '""')}"` : a);
+        spawnCommand = isWin ? winShellQuote(rest[0]) : rest[0];
+        spawnArgs = isWin ? rest.slice(1).map(winShellQuote) : rest.slice(1);
+        useShell = isWin;
+      }
+
       const started = Date.now();
       const r = spawnSync(spawnCommand, spawnArgs, {
         encoding: 'utf8',
         cwd,
         timeout,
         maxBuffer: 32 * 1024 * 1024,
-        shell: isWin,
+        shell: useShell,
       });
       const durationMs = Date.now() - started;
 
@@ -519,7 +562,9 @@ const COMMANDS = {
     run: ({ positional, flags }) => execution.finish(positional[2], payload(flags)),
   },
   'exec not-run': {
-    help: 'Document work that was NOT executed: exec not-run --input not-run.json, where not-run.json is {"goal":"...","status":"BLOCKED","reason":"..."}',
+    help: 'Document work that was NOT executed: exec not-run --input not-run.json, where not-run.json is '
+      + '{"goal":"...","status":"BLOCKED","reason":"...","testCategory":"...","feature":"FEAT-...","uncertainties":["U-..."]}. '
+      + 'It counts toward the coverage floors only when status is BLOCKED/NEEDS_USER_INPUT/DEFERRED and an uncertainty is linked.',
     run: ({ flags }) => execution.recordNonExecution(payload(flags)),
   },
   'exec list': { help: 'List executions.', run: () => state.list('executions') },
@@ -684,6 +729,17 @@ const COMMANDS = {
       const result = reporting.verify(text);
       if (!result.rendered) process.exitCode = 1;
       return result;
+    },
+  },
+
+  'report diff': {
+    help: 'Compare two reports and show what changed: report diff [NEW_ID [OLD_ID]]. '
+      + 'With no args, compares the latest report against its predecessor. '
+      + 'Shows added/removed/changed executions, findings, metrics, and blocked work.',
+    run: ({ positional }) => {
+      const newId = positional[2] || undefined;
+      const oldId = positional[3] || undefined;
+      return reporting.diff(newId, oldId);
     },
   },
 

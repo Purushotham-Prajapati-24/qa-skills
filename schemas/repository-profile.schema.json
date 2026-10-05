@@ -122,6 +122,23 @@
       },
       "additionalProperties": false
     },
+    "functionality_inventory": {
+      "type": "array",
+      "description": "Every distinct feature, page, endpoint or flow the agent found and intends to cover. For a black-box URL this is the primary breadth ledger: discovery enumerates it, planning gives each item at least one must-test scenario, and the per-feature coverage floor (`validate --final`) checks each high/critical item was addressed by an execution tagged with its id. An empty array on a target that plainly has features is itself a discovery gap.",
+      "items": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "description": "Stable id an execution's `feature` field points at, e.g. FEAT-login." },
+          "name": { "type": "string", "minLength": 1 },
+          "kind": { "type": "string", "enum": ["page", "endpoint", "flow", "feature", "component"] },
+          "criticality": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+          "roles": { "type": "array", "items": { "type": "string" }, "description": "Roles that can reach this feature, when the system is multi-role." },
+          "evidence": { "type": "array", "items": { "type": "string" }, "description": "Where it was found: a URL, a route definition, a nav link, an observed API call." }
+        },
+        "additionalProperties": false
+      }
+    },
     "critical_components": {
       "type": "array",
       "items": {

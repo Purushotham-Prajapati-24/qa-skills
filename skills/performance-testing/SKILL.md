@@ -4,7 +4,7 @@ description: Measure and test performance — latency, throughput, load, stress,
 when_to_use: "performance testing", "load test", "is this fast enough", "stress test", "why is this slow", "check for a performance regression"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.11.1
+  system_version: 0.12.0
   role: specialist
 ---
 
@@ -33,6 +33,21 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" auth check --input auth.json
 ```
 
 Never point load at shared infrastructure without telling whoever owns it.
+
+## Baseline first (the `perf-baseline` category)
+
+A latency/throughput **baseline** applies to any reachable API or UI, independent of a stated
+perf target — it is part of the default sweep, not a special request. Capture p50/p95/p99 for
+the core endpoints and the main page loads, record the conditions, and you have the reference
+every later comparison needs. This is the `perf-baseline` category, and it is usually
+applicable on a bare URL where the deeper categories below are not. It is a `mandatory`
+baseline: when it is applicable, `validate --final` fails unless it ran or was recorded
+BLOCKED/DEFERRED with a linked uncertainty, whatever its priority score.
+
+The deeper categories (`load`, `stress`, `spike`, `endurance`) are a different thing: they
+drive sustained or hostile traffic and need a `perf-sensitive` signal, explicit authorisation,
+and a non-production target that nothing else shares. A baseline is measurement; load is
+attack-shaped traffic. Do not conflate them.
 
 ## The test types
 

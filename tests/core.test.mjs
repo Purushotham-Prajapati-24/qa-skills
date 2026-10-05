@@ -97,6 +97,41 @@ test('redaction matches "token" as a whole segment, not as a prefix', () => {
   assert.equal(out.tokenizer, 'bpe');
 });
 
+test('free-text redaction does not mask words that merely contain "pass" -- passed, PASSED, bypass, compass', () => {
+  // The KEY_HINTS lesson above, applied to the free-text pattern: a bare `pass` with an
+  // open suffix/prefix matched `passed`, and every downgrade reason in every report read
+  // 'DOWNGRADED from PASSED: "[REDACTED]" claims ...'.
+  for (const s of [
+    'passed: 1234',
+    'tests passed: 87/87',
+    '[DOWNGRADED from PASSED: "PASSED" claims something was executed, but no evidence is attached.]',
+    'bypass: enabled',
+    'compass: north',
+  ]) {
+    assert.equal(redactText(s), s, `over-redacted: ${s}`);
+  }
+});
+
+test('free-text redaction still masks pass-shaped credential keys', () => {
+  for (const [s, secret] of [
+    ['password: hunter22', 'hunter22'],
+    ['db_pass=hunter22', 'hunter22'],
+    ['pass: hunter22', 'hunter22'],
+    ['passwd=hunter22', 'hunter22'],
+    ['passphrase: correcthorse', 'correcthorse'],
+    ['pass_hash: 5f4dcc3b', '5f4dcc3b'],
+    ['passcode: 123456', '123456'],
+    ['passwords: hunter22', 'hunter22'],
+    ['passport: AB123456', 'AB123456'],
+    ['DB_PASSWORD="s3cr3tvalue"', 's3cr3tvalue'],
+    ['client_secret: abcd1234', 'abcd1234'],
+  ]) {
+    const out = redactText(s);
+    assert.ok(!out.includes(secret), `secret survived: ${s} -> ${out}`);
+    assert.match(out, /\[REDACTED\]/);
+  }
+});
+
 test('a shared reference is not a cycle', () => {
   // Executions routinely hold the same array in two places. A visited-set treats the
   // second reference as circular and silently corrupts the record.

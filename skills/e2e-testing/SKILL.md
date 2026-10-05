@@ -4,7 +4,7 @@ description: Test complete user journeys against a running application — criti
 when_to_use: "end to end test", "test the whole checkout journey", "test the signup flow", "critical path testing", "pre-release testing"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.11.1
+  system_version: 0.12.0
   role: specialist
 ---
 
@@ -27,6 +27,53 @@ Only journeys where failure is unacceptable:
 
 Everything else belongs at a lower level. Ten E2E tests that always pass are worth more
 than a hundred that fail twice a week.
+
+## Cross-role golden-path journeys
+
+When the system involves **multiple roles that interact** (e.g., host creates invite → guest
+arrives → guard admits → supervisor reviews → admin audits), a feature-per-role sweep is
+necessary but not sufficient. Additionally, walk at least one **golden-path journey** that
+chains actions across every role in the sequence they would occur in production.
+
+Template:
+
+```
+1. Role A: creates the entity (verify creation succeeds, note entity ID)
+2. Role B: acts on the entity (verify action succeeds, entity state changes)
+3. Role C: observes the effect (verify visibility, audit trail present)
+4. Verify: no console errors, no dangling state, no missing audit entries
+```
+
+This is a distinct deliverable from category coverage. If any step is blocked, the journey
+status is `PARTIAL` with the blocked step identified — not silently dropped.
+
+If pre-approval authority or a fallback path exists, use it to construct a complete journey
+even when the primary path is blocked. For example, if the normal invite flow is broken, try
+an admin-approved path to keep the downstream roles testable.
+
+Record the golden path as a `critical` `flow` in the profile's `functionality_inventory`
+(for example `{"id": "FLOW-golden-path", "name": "Invite to audited visit", "kind": "flow",
+"criticality": "critical", "roles": ["host", "guest", "guard", "admin"]}`), and run each
+journey as `testCategory: "e2e"` with `"feature": "FLOW-golden-path"`. The per-feature
+coverage floor then makes the journey mandatory at `validate --final`, and the report can
+tell per-role coverage apart from the cross-role chain. The plan must contain at least one
+`must-test` scenario for this flow when ≥2 roles interact — see `planning.md` §9.
+
+**Session management for multi-role journeys:**
+
+If the browser MCP supports multiple contexts (e.g., Playwright's `browser.newContext()`),
+use one context per role — no logout/login overhead, and all sessions can be active
+simultaneously.
+
+If only one browser context is available (e.g., the in-app browser), the order matters:
+1. Perform all actions as Role A first, noting entity IDs created
+2. Log out, log in as Role B, perform actions referencing Role A's entities
+3. Repeat for each subsequent role
+
+Store auth tokens/cookies per role so you can switch via API calls
+(`curl -H "Authorization: Bearer $TOKEN_ROLE_B"`) even when the browser shows a different
+role. The API-first evidence directive applies here: prove cross-role interactions via API
+calls, corroborate via browser screenshots.
 
 ## Before writing
 

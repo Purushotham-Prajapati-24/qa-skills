@@ -34,6 +34,7 @@ export function stateRoot() {
 export const LAYOUT = {
   counters: 'counters.json',
   profile: 'repository-profile.json',
+  applicability: 'applicability.json',
   session: 'testing-state.json',
   capabilities: 'capabilities-probe.json',
   decisions: 'decisions',

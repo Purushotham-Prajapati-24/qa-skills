@@ -4,11 +4,17 @@ description: Choose and run the right browser testing method — agent-driven ex
 when_to_use: "explore the app for UI bugs", "test this page", "should I use Playwright MCP or a script", "create regression tests for this flow", "capture a trace", "the UI is broken"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.11.1
+  system_version: 0.12.0
   role: specialist
 ---
 
 # Browser Testing
+
+> **Evidence rule.** Browser screenshots, console logs and network captures are
+> **corroborating evidence only** — they cap claims at INCONCLUSIVE without execution
+> evidence alongside them. If you need to PROVE a behaviour, capture it via
+> `evidence capture -- curl ...` or a deterministic test script, not a screenshot. Plan
+> for this from turn one. See the evidence policy for the full hierarchy.
 
 The tempting default — *we have a browser MCP, so use the browser MCP* — is wrong most of
 the time. An agent-driven session is not reproducible, so it cannot be a CI gate and it
@@ -119,7 +125,22 @@ live in `engine/browser-decision/matrix.json#script_conversion`.
 | Network log / HAR | Corroborating |
 
 Always capture console errors and failed requests during exploration. They are the
-highest-yield, lowest-cost browser signal and they routinely reveal defects the UI hides.
+highest-yield, lowest-cost browser signal (corroborating-only — they cannot prove PASSED
+on their own, but they routinely reveal defects the UI hides).
+
+**Classifying console errors:**
+
+| Pattern | Classification | Severity |
+| --- | --- | --- |
+| `Uncaught TypeError`, `Uncaught ReferenceError`, `Unhandled Promise rejection` | Finding | Major (unless in a non-critical path) |
+| `Failed to load resource` (404, 500) | Finding | Depends on the resource — a missing API call is major, a missing favicon is trivial |
+| `CORS error`, `Mixed Content` | Finding | Major — indicates a misconfiguration |
+| `[Deprecation]`, `[Violation]` (e.g., forced reflow) | Observation | Include in report, not a finding |
+| React/Vue/Angular development warnings | Observation | Include only if they indicate a real bug (e.g., missing key prop causing render issues) |
+
+Capture console output as corroborating evidence alongside every browser exploration
+session. If you explored without capturing console output, that exploration produced
+incomplete evidence — note it as a gap.
 
 ## Reference pattern: a changed checkout flow
 

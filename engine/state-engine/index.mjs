@@ -184,6 +184,23 @@ export function loadProfile() {
   return readJson(p(LAYOUT.profile), null);
 }
 
+/* ------------------------------------------------------ applicability matrix */
+
+/**
+ * Persist the applicability matrix so the coverage floor (`validate --final`) can later
+ * compare what was judged applicable against what actually ran. Without this, applicability
+ * was computed, printed once, and forgotten -- nothing downstream could tell an applicable
+ * P0/P1 category that silently never ran from one that was never relevant.
+ */
+export function saveApplicability(result) {
+  writeJson(p(LAYOUT.applicability), result);
+  return result;
+}
+
+export function loadApplicability() {
+  return readJson(p(LAYOUT.applicability), null);
+}
+
 /* ---------------------------------------------------------------- telemetry */
 
 /**

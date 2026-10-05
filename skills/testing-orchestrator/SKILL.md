@@ -4,7 +4,7 @@ description: Plan and run software testing for a repository, a pull request, a c
 when_to_use: "test this repo", "test this PR", "test the checkout flow", "what should we test", "create a test plan", "explore the app for bugs", "create regression tests", "read this Jira ticket and plan testing", "continue testing", "what's untested", "run QA on this"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.11.1
+  system_version: 0.12.0
   role: orchestrator
 ---
 
@@ -92,6 +92,56 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session start --example > goals.json
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session start --request "<the user's actual words>" --input goals.json
 ```
 
+## Fast path: "test everything" — on a URL or a repository
+
+When the user asks for comprehensive testing ("test everything", "full QA", "rigorous
+testing") of a staging/non-production URL **or** of a repository, batch the setup instead of
+asking 5 separate questions. Both paths end at the same bar: the same baselines, the same
+per-feature coverage, the same `validate --final` floors.
+
+1. `session start` with goals derived from the user's prompt
+2. Build the profile **with a `functionality_inventory`**:
+   - **URL** — walk the UI and record observed API calls (discovery §1b).
+   - **Repository** — derive pages, endpoints and flows from routes and handlers
+     (`repository-intelligence` §16), then **start the app locally** and record that
+     instance in `environments` as `non-production` (§17). A repository is not "tested"
+     because its unit suite passed: the running-system categories apply to it exactly as
+     they would to a URL.
+3. `profile save`, citing the user's words (URL) or the start command (local instance) as
+   environment evidence
+4. `auth check` for `security_scan.active` (cite "test everything" as the authorisation
+   quote)
+5. `profile signals`, then `applicability eval` — which persists the matrix. It returns what
+   the signals support, not "everything"; if a category you expect is missing, enrich the
+   profile. The floors then make every applicable P0/P1 category, every applicable mandatory
+   baseline and every critical feature either run or be recorded BLOCKED with a linked
+   uncertainty.
+
+Record the user's instruction as both the authorisation quote and the depth decision
+rationale. This eliminates multiple back-and-forth exchanges. The user said "test
+everything" — that is explicit authorisation for the security baseline, the input
+edge-case baseline, accessibility scanning, and (on non-production) load testing at the
+default baseline profile.
+
+Still record each as a decision. The fast path is about fewer questions, not fewer records.
+
+## Evidence strategy — API first, browser second
+
+The evidence gate ranks `command output` and `API response` as execution evidence that
+supports PASSED/FAILED on its own. `Screenshots`, `video`, and `console logs` are
+corroborating evidence only — they cap claims at INCONCLUSIVE without execution evidence
+alongside them.
+
+**Practical consequence:** If the target has any API surface at all, capture evidence via
+curl/API calls first. The browser is for **finding** things to test, not **proving** them.
+
+Typical flow:
+1. Browser exploration → discover the feature and its API endpoints
+2. API-level evidence capture → prove the behaviour with a curl/request pair
+3. Browser screenshot → corroborate the visual outcome
+
+Do not learn this by getting downgraded repeatedly. Plan for it from turn one.
+
 ## Phases and where each is specified
 
 | Phase | What you are deciding | Read |
@@ -103,7 +153,7 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session start --request "<the user's ac
 | Select tests + tools | What is the cheapest reliable evidence? | [policies/decision-policy.md](policies/decision-policy.md) |
 | Plan | What exactly will run, and what will not? | [workflows/planning.md](workflows/planning.md), skill `test-strategy` |
 | Execute | Run it and capture proof | [workflows/execution.md](workflows/execution.md) |
-| Validate | Does the evidence support the claim? | [policies/evidence-policy.md](policies/evidence-policy.md) |
+| Validate | Does the evidence support the claim? Could the test have failed? | [policies/evidence-policy.md](policies/evidence-policy.md), [policies/test-sensitivity-policy.md](policies/test-sensitivity-policy.md) |
 | Document | Findings, issues, report | [workflows/reporting.md](workflows/reporting.md) |
 | Escalate | When to stop and ask | [policies/escalation-policy.md](policies/escalation-policy.md) |
 
@@ -127,6 +177,8 @@ three-file change, do it yourself.
 | HTTP / GraphQL / gRPC | `api-testing` |
 | Component and visual UI | `ui-testing` |
 | Full user journeys | `e2e-testing` |
+| Cross-role golden-path journeys (mandatory when ≥2 roles) | `e2e-testing` |
+| Mandatory security sweep (when auth + user-input present) | `security-testing` |
 | Re-running and change-aware selection | `regression-testing` |
 | WCAG | `accessibility-testing` |
 | Authn/authz, input validation, dependency scanning | `security-testing` |
@@ -140,6 +192,74 @@ three-file change, do it yourself.
 
 **A skill existing is not evidence a test ran.** Never write "delegated to
 security-testing" and treat the category as covered.
+
+## Mandatory testing baselines
+
+Some categories are not optional when their trigger conditions are met.
+
+### Security baseline — automatic when auth + user-input are both present
+
+When the applicability matrix marks `security` applicable (any of the `user-input`, `auth`,
+`secrets` or `pii` signals), the following minimum sweep runs **before** the session can
+complete, without waiting for the agent to decide. The probes that need a session (IDOR, auth
+bypass, rate limiting on login) apply when the profile also has `auth`:
+
+| Check | Probe | Evidence |
+| --- | --- | --- |
+| XSS (stored) | `<img src=x onerror=alert(1)>` in every free-text field, verify output | API response or DOM |
+| SQLi (error-based) | `' OR '1'='1` in every text input, via API | API response |
+| IDOR | Decrement/increment one resource ID as a different authenticated user | API response (expect 403/404) |
+| Auth bypass | Send a request with an expired/malformed/missing token | API response (expect 401) |
+| Mass assignment | `POST`/`PUT` with extra fields (`{"role":"admin"}`, `{"is_vvip":true}`) | API response |
+| Rate limiting | 20 rapid login attempts | API responses (expect 429 after threshold) |
+| Security headers | Check CORS, CSP, HSTS, X-Frame-Options, X-Content-Type-Options on every response | API response headers |
+
+The sweep uses **benign, non-destructive payloads** only. It does not:
+- Extract or reuse discovered secrets (flag location + kind; stop short of replay)
+- Execute destructive operations
+- Attempt credential stuffing or brute-force beyond rate-limit detection
+
+Record each probe as an execution. Any finding of severity `critical` or `blocker` is surfaced
+**immediately** per the escalation policy — do not batch it.
+
+This is NOT optional, and the engine enforces it. `security`, `input-validation`,
+`accessibility` and `perf-baseline` are `mandatory` baselines in the applicability catalog:
+whenever one is applicable, `validate --final` fails unless it has an execution — or a
+BLOCKED/DEFERRED `exec not-run` that links an uncertainty — **whatever its priority score**.
+If you have no authorisation for the sweep, record it BLOCKED with the reason; do not skip it.
+
+### Input edge-case baseline — automatic when user-input surfaces exist
+
+For every user-input field discovered, test at minimum:
+
+| Category | Payloads | Expect |
+| --- | --- | --- |
+| Empty/null | `""`, `null`, missing field entirely | Validation error, not crash |
+| Unicode | Accented characters, CJK, Arabic, emoji sequences | Accepted or clean rejection |
+| Boundary length | 1 char, max-length, max-length+1, oversized (10 MB) | Enforced limits |
+| Numeric boundaries | `0`, `-1`, `2147483647`, `2147483648`, `NaN`, `Infinity` | Type-safe handling |
+| Format violations | Invalid email, reserved phone numbers, impossible dates | Clean validation message |
+| Special characters | `<>&"'\/{}[]()`, backticks, null bytes | Escaped or rejected |
+| Concurrency | Double-submit the same form within 100 ms | Idempotent or clean rejection |
+
+This is a structured boundary probe, not fuzz testing. It takes minutes, finds real bugs
+consistently, and produces clear evidence.
+
+### Accessibility baseline — automatic when a web UI is present
+
+If the applicability matrix marks `accessibility` as applicable (i.e., the target has a web
+UI), run at minimum one automated axe scan on the primary page states (login, dashboard, main
+feature page) before the session can complete. It is a `mandatory` baseline, so the coverage
+floor enforces it.
+
+This is a 30-second operation that catches heading hierarchy violations, missing labels,
+contrast failures, and ARIA attribute errors. It is not a substitute for manual keyboard
+and screen-reader testing, but it catches the low-hanging fruit that manual testing would
+waste time on.
+
+Capture the axe JSON output as execution evidence. Report the `violations` count, the
+`incomplete` count (items axe could not decide), and the tag list used. A scan with zero
+violations but twelve `incomplete` items is not a clean scan — say so.
 
 ## Capabilities, not tool names
 
@@ -226,9 +346,22 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" report verify <the markdown_path just p
 ```
 
 `ast validate --final` checks every record against its schema, flags dangling references
-and unfinished executions, and — only under `--final` — turns a blocking process gap (no
-decision records; blocked work never raised as an uncertainty) into a failure rather than
-a warning. Fix what it finds before generating the report, not after.
+and unfinished executions, and — only under `--final` — turns a blocking process gap into a
+failure rather than a warning. The blocking gaps now include two **coverage floors**:
+
+- **Category floor** — every applicable P0/P1 category in the persisted applicability matrix,
+  and every applicable `mandatory` baseline (`security`, `input-validation`, `accessibility`,
+  `perf-baseline`) whatever its priority, must have an execution: a real run, or an
+  `exec not-run` BLOCKED/DEFERRED whose `uncertainties` links the reason. Run
+  `applicability eval` during planning so the matrix is persisted; a session with real
+  executions and no persisted matrix fails `--final` too.
+- **Per-feature floor** — every `high`/`critical` item in the profile's
+  `functionality_inventory` must have an execution tagged with its `feature` id. A profile
+  that shows a UI, an API or a critical component but has **no** inventory fails too, so
+  skipping the inventory does not skip the floor — on a URL or a repository.
+
+Together these convert "honest thin report" into "cannot finish until breadth is real or
+explicitly blocked". Fix what it finds before generating the report, not after.
 
 `ast report verify` proves the file you are about to hand the user is the one the CLI just
 rendered, not a paraphrase of it. Rule 4 exists because a capable agent under delivery

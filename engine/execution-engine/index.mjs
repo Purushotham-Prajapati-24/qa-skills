@@ -22,6 +22,7 @@ export function start({
   goal,
   method,
   testCategory = null,
+  feature = null,
   decisionId = null,
   planId = null,
   command = null,
@@ -54,6 +55,7 @@ export function start({
     provenance: provenance({ sessionId: session.session_id, skillName, now }),
   };
   if (testCategory) rec.test_category = testCategory;
+  if (feature) rec.feature = feature;
   if (decisionId) rec.decision_id = decisionId;
   if (planId) rec.plan_id = planId;
   if (command) rec.command = command;
@@ -175,8 +177,8 @@ export function finish(executionId, {
  * BLOCKED / SKIPPED / NOT_APPLICABLE items get a first-class, auditable record
  * instead of vanishing from the report.
  */
-export function recordNonExecution({ goal, status, reason, testCategory = null, uncertainties = [], now = new Date() }) {
-  const rec = start({ goal, method: 'not-executed', testCategory, now });
+export function recordNonExecution({ goal, status, reason, testCategory = null, feature = null, uncertainties = [], now = new Date() }) {
+  const rec = start({ goal, method: 'not-executed', testCategory, feature, now });
   return finish(rec.execution_id, {
     status,
     statusReason: reason,

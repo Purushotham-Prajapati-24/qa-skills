@@ -4,7 +4,7 @@ description: Build a structured, evidence-backed profile of a repository — lan
 when_to_use: "what does this repo do", "analyse this codebase", "profile the repository", "what testing exists here", "what stack is this"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell
 metadata:
-  system_version: 0.11.1
+  system_version: 0.12.0
   role: specialist
 ---
 
@@ -64,6 +64,36 @@ command, and whether CI actually runs it.
 **14. Observability** — logger setup, metrics, tracing, error reporting.
 
 **15. Documentation** — README, ARCHITECTURE, ADRs, `docs/`.
+
+**16. Functionality inventory — mandatory when there is a UI, an API or a critical
+component.** Enumerate every user-reachable feature from the code itself and record it as
+`functionality_inventory`, each item with a file:line `evidence`:
+
+| Source in the repo | Becomes |
+| --- | --- |
+| Router config, `pages/`/`app/` directories, route tables | one `page` per user-reachable route |
+| Route registration / controllers / handlers | one `endpoint` per method + path group |
+| Multi-step user journeys (signup, checkout, invite → approve) | one `flow` each |
+| CLI commands, scheduled jobs, webhook handlers | `feature` items |
+
+Mark `criticality` from what breaks if it fails: revenue, auth, data writes and anything in
+`critical_components` are `high`/`critical`. `validate --final` **fails** when a profile has
+a feature surface and no inventory, and fails again for every `high`/`critical` item with no
+execution tagged to it — so this list is the contract for "every feature was tested".
+
+**17. The local environment you will test against.** A repository can usually be started:
+that instance is the target for the same running-system tests a URL would get (E2E per
+feature, API, input edge cases, security sweep, accessibility, `perf-baseline`). Record it in
+`environments` with `class: "non-production"` and evidence such as
+`"started by the agent via npm run dev on localhost:3000"`. If it genuinely cannot start
+(missing secrets, unavailable service), say exactly why in `gaps` — that reason becomes the
+BLOCKED uncertainty for every running-system category, rather than those categories
+quietly shrinking to "ran the unit suite".
+
+**18. Signals only the code reveals.** Declare them in `declared_signals` with evidence:
+`perf-sensitive` (an SLO, a latency budget, timeouts in config), `responsive` (media queries,
+breakpoint classes), `i18n` (locale/translation directories), `concurrency` (workers, queues,
+async jobs, locks), `multi-browser` (a browserslist or support matrix).
 
 ## Prove the test suite runs
 

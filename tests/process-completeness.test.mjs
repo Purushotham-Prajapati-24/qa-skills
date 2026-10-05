@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { useTempState } from './helpers.mjs';
+import { useTempState, sampleProfile } from './helpers.mjs';
 import * as state from '../engine/state-engine/index.mjs';
 import * as execution from '../engine/execution-engine/index.mjs';
 import * as decisions from '../engine/decision-engine/index.mjs';
@@ -116,8 +116,114 @@ test('a fully-compliant session (decisions recorded and assessed, no blocked wor
   // Guards against a check that fires unconditionally regardless of what actually happened.
   // "Compliant" includes assessing at least one decision (0.11.0's no-decision-assessed).
   for (const d of state.list('decisions')) decisions.assess(d.decision_id, { verdict: 'correct' });
+  // Compliance now also means the applicability matrix was persisted and its high-priority
+  // categories were all addressed: 'sanity' ran above, 'e2e' is BLOCKED with its uncertainty
+  // raised. With the matrix present and the floor met, nothing fires.
+  state.saveApplicability({ matrix: [
+    { category: 'sanity', applicable: true, priority: 'P0' },
+    { category: 'e2e', applicable: true, priority: 'P1' },
+  ] });
   const findings = checkCompleteness();
   assert.deepEqual(findings, []);
+});
+
+/* ------------------------------------------------------------- coverage floor */
+
+test('coverage floor: an applicable P0/P1 category with no execution of any kind is a blocking finding', () => {
+  state.saveApplicability({ matrix: [{ category: 'load', applicable: true, priority: 'P0' }] });
+  const findings = checkCompleteness();
+  const f = findings.find((c) => c.check === 'coverage-floor');
+  assert.ok(f, 'expected a coverage-floor finding');
+  assert.equal(f.severity, 'blocking');
+  assert.match(f.message, /load \(P0\)/);
+});
+
+test('coverage floor: a lower-priority (P2/P3) applicable category never bites', () => {
+  state.saveApplicability({ matrix: [{ category: 'load', applicable: true, priority: 'P2' }] });
+  assert.equal(checkCompleteness().find((c) => c.check === 'coverage-floor'), undefined);
+});
+
+test('coverage floor: a DEFERRED not-run with no linked uncertainty does NOT satisfy the floor', () => {
+  // An open uncertainty exists elsewhere in this session, but this record links none --
+  // "some uncertainty exists" is not "this gap is justified".
+  execution.recordNonExecution({ goal: 'Load test', status: 'DEFERRED', reason: 'later', testCategory: 'load' });
+  state.saveApplicability({ matrix: [{ category: 'load', applicable: true, priority: 'P0' }] });
+  const f = checkCompleteness().find((c) => c.check === 'coverage-floor');
+  assert.ok(f, 'an unlinked not-run must not count as coverage');
+  assert.match(f.message, /load \(P0\)/);
+});
+
+test('coverage floor: an explicit not-run BLOCKED record that links its uncertainty satisfies the floor', () => {
+  const u = uncertainty.raise({
+    question: 'Is there an isolated environment for load tests?',
+    impact: 'load traffic cannot be pointed at shared infrastructure',
+    affectedScope: ['load'],
+    nextAction: 'ask the owner for an isolated environment',
+  });
+  execution.recordNonExecution({ goal: 'Load test', status: 'BLOCKED', reason: 'no isolated environment', testCategory: 'load', uncertainties: [u.id] });
+  state.saveApplicability({ matrix: [{ category: 'load', applicable: true, priority: 'P0' }] });
+  assert.equal(checkCompleteness().find((c) => c.check === 'coverage-floor'), undefined);
+});
+
+test('coverage floor: an applicable mandatory baseline is enforced even at P3', () => {
+  state.saveApplicability({ matrix: [{ category: 'perf-baseline', applicable: true, priority: 'P3' }] });
+  const f = checkCompleteness().find((c) => c.check === 'coverage-floor');
+  assert.ok(f, 'perf-baseline is a mandatory baseline: low priority does not exempt it');
+  assert.match(f.message, /perf-baseline \(mandatory baseline, P3\)/);
+});
+
+test('coverage floor: a mandatory baseline that is NOT applicable is not demanded', () => {
+  state.saveApplicability({ matrix: [{ category: 'perf-baseline', applicable: false, priority: 'P3' }] });
+  assert.equal(checkCompleteness().find((c) => c.check === 'coverage-floor'), undefined);
+});
+
+test('coverage floor: a real run of any outcome counts as coverage -- a FAILED or PARTIAL run is still testing', () => {
+  // 'sanity' ran (PARTIAL) far above. That it did not PASS does not make the category untested.
+  state.saveApplicability({ matrix: [{ category: 'sanity', applicable: true, priority: 'P0' }] });
+  assert.equal(checkCompleteness().find((c) => c.check === 'coverage-floor'), undefined);
+});
+
+/* -------------------------------------------------------- per-feature floor */
+
+test('missing inventory: a profile with no feature surface (no UI, API or critical component) is not asked for one', () => {
+  state.saveApplicability({ matrix: [] });
+  state.saveProfile({
+    ...sampleProfile(),
+    architecture: { frontend: { present: false } },
+    apis: [],
+    critical_components: [],
+  });
+  assert.equal(checkCompleteness().find((c) => c.check === 'no-functionality-inventory'), undefined);
+});
+
+test('missing inventory: a profile showing a UI/API but no functionality_inventory is a blocking finding -- skipping the inventory no longer skips the floor', () => {
+  // sampleProfile() has a frontend, a REST API and a critical checkout component, and no inventory.
+  state.saveProfile(sampleProfile());
+  const f = checkCompleteness().find((c) => c.check === 'no-functionality-inventory');
+  assert.ok(f, 'expected a no-functionality-inventory finding');
+  assert.equal(f.severity, 'blocking');
+});
+
+test('per-feature floor: a high/critical inventory feature with no tagged execution is a blocking finding; a low one is exempt', () => {
+  // Neutralise the category floor so only the feature floor is under test.
+  state.saveApplicability({ matrix: [] });
+  state.saveProfile({ ...sampleProfile(), functionality_inventory: [
+    { id: 'FEAT-login', name: 'Login', kind: 'flow', criticality: 'critical' },
+    { id: 'FEAT-help', name: 'Help page', kind: 'page', criticality: 'low' },
+  ] });
+  const all = checkCompleteness();
+  assert.equal(all.find((c) => c.check === 'no-functionality-inventory'), undefined, 'an inventory now exists');
+  const f = all.find((c) => c.check === 'feature-coverage-floor');
+  assert.ok(f, 'expected a feature-coverage-floor finding');
+  assert.equal(f.severity, 'blocking');
+  assert.match(f.message, /FEAT-login \(Login\)/);
+  assert.doesNotMatch(f.message, /FEAT-help/, 'a low-criticality feature is not demanded by the floor');
+});
+
+test('per-feature floor: an execution tagged with the feature id satisfies it', () => {
+  const exec = execution.start({ goal: 'Login happy path', method: 'playwright-script', testCategory: 'e2e', feature: 'FEAT-login', git: null });
+  execution.finish(exec.execution_id, { status: 'PASSED', statusReason: 'login works' });
+  assert.equal(checkCompleteness().find((c) => c.check === 'feature-coverage-floor'), undefined);
 });
 
 /* --------------------------------------------------- CLI: ast validate [--final] */
@@ -154,6 +260,8 @@ test('CLI: "ast validate" reports a blocking process gap as a warning and stays 
 test('CLI: "ast validate --final" promotes the same gap to a failure', () => {
   const dir = freshState('promote');
   ast(['session', 'start', '--request', 'x'], dir);
+  // Persist a matrix with nothing the floor enforces, so the only gap under test is no-decisions.
+  astInput(['applicability', 'eval'], { signals: [] }, dir);
   const execOut = JSON.parse(astInput(['exec', 'start'], { goal: 'smoke', method: 'static-analysis' }, dir));
   astInput(['exec', 'finish', execOut.execution_id], { status: 'PASSED', statusReason: 'ok' }, dir);
   let out;
@@ -173,9 +281,114 @@ test('CLI: "ast validate --final" promotes the same gap to a failure', () => {
   assert.ok(out.problems.some((p) => /No decision records/.test(p)));
 });
 
+test('CLI: "ast validate --final" fails when an applicable high-priority category never ran (coverage floor end-to-end)', () => {
+  const dir = freshState('floor');
+  ast(['session', 'start', '--request', 'test the API'], dir);
+  // `applicability eval` auto-persists the matrix. A real risk assessment plus "none" coverage
+  // lifts at least one category (unit) to P0, so the floor has real teeth here.
+  astInput(['applicability', 'eval'], {
+    signals: ['http-api'],
+    coverage: { api: 'none' },
+    riskAssessment: {
+      risk_score: 0.9, confidence: 1, confidence_band: 'high',
+      factors: [{ factor: 'coverage_deficit', contribution: 0.3 }, { factor: 'integration_complexity', contribution: 0.3 }],
+    },
+  }, dir);
+  // Do real, decided work in a DIFFERENT category, so the ONLY thing wrong is the unrun floor.
+  const execOut = JSON.parse(astInput(['exec', 'start'], { goal: 'smoke', method: 'static-analysis', testCategory: 'smoke', git: null }, dir));
+  astInput(['decide'], {
+    question: 'How deep?', options: ['shallow', 'deep'], selected: 'shallow', reason: 'time-boxed', confidence: 0.7, reversible: true,
+  }, dir);
+  astInput(['exec', 'finish', execOut.execution_id], { status: 'PASSED', statusReason: 'ok' }, dir);
+
+  let out;
+  let threw = false;
+  try {
+    ast(['validate', '--final'], dir);
+  } catch (err) {
+    threw = true;
+    assert.equal(err.status, 1);
+    out = JSON.parse(err.stdout);
+  }
+  assert.ok(threw, '--final must exit non-zero when an applicable high-priority category never ran');
+  assert.equal(out.valid, false);
+  assert.ok(out.problems.some((p) => /no qualifying execution/i.test(p)),
+    'the failure must name the coverage floor');
+});
+
+test('CLI: "ast validate --final" fails when a critical inventory feature was never tested (per-feature floor end-to-end)', () => {
+  const dir = freshState('feature-floor');
+  ast(['session', 'start', '--request', 'test the app'], dir);
+  astInput(['profile', 'save'], {
+    ...sampleProfile(),
+    functionality_inventory: [{ id: 'FEAT-checkout', name: 'Checkout', kind: 'flow', criticality: 'critical' }],
+  }, dir);
+  // Decided, real work that is NOT the critical feature, so only the per-feature floor is at stake.
+  const execOut = JSON.parse(astInput(['exec', 'start'], { goal: 'smoke', method: 'static-analysis', testCategory: 'smoke', feature: 'FEAT-other', git: null }, dir));
+  astInput(['decide'], {
+    question: 'How deep?', options: ['shallow', 'deep'], selected: 'shallow', reason: 'time-boxed', confidence: 0.7, reversible: true,
+  }, dir);
+  astInput(['exec', 'finish', execOut.execution_id], { status: 'PASSED', statusReason: 'ok' }, dir);
+
+  let out;
+  let threw = false;
+  try {
+    ast(['validate', '--final'], dir);
+  } catch (err) {
+    threw = true;
+    out = JSON.parse(err.stdout);
+  }
+  assert.ok(threw, '--final must fail when a critical feature was never tested');
+  assert.ok(out.problems.some((p) => /FEAT-checkout|functionality inventory/i.test(p)),
+    'the failure must name the untested feature');
+});
+
+test('CLI: "ast validate --final" fails when real work ran but no applicability matrix was ever persisted', () => {
+  const dir = freshState('no-matrix');
+  ast(['session', 'start', '--request', 'x'], dir);
+  const execOut = JSON.parse(astInput(['exec', 'start'], { goal: 'smoke', method: 'static-analysis', git: null }, dir));
+  astInput(['decide'], {
+    question: 'How deep?', options: ['shallow', 'deep'], selected: 'shallow', reason: 'time-boxed', confidence: 0.7, reversible: true,
+  }, dir);
+  astInput(['exec', 'finish', execOut.execution_id], { status: 'PASSED', statusReason: 'ok' }, dir);
+  // Mid-session it is only a warning...
+  const mid = JSON.parse(ast(['validate'], dir));
+  assert.equal(mid.valid, true);
+  assert.ok(mid.warnings.some((w) => /No applicability matrix is persisted/.test(w)));
+  // ...but skipping `applicability eval` must not silence the floor at the finish line.
+  let out;
+  let threw = false;
+  try {
+    ast(['validate', '--final'], dir);
+  } catch (err) {
+    threw = true;
+    out = JSON.parse(err.stdout);
+  }
+  assert.ok(threw, '--final must fail when the coverage floor could never be checked');
+  assert.ok(out.problems.some((p) => /No applicability matrix is persisted/.test(p)));
+});
+
+test('CLI: "ast validate --final" fails on a UI/API profile with no inventory even before anything ran', () => {
+  const dir = freshState('inventory-first');
+  ast(['session', 'start', '--request', 'x'], dir);
+  astInput(['profile', 'save'], sampleProfile(), dir);
+  let out;
+  let threw = false;
+  try {
+    ast(['validate', '--final'], dir);
+  } catch (err) {
+    threw = true;
+    out = JSON.parse(err.stdout);
+  }
+  assert.ok(threw, 'a feature surface with no inventory is a gap whether or not anything has executed');
+  assert.ok(out.problems.some((p) => /functionality_inventory/.test(p)));
+});
+
 test('CLI: "ast validate --final" never promotes the advisory-only no-git-provenance finding', () => {
   const dir = freshState('git-advisory');
   ast(['session', 'start', '--request', 'x'], dir);
+  // Persist a matrix with nothing the floor enforces, so no blocking gap competes with the advisory.
+  astInput(['applicability', 'eval'], { signals: [] }, dir);
   // git: null, explicitly -- git is now auto-captured from this real repo checkout by
   // default (this test's whole point), so simulating "testing a target with no git
   // provenance" requires opting out explicitly rather than simply omitting the field.

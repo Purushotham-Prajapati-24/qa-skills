@@ -2,6 +2,11 @@
 
 Goal: run the plan, capture proof, and never report more certainty than you earned.
 
+> **Turn-one rule.** If the target has any API surface at all, your first evidence captures
+> must be API-level (`evidence capture -- curl ...`), not browser screenshots. Screenshots
+> are corroborating-only and cap claims at INCONCLUSIVE. Plan API-first evidence from the
+> start — do not learn this by getting downgraded 30 times.
+
 ## The execution contract
 
 Every attempt follows the same three steps. Step 1 happens **before** the work, which is
@@ -48,8 +53,14 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence add --input evidence.json
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec finish EXEC-2026-00003 --input result.json
 ```
 
-`exec start --example` and `exec finish --example` print valid payloads. Three fields matter
+`exec start --example` and `exec finish --example` print valid payloads. Four fields matter
 more than they look:
+
+- **`feature`** on `exec start` — the id of the `functionality_inventory` item this execution
+  exercises (`"feature": "FEAT-login"`). This is how the per-feature coverage floor confirms
+  every critical feature was addressed; an execution with no `feature` tag does not count
+  toward any inventory item, so a run that proves checkout works but is untagged still reads
+  as "checkout untested" at `validate --final`.
 
 - **`target`** on `exec start` — when you test a deployed system over the network, give its
   URL (and `deployed_commit` if the hosting dashboard shows it). The local git commit says
@@ -98,6 +109,61 @@ passed as separate argv words after `--`, e.g. `-- npx playwright test "checkout
 rather than one pre-built string — the CLI spawns each word directly rather than asking a
 shell to re-split a single string, which is where most quoting mistakes come from.
 
+**Multi-line and quote-heavy commands:** Use `--script <file>` to avoid all quoting issues.
+Write the command to a file, then pass the file — the CLI dispatches by extension (`.sh` →
+bash, `.ps1` → powershell, `.mjs`/`.js` → node, `.py` → python) with `shell: false`, so
+no intermediate shell re-tokenizes your quotes.
+
+Bash / Linux / macOS:
+```bash
+# Write the command to a file
+cat > /tmp/ast-probe.sh << 'SCRIPT'
+curl -s -X POST "https://api.example.com/register" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"<img src=x onerror=alert(1)>","email":"test@example.test"}'
+SCRIPT
+
+# Execute through the CLI — --script dispatches by extension
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence capture --exec EXEC-2026-00003 \
+  --summary "XSS probe on registration name field" --script /tmp/ast-probe.sh
+```
+
+Windows / PowerShell — two traps, both silent. `curl` is an alias for `Invoke-WebRequest` in
+Windows PowerShell 5.1, so call `curl.exe`. And 5.1 strips the double quotes inside a JSON
+argument passed to a native program: `curl.exe -d '{"name":"x"}'` sends `{name:x}`, which the
+server rejects as malformed — a 400 that looks like "input rejected" but tested nothing. Send
+the body from a file instead:
+
+```powershell
+# Write the command to a file
+@'
+$bodyFile = Join-Path $env:TEMP 'ast-probe-body.json'
+Set-Content -Path $bodyFile -Encoding ascii -NoNewline `
+  -Value '{"name":"<img src=x onerror=alert(1)>","email":"test@example.test"}'
+curl.exe -s -X POST "https://api.example.com/register" `
+  -H "Content-Type: application/json" --data-binary "@$bodyFile"
+'@ | Out-File -Encoding UTF8 "$env:TEMP\ast-probe.ps1"
+
+# Execute through the CLI — --script dispatches by extension
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence capture --exec EXEC-2026-00003 `
+  --summary "XSS probe on registration name field" --script "$env:TEMP\ast-probe.ps1"
+```
+
+For Node.js scripts (JSON payloads, multi-step API probes):
+```bash
+# Write the probe script
+cat > /tmp/ast-idor-probe.mjs << 'SCRIPT'
+const res = await fetch('https://api.example.com/orders/42', {
+  headers: { 'Authorization': `Bearer ${process.env.TOKEN_USER_A}` }
+});
+console.log(JSON.stringify({ status: res.status, body: await res.text() }));
+process.exit(res.status === 403 || res.status === 404 ? 0 : 1);
+SCRIPT
+
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence capture --exec EXEC-2026-00003 \
+  --summary "IDOR probe: user A requesting user B order 42" --script /tmp/ast-idor-probe.mjs
+```
+
 If a test runner already wrote its own structured report to disk (Playwright's
 `results.json`, a coverage summary) and you did not just invoke it yourself, register that
 file directly instead:
@@ -127,7 +193,11 @@ Run in this order unless there is a reason not to — it front-loads cheap, high
 evidence and defers the expensive, fragile work:
 
 1. **Verify the harness runs at all.** A green suite you never executed is worthless.
-2. **Existing tests over new ones.** Cheapest reliable evidence.
+2. **Existing tests over new ones.** Cheapest reliable evidence — and a floor, not a
+   ceiling. A green unit suite does not cover the `e2e`, `api`, `input-validation`,
+   `security` or `perf-baseline` categories, nor any inventory feature it never exercises.
+   For a repository, start the app and test the running system next. "No running instance"
+   is a valid BLOCKED reason only after you tried to start it and recorded why it failed.
 3. **Static and dependency analysis.** Seconds, no environment needed.
 4. **Unit → integration → API → UI → E2E.** Failures get cheaper to diagnose the lower
    you are in the stack.
@@ -137,6 +207,29 @@ evidence and defers the expensive, fragile work:
 Parallelise reads freely (repository analysis, ticket retrieval, coverage inspection).
 Never parallelise anything that shares mutable state: a database under test, an external
 write, a report version bump.
+
+### The non-functional checkpoint
+
+When all functional testing has a terminal status, **explicitly ask the user** before
+proceeding to non-functional testing:
+
+> Functional testing is complete. The following non-functional categories are applicable
+> and have not run:
+> - `security-testing` (mandatory baseline + deep scan) — needs non-production confirmation
+> - `performance-testing` (load/stress) — needs explicit authorisation
+> - `accessibility-testing` — ready to run
+>
+> **Which should I proceed with?**
+> (a) All applicable non-functional testing
+> (b) Security and accessibility only (skip load)
+> (c) Skip all non-functional — record as DEFERRED
+> (d) [specific selection]
+
+Do not silently defer non-functional testing to never. The checkpoint ensures it either
+runs or is explicitly deferred by the user — never quietly dropped.
+
+The mandatory security baseline (see orchestrator's "Mandatory testing baselines") runs
+regardless of this checkpoint when its trigger conditions are met.
 
 ## When something fails
 
@@ -214,8 +307,12 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" uncertainty raise --input uncertainty.j
 `not-run.json`:
 
 ```json
-{"goal":"Payment E2E","status":"BLOCKED","reason":"...","testCategory":"e2e"}
+{"goal":"Payment E2E","status":"BLOCKED","reason":"...","testCategory":"e2e","feature":"FEAT-checkout","uncertainties":["U-00019"]}
 ```
+
+Link the uncertainty you just raised. A not-run counts toward the coverage floors only when
+it names its category (and `feature`, for an inventory item) and links an uncertainty — a
+bare BLOCKED or DEFERRED with nothing linked is treated as silently skipped.
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec not-run --input not-run.json

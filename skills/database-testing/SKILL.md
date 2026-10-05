@@ -4,7 +4,7 @@ description: Test data layer behaviour — queries, constraints, transactions, d
 when_to_use: "test the migration", "database testing", "is the data correct", "test the schema change", "will this migration lose data"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.11.1
+  system_version: 0.12.0
   role: specialist
 ---
 

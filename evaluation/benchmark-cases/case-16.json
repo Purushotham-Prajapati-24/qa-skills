@@ -1,0 +1,29 @@
+{
+  "id": "case-16",
+  "title": "Repository with a UI and an API gets the same running-system breadth as a URL",
+  "context": "The user gave repository access instead of a URL. The profile was built from code: a React frontend, an Express REST API with auth, Postgres, and a checkout component.",
+  "given": {
+    "profile": {
+      "architecture": {
+        "frontend": { "present": true, "stack": ["React"] },
+        "backend": { "present": true, "stack": ["Express"] }
+      },
+      "technologies": [
+        { "name": "React", "kind": "framework", "evidence": ["package.json#dependencies.react", "src/main.tsx:3"] },
+        { "name": "Express", "kind": "framework", "evidence": ["server/index.ts:1"] },
+        { "name": "Postgres", "kind": "database", "evidence": ["docker-compose.yml#services.db"] }
+      ],
+      "apis": [{ "kind": "rest", "route_count": 14, "auth_required": true }],
+      "critical_components": [{ "name": "checkout", "why": "only revenue path", "business_criticality": "critical", "data_sensitivity": "financial" }],
+      "environments": [{ "name": "local", "url": "http://localhost:3000", "class": "non-production", "evidence": ["started by the agent via npm run dev"] }]
+    }
+  },
+  "expect": {
+    "profile_signals_include": ["user-input", "web-ui", "http-api", "auth", "database", "payments"],
+    "applicable_includes": ["unit", "integration", "api", "e2e", "input-validation", "security", "perf-baseline", "database"]
+  },
+  "reasoning_notes": [
+    "Repository access must not shrink testing to the unit suite. The same signals a URL produces -- user-input from the API/UI, perf-baseline from a reachable API -- come out of a code-derived profile.",
+    "The locally started instance is declared non-production with the start command as evidence, which is what lets the running-system categories run against it."
+  ]
+}

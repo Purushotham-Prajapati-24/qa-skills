@@ -44,7 +44,17 @@ so the report and `evidence_anchored_rate` can say, honestly, how much of what y
 is checkable versus how much is your word. Prefer driving that ratio up by capturing real
 output (below), not by arguing the gate should accept less.
 
+For the practical implication of this hierarchy during test planning, see the orchestrator's
+"Evidence strategy — API first, browser second" section: if the target has any API surface,
+plan API-level evidence capture from turn one.
+
 ## Prefer captured evidence over typed evidence
+
+**The most common evidence mistake:** using browser screenshots to "prove" that a test
+passed. Screenshots are corroborating-only — they show what a page looked like, not that an
+assertion held. If you explored a feature in the browser and want to claim PASSED, you need
+a `curl` call, a test script, or an API response captured through `evidence capture`. Plan
+for this from the start of execution, not after the evidence gate downgrades you.
 
 `evidence add` will accept a hand-typed summary with no artifact behind it — a sentence
 you wrote is not a lie, but it is not proof either, and the gate below can only check the
@@ -80,6 +90,14 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" evidence verify --input claim.json
 `PASSED`, `FAILED`, `COMPLETED` and `PARTIAL` all claim something was executed, so all
 four require evidence. A claim that fails the gate is downgraded to `INCONCLUSIVE` with
 the reason recorded. Do not argue with the downgrade — attach the evidence or accept it.
+
+## A green run is not yet proof the test works
+
+The gate checks that something ran and exited zero, not that the test could have
+noticed a defect. A test that cannot fail passes the gate as easily as a good one. Before a
+`PASSED` claim rests on a test you wrote, or on a threshold or scan you configured, follow
+the [test sensitivity policy](test-sensitivity-policy.md): plant the fault, capture a
+non-zero exit, restore, capture a zero exit.
 
 ## What to capture
 

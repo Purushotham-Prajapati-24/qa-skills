@@ -4,7 +4,7 @@ description: Turn a repository profile, change analysis, requirements and risk a
 when_to_use: "create a test plan", "what's the test strategy", "detailed test implementation plan", "how should we test this", "acceptance testing plan"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write
 metadata:
-  system_version: 0.11.1
+  system_version: 0.12.0
   role: specialist
 ---
 

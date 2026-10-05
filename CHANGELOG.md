@@ -3,6 +3,106 @@
 Semantic versioning. See [docs/versioning.md](docs/versioning.md) for what is versioned
 independently — document schemas and policy files carry their own versions.
 
+## [0.12.0] - 2026-10-05
+
+Driven by two rounds of field-trial feedback: a Sonnet session that hit friction on an
+authorised staging app, and the recurring complaint that a bare URL produced a thin test
+run. The theme is **rigor**: a simple prompt should now drive broad, enforced coverage —
+every applicable high-priority category and every critical feature must be tested or
+explicitly blocked, not silently skipped.
+
+### Changed (behaviour)
+
+- **`ast validate --final` now enforces two coverage floors.** Previously it checked process
+  integrity (decisions, uncertainties, provenance) but never whether the testing was actually
+  broad enough, so a session could mark a dozen categories not-applicable, run three, and
+  finish clean. Now, under `--final`:
+  - **Category floor** — every applicable **P0/P1** category in the persisted applicability
+    matrix, and every applicable **mandatory baseline** (`security`, `input-validation`,
+    `accessibility`, `perf-baseline` — `mandatory: true` in the catalog) whatever its
+    priority, must have at least one execution: a real run of any outcome, or an
+    `exec not-run` with a `BLOCKED`/`NEEDS_USER_INPUT`/`DEFERRED` status that **links** an
+    uncertainty in its `uncertainties`. A not-run with nothing linked does not count.
+  - **Per-feature floor** — every `high`/`critical` item in the profile's new
+    `functionality_inventory` must have an execution tagged with its `feature` id.
+  - **Missing inventory** — a profile that shows a UI, an API or a critical component but has
+    no `functionality_inventory` is itself a blocking gap, whether or not anything has run.
+    Without this, skipping the inventory silently skipped the per-feature floor.
+  - **Missing matrix** — a session with real executions but no persisted applicability
+    matrix is a blocking gap, so skipping `applicability eval` cannot silence the floor.
+  All are warnings mid-session and only fail `--final`, matching the existing process-gap
+  split.
+- **Repository access gets the same breadth as a URL.** repository-intelligence now builds the
+  `functionality_inventory` from routes and handlers (§16), records the locally started app as
+  a `non-production` environment (§17), and declares code-revealed signals such as
+  `perf-sensitive`, `responsive` and `i18n` (§18). The orchestrator fast path covers both URLs
+  and repositories, and execution treats the existing suite as a floor, not a ceiling: a green
+  unit suite no longer stands in for e2e, API, input, security and baseline-performance
+  testing of the running app.
+- The orchestrator fast path no longer claims `applicability eval` makes "all categories
+  applicable"; it returns what the signals support, and the floors enforce coverage.
+- **`user-input` is now derived from the profile.** Any `apis` entry or a present frontend
+  yields the `user-input` signal, so `input-validation` and the input edge-case baseline
+  apply by default. Before, `user-input` had no derivation path at all, so a bare-URL target
+  silently skipped input and edge-case testing — the single biggest black-box coverage hole.
+
+### Added
+
+- **`perf-baseline` test category.** A latency/throughput baseline applies to any reachable
+  API or UI (`requires: http-api | web-ui`), independent of a stated perf target. It is a
+  mandatory baseline, so whenever it is applicable the floor requires a run, or a BLOCKED/
+  DEFERRED record with a linked reason (no capability, no authorisation, out of budget). It
+  is never silently skipped, even when it scores low. The deeper `load`/`stress`/
+  `spike`/`endurance` categories still require a `perf-sensitive` signal plus explicit
+  authorisation and a non-production environment. The applicability catalog is now 48
+  categories (catalog 1.1.0).
+- **Profile `functionality_inventory`** (repository-profile 1.1.0, additive). The breadth
+  ledger: every feature/page/endpoint/flow the agent found, each with an id, kind,
+  criticality and evidence. Discovery enumerates it, planning gives each item a `must-test`
+  scenario, and the per-feature floor checks each critical item was addressed.
+- **Execution `feature` field.** Tags an execution to a `functionality_inventory` id so the
+  per-feature floor can confirm every critical feature was exercised.
+- **Applicability matrix is persisted.** `applicability eval` now saves its result (opt out
+  with `--no-save`), and `state.loadApplicability()` reads it, so the coverage floor can
+  compare what was judged applicable against what actually ran.
+- **`evidence capture --script <file>`.** Dispatches by extension (`.sh`/`.ps1`/`.mjs`/
+  `.js`/`.py`) with `shell: false`, so multi-line and quote-heavy probes stop breaking on
+  Windows shell re-tokenisation. Documented as the primary pattern for anything beyond a bare
+  command.
+- **`ast report diff [NEW_ID [OLD_ID]]`.** Compares two stored report records (not rendered
+  Markdown) and outputs a structured delta — added/removed/status-changed executions,
+  added/resolved/severity-changed findings, metric deltas and blocked-work changes. Defaults
+  to the latest report against its predecessor.
+- **Affirmative security green-light.** security-testing gains an explicit in-bounds technique
+  list (XSS/SQLi-shaped inputs, IDOR, malformed tokens, mass-assignment, rate-limit probes,
+  header checks, NoSQLi, auth-bypass) and a flag-and-stop list (secret replay, destructive
+  injection, SSRF exfiltration, DoS, impersonation). authorization-policy and
+  escalation-policy state that in-bounds techniques on an authorised non-production target
+  proceed without stopping; detection is always in-bounds, exploitation is not.
+- **Cross-role golden-path journeys.** e2e-testing and planning require at least one
+  `must-test` journey when ≥2 roles interact, recorded as a `critical` `flow` in the
+  `functionality_inventory` (e.g. `FLOW-golden-path`) and run as `testCategory: "e2e"` with
+  that `feature` id, so the per-feature floor enforces it.
+- **Regression case reg-006** seeds this field failure: a bare-URL profile must derive
+  `user-input` and reach `input-validation`, `perf-baseline`, `security` and `e2e`.
+- **Benchmark case-16**: a code-derived repository profile reaches the same running-system
+  categories as a URL. Eval is now 22 cases / 51 checks.
+
+### Fixed
+
+- **The redactor masked ordinary words after `pass`.** The free-text `KEY: value` pattern
+  matched an open-ended `pass`, so `passed`, `PASSED`, `passes`, `bypass` and `compass`
+  followed by `:` or `=` lost their values. Every report with a downgraded claim read
+  `DOWNGRADED from PASSED: "[REDACTED]" claims ...`, and evidence excerpts such as
+  `tests passed: 87/87` lost their counts. `pass` now has to be a whole segment
+  (`db_pass`, `pass_hash`, `password(s)`, `passwd`, `passphrase`, `passcode`, `passport`), and
+  every secret-shaped key is still masked. A bare `pass: <value>` is still masked too, because
+  it cannot be told apart from a credential.
+- Browser evidence framing: browser-testing and execution now lead with the rule that
+  screenshots/console/network are corroborating-only and cap claims at INCONCLUSIVE — capture
+  API-level evidence to prove a behaviour. Corrects the old "console errors are highest-yield"
+  line that read as if they could prove a pass.
+
 ## [0.11.1] - 2026-10-01
 
 Patch release. No engine, schema, or skill-content changes — release engineering and a
@@ -827,7 +927,7 @@ breakdown of what is implemented versus designed.
   downgraded to `INCONCLUSIVE` with the reason recorded.
 - **Risk engine** — 14 factors, 4 weighting profiles, unevidenced factors excluded rather
   than guessed, confidence reported as the share of profile weight actually evidenced.
-- **Applicability engine** — 47 test categories, 35 repository signals, priority-tiered
+- **Applicability engine** — 47 test-category definitions, 35 repository signals, priority-tiered
   budget selection so a budget never drops P0 work in favour of cheap P2 wins.
 - **Browser decision engine** — 5 methods, 15 factors, 4 hard rules, ambiguity gate that
   escalates rather than guessing.

@@ -73,7 +73,7 @@
         "unit", "component", "integration", "api", "contract", "e2e", "ui",
         "exploratory", "smoke", "sanity", "regression", "acceptance", "functional",
         "non-functional", "accessibility", "visual", "cross-browser", "responsive",
-        "compatibility", "localization", "performance", "load", "stress", "spike",
+        "compatibility", "localization", "performance", "perf-baseline", "load", "stress", "spike",
         "endurance", "security", "authn-authz", "session-management",
         "input-validation", "dependency-scan", "database", "data-integrity",
         "migration", "caching", "concurrency", "resilience", "observability",
