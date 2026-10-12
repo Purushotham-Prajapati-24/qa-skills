@@ -96,7 +96,7 @@ something worth someone's attention:
 `uncertainty.json`:
 
 ```json
-{"question":"...","status":"ambiguous-requirement","impact":"the two readings need different expected outcomes","affectedScope":["REQ-3"],"nextAction":"ask the ticket author","owner":"user"}
+{"question":"Does \"saved card\" include cards saved by a guest before signing up?","status":"ambiguous-requirement","impact":"the two readings need different expected outcomes","affectedScope":["REQ-3"],"nextAction":"ask the ticket author","owner":"user"}
 ```
 
 ```bash

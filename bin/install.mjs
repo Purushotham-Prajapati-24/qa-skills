@@ -73,7 +73,7 @@ if (flags.help) {
   --user, --global   Install into ~/.claude (every project) instead of ./.claude
   --target <dir>     Install into a specific directory's .claude
   --only a,b,c       Install only these skills
-  --hooks            Also wire the SessionStart and PreToolUse hooks into settings.json
+  --hooks            Also wire the SessionStart, PreToolUse, UserPromptSubmit and Stop hooks into settings.json
   --force            Overwrite an existing installation
   --dry-run          Print the plan and change nothing
   --help
@@ -237,13 +237,21 @@ if (flags.hooks && !DRY) {
   const script = (name) => path.join(runtimeDir, 'scripts', 'hooks', name).replace(/\\/g, '/');
   settings.hooks.SessionStart ??= [];
   settings.hooks.SessionStart.push({
-    matcher: 'startup|resume|clear',
+    matcher: 'startup|resume|clear|compact',
     hooks: [{ type: 'command', command: ['node', script('session-start.mjs')], timeout: 15 }],
   });
   settings.hooks.PreToolUse ??= [];
   settings.hooks.PreToolUse.push({
     matcher: 'Bash|PowerShell',
     hooks: [{ type: 'command', command: ['node', script('guard-destructive.mjs')], timeout: 10 }],
+  });
+  settings.hooks.UserPromptSubmit ??= [];
+  settings.hooks.UserPromptSubmit.push({
+    hooks: [{ type: 'command', command: ['node', script('record-user-prompt.mjs')], timeout: 10 }],
+  });
+  settings.hooks.Stop ??= [];
+  settings.hooks.Stop.push({
+    hooks: [{ type: 'command', command: ['node', script('stop-gate.mjs')], timeout: 30 }],
   });
   fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, 'utf8');
   log(`  hooks     wired into ${path.relative(targetRoot, settingsPath)}`);

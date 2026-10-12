@@ -10,6 +10,7 @@ import * as state from '../engine/state-engine/index.mjs';
 import * as execution from '../engine/execution-engine/index.mjs';
 import * as decisions from '../engine/decision-engine/index.mjs';
 import * as uncertainty from '../engine/uncertainty-register/index.mjs';
+import * as evidence from '../engine/evidence-engine/index.mjs';
 import { check as checkCompleteness } from '../engine/evaluation-engine/process-completeness.mjs';
 
 /**
@@ -87,6 +88,8 @@ test('a BLOCKED execution with no uncertainty raised is a blocking finding namin
 test('raising the uncertainty clears the blocked-without-uncertainty finding', () => {
   uncertainty.raise({
     question: 'Should payment tests use real provider credentials?',
+    status: 'user-input-required',
+    owner: 'user',
     impact: 'cannot safely execute a real transaction',
     affectedScope: ['payment-e2e'],
     nextAction: 'ask the user which environment and credentials to use',
@@ -116,9 +119,25 @@ test('a fully-compliant session (decisions recorded and assessed, no blocked wor
   // Guards against a check that fires unconditionally regardless of what actually happened.
   // "Compliant" includes assessing at least one decision (0.11.0's no-decision-assessed).
   for (const d of state.list('decisions')) decisions.assess(d.decision_id, { verdict: 'correct' });
-  // Compliance now also means the applicability matrix was persisted and its high-priority
-  // categories were all addressed: 'sanity' ran above, 'e2e' is BLOCKED with its uncertainty
-  // raised. With the matrix present and the floor met, nothing fires.
+  // Compliance also means: the plan was persisted and its must-test scenario ran with evidence;
+  // every floor category was addressed ('sanity' ran with evidence, 'e2e' is held by an open
+  // user-owned blocker, linked). With all of that true, nothing fires.
+  const payment = state.list('uncertainties').find((u) => /payment/.test(u.question));
+  state.savePlan({
+    plan_id: 'PLAN-00001', created_at: new Date().toISOString(), objective: 'Compliant session fixture',
+    scope: { in_scope: ['sanity', 'payments'], out_of_scope: [] },
+    applicability: [{ category: 'sanity', applicable: true, reason: 'always applicable' }],
+    scenarios: [
+      { id: 'S-01', title: 'sanity sweep', category: 'sanity', method: 'static-analysis', obligation: 'must-test' },
+      { id: 'S-02', title: 'live payment e2e', category: 'e2e', method: 'playwright-script', obligation: 'blocked', blocked_by: payment.id },
+    ],
+    exit_criteria: ['S-01 ran'],
+    provenance: { skill_version: '0.12.0', created_at: new Date().toISOString(), created_by: 'agent' },
+  });
+  const run = execution.start({ goal: 'sanity sweep', method: 'static-analysis', testCategory: 'sanity', planScenarioId: 'S-01', git: { repository: 'demo', branch: 'main', commit: 'abc1234' } });
+  const ev = evidence.captureOutput({ argv: 'npm run lint', cwd: '/repo', exitCode: 0, durationMs: 5, stdout: 'ok', summary: 'lint', executionId: run.execution_id, git: null });
+  execution.finish(run.execution_id, { status: 'PASSED', statusReason: 'lint exited 0 at abc1234', evidence: [ev.evidence_id] });
+  execution.recordNonExecution({ goal: 'Live payment E2E', status: 'BLOCKED', reason: 'no sandbox credentials', testCategory: 'e2e', planScenarioId: 'S-02', uncertainties: [payment.id] });
   state.saveApplicability({ matrix: [
     { category: 'sanity', applicable: true, priority: 'P0' },
     { category: 'e2e', applicable: true, priority: 'P1' },
@@ -156,6 +175,7 @@ test('coverage floor: a DEFERRED not-run with no linked uncertainty does NOT sat
 test('coverage floor: an explicit not-run BLOCKED record that links its uncertainty satisfies the floor', () => {
   const u = uncertainty.raise({
     question: 'Is there an isolated environment for load tests?',
+    status: 'environment-unavailable',
     impact: 'load traffic cannot be pointed at shared infrastructure',
     affectedScope: ['load'],
     nextAction: 'ask the owner for an isolated environment',
@@ -177,9 +197,20 @@ test('coverage floor: a mandatory baseline that is NOT applicable is not demande
   assert.equal(checkCompleteness().find((c) => c.check === 'coverage-floor'), undefined);
 });
 
-test('coverage floor: a real run of any outcome counts as coverage -- a FAILED or PARTIAL run is still testing', () => {
-  // 'sanity' ran (PARTIAL) far above. That it did not PASS does not make the category untested.
+test('coverage floor: a real run of any outcome counts as coverage -- a FAILED run with evidence is still testing', () => {
+  const run = execution.start({ goal: 'regression suite', method: 'existing-suite', testCategory: 'regression', git: null });
+  const ev = evidence.captureOutput({ argv: 'npm test', cwd: '/repo', exitCode: 1, durationMs: 5, stdout: '3 failed', summary: 'suite', executionId: run.execution_id, git: null });
+  execution.finish(run.execution_id, { status: 'FAILED', statusReason: '3 tests failed', evidence: [ev.evidence_id] });
+  state.saveApplicability({ matrix: [{ category: 'regression', applicable: true, priority: 'P0' }] });
+  assert.equal(checkCompleteness().find((c) => c.check === 'coverage-floor'), undefined);
+});
+
+test('coverage floor: a run that left no evidence (the early PARTIAL "typecheck") does not count', () => {
   state.saveApplicability({ matrix: [{ category: 'sanity', applicable: true, priority: 'P0' }] });
+  const before = state.list('executions').filter((e) => e.test_category === 'sanity');
+  assert.ok(before.some((e) => (e.evidence ?? []).length === 0), 'fixture: an evidence-less sanity run exists');
+  // The compliant-session test above added an evidenced sanity run, so the category IS covered --
+  // by that run, not by the evidence-less one.
   assert.equal(checkCompleteness().find((c) => c.check === 'coverage-floor'), undefined);
 });
 
@@ -222,7 +253,8 @@ test('per-feature floor: a high/critical inventory feature with no tagged execut
 
 test('per-feature floor: an execution tagged with the feature id satisfies it', () => {
   const exec = execution.start({ goal: 'Login happy path', method: 'playwright-script', testCategory: 'e2e', feature: 'FEAT-login', git: null });
-  execution.finish(exec.execution_id, { status: 'PASSED', statusReason: 'login works' });
+  const ev = evidence.captureOutput({ argv: 'npx playwright test login', cwd: '/repo', exitCode: 0, durationMs: 5, stdout: '1 passed', summary: 'login', executionId: exec.execution_id, git: null });
+  execution.finish(exec.execution_id, { status: 'PASSED', statusReason: 'login spec passed', evidence: [ev.evidence_id] });
   assert.equal(checkCompleteness().find((c) => c.check === 'feature-coverage-floor'), undefined);
 });
 
@@ -243,6 +275,35 @@ function astInput(args, payload, stateDir) {
   const file = path.join(stateDir, `input-${Math.random().toString(36).slice(2)}.json`);
   fs.writeFileSync(file, JSON.stringify(payload));
   return ast([...args, '--input', file], stateDir);
+}
+
+function cliPlan(dir, scenarios) {
+  return astInput(['plan', 'save'], {
+    plan_id: 'PLAN-00001',
+    created_at: '2026-10-08T10:00:00.000Z',
+    objective: 'CLI fixture plan',
+    scope: { in_scope: ['fixture'], out_of_scope: [] },
+    applicability: [{ category: 'e2e', applicable: true, reason: 'fixture category' }],
+    scenarios: scenarios.map((s) => ({ category: 'e2e', method: 'api-client', obligation: 'must-test', ...s })),
+    exit_criteria: ['All must-test scenarios run'],
+    provenance: { skill_version: '0.12.0', created_at: '2026-10-08T10:00:00.000Z', created_by: 'agent' },
+  }, dir);
+}
+
+/** exec start + a real captured command + exec finish, all through the CLI. */
+function cliEvidencedRun(dir, startPayload, status = 'PASSED') {
+  const ex = JSON.parse(astInput(['exec', 'start'], { git: null, ...startPayload }, dir));
+  const ev = JSON.parse(ast(['evidence', 'capture', '--exec', ex.execution_id, '--summary', 'fixture run', '--', process.execPath, '-e', "require('node:assert').ok(1 + 1 === 2)"], dir));
+  astInput(['exec', 'finish', ex.execution_id], { status, statusReason: 'fixture command exited 0', evidence: [ev.evidence_id] }, dir);
+  return ex.execution_id;
+}
+
+/** `applicability eval` with no signals still finds a few P3 categories; give each a visible disposition. */
+function cliMatrixWithDispositions(dir) {
+  const m = JSON.parse(astInput(['applicability', 'eval'], { signals: [] }, dir));
+  for (const r of (m.matrix ?? []).filter((x) => x.applicable)) {
+    astInput(['exec', 'not-run'], { goal: `${r.category} testing`, status: 'SKIPPED', reason: `${r.priority}, out of scope for this fixture`, testCategory: r.category }, dir);
+  }
 }
 
 test('CLI: "ast validate" reports a blocking process gap as a warning and stays valid: true', () => {
@@ -277,7 +338,7 @@ test('CLI: "ast validate --final" promotes the same gap to a failure', () => {
   assert.equal(out.valid, false);
   // Confirms failure comes from the process gap specifically, not from some other,
   // unrelated validate problem coincidentally also being true.
-  assert.equal(out.problems.length, 1);
+  assert.ok(out.problems.every((p) => p.startsWith('process:')), out.problems.join('\n'));
   assert.ok(out.problems.some((p) => /No decision records/.test(p)));
 });
 
@@ -388,18 +449,128 @@ test('CLI: "ast validate --final" never promotes the advisory-only no-git-proven
   const dir = freshState('git-advisory');
   ast(['session', 'start', '--request', 'x'], dir);
   // Persist a matrix with nothing the floor enforces, so no blocking gap competes with the advisory.
-  astInput(['applicability', 'eval'], { signals: [] }, dir);
+  cliMatrixWithDispositions(dir);
   // git: null, explicitly -- git is now auto-captured from this real repo checkout by
   // default (this test's whole point), so simulating "testing a target with no git
   // provenance" requires opting out explicitly rather than simply omitting the field.
-  const execOut = JSON.parse(astInput(['exec', 'start'], { goal: 'smoke', method: 'static-analysis', git: null }, dir));
   astInput(['decide'], {
     question: 'How deep should this pass go?', options: ['shallow', 'deep'], selected: 'shallow',
     reason: 'time-boxed', confidence: 0.7, reversible: true,
   }, dir);
-  astInput(['exec', 'finish', execOut.execution_id], { status: 'PASSED', statusReason: 'ok' }, dir);
+  cliPlan(dir, [{ id: 'S-01', title: 'smoke' }]);
+  cliEvidencedRun(dir, { goal: 'smoke', method: 'static-analysis', plan_scenario_id: 'S-01' });
 
   const out = JSON.parse(ast(['validate', '--final'], dir));
   assert.equal(out.valid, true, 'no-git-provenance alone must never fail --final');
   assert.ok(out.warnings.some((w) => /no-git-provenance|Nothing in this session is reproducible/.test(w)));
+});
+
+/* -------------------------------------------------- scenario coverage floor */
+
+test('scenario floor: must-test scenarios with no linked execution are a blocking finding', () => {
+  // Use a fresh state scope for plan tests — the in-process state accumulated above
+  // has no plan, so we need a clean slate.
+  const dir = freshState('scenario-floor');
+  ast(['session', 'start', '--request', 'test the VMS'], dir);
+  astInput(['applicability', 'eval'], { signals: [] }, dir);
+  astInput(['decide'], {
+    question: 'How deep should testing go?', options: ['standard', 'deep'], selected: 'standard',
+    reason: 'time-boxed', confidence: 0.8, reversible: true,
+  }, dir);
+  // Save a plan with 3 must-test and 1 should-test scenario.
+  astInput(['plan', 'save'], {
+    plan_id: 'PLAN-00001',
+    created_at: '2026-10-08T10:00:00.000Z',
+    objective: 'Test the VMS end to end',
+    scope: { in_scope: ['visitor CRUD'], out_of_scope: ['billing'] },
+    applicability: [{ category: 'e2e', applicable: true, reason: 'multi-role system with handoff points', priority: 'P0' }],
+    scenarios: [
+      { id: 'S-01', title: 'Host creates invite', category: 'e2e', obligation: 'must-test', method: 'api-client' },
+      { id: 'S-02', title: 'Guard approves visitor', category: 'e2e', obligation: 'must-test', method: 'api-client' },
+      { id: 'S-03', title: 'XSS on name field', category: 'security', obligation: 'must-test', method: 'api-client' },
+      { id: 'S-04', title: 'Load test check-in', category: 'load', obligation: 'should-test', method: 'load-tool' },
+    ],
+    exit_criteria: ['All must-test scenarios run'],
+    provenance: { skill_version: '0.13.0', created_at: '2026-10-08T10:00:00.000Z', created_by: 'agent' },
+  }, dir);
+  // Run only scenario S-01, leaving S-02 and S-03 unrun.
+  cliEvidencedRun(dir, { goal: 'Host creates invite', method: 'api-client', testCategory: 'e2e', plan_scenario_id: 'S-01' });
+
+  let out;
+  let threw = false;
+  try { ast(['validate', '--final'], dir); } catch (err) {
+    threw = true;
+    out = JSON.parse(err.stdout);
+  }
+  assert.ok(threw, '--final must fail when must-test scenarios were not executed');
+  assert.ok(out.problems.some((p) => /scenario-coverage-floor|must-test scenario/i.test(p)));
+  // S-02 and S-03 should be named in the message, but S-04 (should-test) should not.
+  const msg = out.problems.find((p) => /scenario-coverage-floor|must-test scenario/i.test(p));
+  assert.match(msg, /S-02/);
+  assert.match(msg, /S-03/);
+  assert.doesNotMatch(msg, /S-01/, 'S-01 ran with evidence');
+  assert.doesNotMatch(msg, /S-04/, 'should-test scenarios are not enforced by the floor');
+});
+
+test('scenario floor: a BLOCKED not-run linked to an uncertainty satisfies a must-test scenario', () => {
+  const dir = freshState('scenario-blocked');
+  ast(['session', 'start', '--request', 'test'], dir);
+  cliMatrixWithDispositions(dir);
+  astInput(['decide'], {
+    question: 'How deep should testing go?', options: ['standard', 'deep'], selected: 'standard', reason: 'time-boxed', confidence: 0.8, reversible: true,
+  }, dir);
+  astInput(['plan', 'save'], {
+    plan_id: 'PLAN-00001',
+    created_at: '2026-10-08T10:00:00.000Z',
+    objective: 'Test security probes',
+    scope: { in_scope: ['auth'], out_of_scope: [] },
+    applicability: [{ category: 'security', applicable: true, reason: 'auth and user-input signals present', priority: 'P1' }],
+    scenarios: [
+      { id: 'S-01', title: 'XSS probe', category: 'security', obligation: 'must-test', method: 'api-client' },
+    ],
+    exit_criteria: ['All run'],
+    provenance: { skill_version: '0.13.0', created_at: '2026-10-08T10:00:00.000Z', created_by: 'agent' },
+  }, dir);
+  // Raise an uncertainty and record the scenario as BLOCKED with a link.
+  const uOut = JSON.parse(astInput(['uncertainty', 'raise'], {
+    question: 'No non-prod environment for security probes',
+    status: 'environment-unavailable',
+    impact: 'cannot probe', affectedScope: ['security'], nextAction: 'ask user',
+  }, dir));
+  astInput(['exec', 'not-run'], {
+    goal: 'XSS probe', status: 'BLOCKED', reason: 'no non-prod environment',
+    testCategory: 'security', plan_scenario_id: 'S-01', uncertainties: [uOut.id],
+  }, dir);
+
+  const out = JSON.parse(ast(['validate', '--final'], dir));
+  assert.equal(out.valid, true, 'a justified BLOCKED not-run should satisfy the scenario floor');
+  assert.ok(!out.problems.some((p) => /scenario-coverage-floor/i.test(p)));
+});
+
+test('scenario floor: plan progress command shows executed vs remaining', () => {
+  const dir = freshState('plan-progress');
+  ast(['session', 'start', '--request', 'test'], dir);
+  astInput(['plan', 'save'], {
+    plan_id: 'PLAN-00001',
+    created_at: '2026-10-08T10:00:00.000Z',
+    objective: 'Test two things',
+    scope: { in_scope: ['a', 'b'], out_of_scope: [] },
+    applicability: [{ category: 'e2e', applicable: true, reason: 'multi-role user paths present', priority: 'P0' }],
+    scenarios: [
+      { id: 'S-01', title: 'Thing A', category: 'e2e', obligation: 'must-test', method: 'api-client' },
+      { id: 'S-02', title: 'Thing B', category: 'e2e', obligation: 'must-test', method: 'api-client' },
+    ],
+    exit_criteria: ['Both run'],
+    provenance: { skill_version: '0.13.0', created_at: '2026-10-08T10:00:00.000Z', created_by: 'agent' },
+  }, dir);
+  // Run only S-01.
+  cliEvidencedRun(dir, { goal: 'Thing A', method: 'api-client', testCategory: 'e2e', plan_scenario_id: 'S-01' });
+
+  const progress = JSON.parse(ast(['plan', 'progress'], dir));
+  assert.equal(progress.must_test, 2);
+  assert.equal(progress.must_test_executed, 1);
+  assert.equal(progress.must_test_remaining, 1);
+  const s2 = progress.scenarios.find((s) => s.id === 'S-02');
+  assert.equal(s2.executed, false);
+  assert.equal(s2.obligation, 'must-test');
 });

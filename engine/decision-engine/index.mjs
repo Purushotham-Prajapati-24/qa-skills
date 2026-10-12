@@ -162,6 +162,10 @@ const NEXT_ACTION_BY_CLASS = {
     next: 'Gather more signal before deciding. An unclassified failure must not be reported as a defect.',
     continue_suite: true,
   },
+  'unclassified-no-signals': {
+    next: 'The classifier was given no signals. Re-run `failure classify` with real tokens from the output (`failure signals` lists them), or a static-analysis signal for a scan finding. Not a verdict on the failure.',
+    continue_suite: true,
+  },
 };
 
 /**
@@ -186,11 +190,16 @@ export function nextAction({ status, failureClass = null, remainingWork = [], bl
     };
   }
 
-  const guide = NEXT_ACTION_BY_CLASS[failureClass ?? 'unclassified'];
+  const known = Object.prototype.hasOwnProperty.call(NEXT_ACTION_BY_CLASS, failureClass ?? 'unclassified');
+  const guide = known ? NEXT_ACTION_BY_CLASS[failureClass ?? 'unclassified'] : NEXT_ACTION_BY_CLASS.unclassified;
   return {
     next: guide.next,
     reassess: true,
     continue_suite: guide.continue_suite,
     rationale: `Failure classified as "${failureClass ?? 'unclassified'}". Response is determined by the classification, not by the fact that something went red.`,
+    ...(known ? {} : {
+      unknown_failure_class: failureClass,
+      warning: `"${failureClass}" is not a failure class; treated as unclassified. Get the class from \`failure classify\` (its "class" field) and pass that. Known: ${Object.keys(NEXT_ACTION_BY_CLASS).join(', ')}.`,
+    }),
   };
 }

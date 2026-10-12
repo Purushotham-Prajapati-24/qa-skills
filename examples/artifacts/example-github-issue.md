@@ -13,6 +13,8 @@ hand-written approximation of it.
 ---
 
 
+> **Confirmed** by a failing repro check: `npm run test:api -- saved-cards` (EXEC-2026-00003). It should pass once this is fixed.
+
 ## Summary
 
 The payment-method lookup does not compare the record owner to the session user, so any authenticated user can select and charge a card saved by someone else.
@@ -54,7 +56,7 @@ Any authenticated user can enumerate and charge other users' stored cards. Finan
 
 ## Evidence
 
-- **EV-2026-00002** (command-output, observed): api: 11/12 passed, 1 failed — `C:\Users\purus\AppData\Local\Temp\ast-demo-wEFh3G\evidence\blobs\output-2026-10-05T09-07-29-492Z-45768.txt`
+- **EV-2026-00002** (command-output, observed): api: 11/12 passed, 1 failed — `C:\Users\purus\AppData\Local\Temp\ast-demo-hJo470\evidence\blobs\output-2026-10-12T10-53-18-746Z-32868.txt`
 
 ## Recommended next action
 
@@ -66,5 +68,5 @@ Add an ownership check in server/payments/stripe.ts:52 before returning or using
 
 ---
 
-Filed by the Autonomous Software Testing agent — finding `FIND-00001`, session `SESSION-0001`, skill v0.12.0.
+Filed by the Autonomous Software Testing agent — finding `FIND-00001`, session `SESSION-0001`, skill v0.13.0.
 Fingerprint: `sha256:8e75ed09c720ff3b2d0d11c070217e76cd94e69c7cf0f2993e59016addb1f112` (used to prevent duplicate filings).

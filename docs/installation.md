@@ -46,7 +46,7 @@ and warns if any skill still points at the old path.
 | `--user`, `--global` | Install into `~/.claude` — every project on this machine |
 | `--target <dir>` | Install into a specific directory's `.claude` |
 | `--only a,b,c` | Install only these skills |
-| `--hooks` | Also wire SessionStart and PreToolUse into `.claude/settings.json` |
+| `--hooks` | Also wire SessionStart, PreToolUse, UserPromptSubmit and Stop into `.claude/settings.json`. Stop refuses to end a turn while `ast todo` lists owed testing work (releases after 3 refusals without progress; `AST_STOP_GATE=off` disables it). UserPromptSubmit records what you say so holds the agent attributes to you can be checked. **Recommended** -- without it, finishing is gated only by `validate --final`. |
 | `--force` | Overwrite an existing install (it refuses by default) |
 | `--dry-run` | Print the plan and change nothing |
 | `--help` | |
@@ -56,13 +56,13 @@ and warns if any skill still points at the old path.
 Tracking the default branch means you get changes as they land. To pin:
 
 ```bash
-npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.12.0
+npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.13.0
 ```
 
 Or install from a release tarball, which needs no git:
 
 ```bash
-npx --yes https://github.com/Purushotham-Prajapati-24/qa-skills/releases/download/v0.12.0/autonomous-software-testing-0.12.0.tgz
+npx --yes https://github.com/Purushotham-Prajapati-24/qa-skills/releases/download/v0.13.0/autonomous-software-testing-0.13.0.tgz
 ```
 
 ### If npx picks the wrong command
@@ -112,7 +112,16 @@ node .claude/ast/bin/ast.mjs caps probe
 `caps probe` reports what this environment can actually do. Read it before trusting any
 plan.
 
-By default, state lives in `<plugin>/state`. To put it elsewhere — for example inside the
+Where state lives by default depends on where the runtime is installed:
+
+| Install | Default state directory | Why |
+| --- | --- | --- |
+| Project (`npx …` in the repo, or this source repo) | `.claude/ast/state/` | The runtime is inside the project, so its state is too |
+| User scope (`--user`) or plugin | `<project root>/.testing-state/` | One runtime serves every project, and a plugin update installs a new cache directory. State beside the runtime would be shared by all projects and lost on update |
+
+`<project root>` is the git top level of the working directory, or the directory itself.
+The implicit `.testing-state/` gets a `.gitignore` of `*`, so evidence does not show up as
+untracked files; delete that file if you want testing history committed. To put state elsewhere — for example inside the
 repository under test, so testing history travels with the code:
 
 ```bash
@@ -177,7 +186,7 @@ quietly dropping the obligation.
 ## Verify the installation
 
 ```bash
-npm test                           # 361 tests (node --test "tests/*.test.mjs" needs Node >= 21)
+npm test                           # 444 tests (node --test "tests/*.test.mjs" needs Node >= 21)
 node bin/ast.mjs eval run          # 22 cases (16 benchmark + 6 regression), 51 checks
 node scripts/validate-repo.mjs     # links, schemas, cross-references
 ```

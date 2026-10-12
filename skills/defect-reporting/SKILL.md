@@ -4,7 +4,7 @@ description: Turn a test failure or observation into an actionable defect report
 when_to_use: "write up this bug", "create a GitHub issue for this", "report this defect", "is this worth filing"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell
 metadata:
-  system_version: 0.12.0
+  system_version: 0.13.0
   role: specialist
 ---
 
@@ -38,6 +38,68 @@ Then reproduce. Three attempts, and record the count:
 | Not attempted | `unverified` — state this prominently |
 
 An intermittent defect is still worth reporting. Pretending it is deterministic is not.
+
+## Prove it: a repro check that fails today
+
+Reproduction counts say how often you saw it. They do not prove it. A defect claim
+(`defect`, `regression`, `security-issue`, `accessibility-violation`, `performance-issue`,
+`data-integrity-issue`) is **confirmed** only by an executable check that fails today on the
+assertion encoding the bug — and will pass once it is fixed. The engine decides this, not
+you:
+
+1. Record the candidate with `finding add` (below). It starts **unverified**.
+2. Write the smallest check that encodes the bug: a test asserting the expected behaviour,
+   or a script that exits non-zero while the bug is present. Match the repo's test
+   conventions; keep it out of the gating suite until fixed (a `bugbash` tag or directory).
+3. Run it linked to the finding:
+
+   ```json
+   {"goal":"Repro FIND-00001","method":"playwright-script","reproduces":"FIND-00001","test_files":["tests/bugbash/order-persist.spec.ts"],"command":"npx playwright test tests/bugbash/order-persist.spec.ts"}
+   ```
+
+   `exec start` → `evidence capture -- <command>` → `exec finish` with `"status":"FAILED"` and
+   the **real** failure signals (`"assertion-mismatch"`, `"data-not-persisted"`, …).
+
+If the run you found the bug in already is such a check (an API test that failed on the
+assertion), linking the finding with `executionId` is enough. Nothing more to do.
+
+What does **not** confirm: a failure classified as anything but `product-defect` (a
+locator not found or a timeout means the *test* is wrong — fix it and re-run); evidence that
+is only your own sentence or `echo FAILED`; a run with no recorded command. If the repro
+**passes**, the claim is refuted: reject it as `not-reproduced`, or write a better repro.
+If the repro genuinely cannot run (sandbox down), hold it: `exec not-run` with `reproduces`
+and a blocking uncertainty.
+
+Check where each finding stands at any time:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" finding verify
+```
+
+`validate --final` fails while a `major`+ defect claim is unverified or refuted. Minor ones
+are reported as unverified. The report labels every defect **Confirmed** (with its repro
+command) or not.
+
+## Triage candidates out — with a citation
+
+Explorers produce false positives. Before writing a repro, rule out the usual ones, and
+reject with a reason someone else can check:
+
+| `--class` | When |
+| --- | --- |
+| `explorer-artifact` | The tool could not do what a user can: new-tab links, lazy-loaded images, hover-only menus |
+| `environment` | Local setup, not the product: missing env var, unstarted service, stale build |
+| `intended-design` | The behaviour is deliberate — cite the code, spec or ticket that says so |
+| `fixture-gap` | The seed or test data does not cover the state you hit |
+| `not-reproduced` | A repro check passed |
+| `out-of-scope` | Real, but outside what this session was asked to test |
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" finding reject FIND-00004 --class intended-design --reason "Discount applies at the payment step by design" --cite "src/checkout/pricing.ts:88"
+```
+
+All three are required. Rejected candidates are listed in the report with their citation,
+never silently dropped. Read the source before rejecting — "probably intended" is a guess.
 
 ## Record it
 
@@ -105,9 +167,13 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" finding promote FIND-00001 --authorised
 - already written and confirmed in the ledger
 - no explicit user authorisation **in this session**
 - kind is `observation` — observations go in the report, not the tracker
+- the defect is not **confirmed** by a failing repro check — prove it first. Only if the
+  user explicitly asks for an unverified issue, pass `--allow-unverified`; the rendered
+  issue then leads with "Unverified" automatically
 
 Warnings do not block but change the content: confidence below 0.6 must **lead** the issue
-body with the uncertainty; unverified reproduction must be stated plainly.
+body with the uncertainty; unverified reproduction must be stated plainly. A confirmed
+issue leads with its repro command, so the developer can watch it go green.
 
 ## Filing
 
@@ -164,11 +230,9 @@ ticket and the rendered content, and you finish it:
 # perform the call with your own GitHub MCP tools, then:
 ```
 
-`response.json`:
-
-```json
-<the provider response>
-```
+`response.json` is the provider's raw response, saved unedited. `adapter complete --example`
+shows the shape for a GitHub issue. The engine reads the identifier back from GitHub itself,
+so an edited or invented response does not confirm anything.
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" adapter complete --ticket WT-… --input response.json

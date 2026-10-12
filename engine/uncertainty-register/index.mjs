@@ -22,6 +22,7 @@ export function raise({
   blocksCategories = [],
   nextAction,
   owner = 'agent',
+  userQuote = null,
   raisedByExecution = null,
   evidence = [],
   independentWork = [],
@@ -52,6 +53,7 @@ export function raise({
     provenance: provenance({ sessionId: session?.session_id, skillName, now }),
   };
   if (session) rec.session_id = session.session_id;
+  if (userQuote) rec.user_quote = userQuote;
   if (raisedByExecution) rec.raised_by_execution = raisedByExecution;
 
   state.put('uncertainties', id, rec, 'uncertainty');
@@ -89,7 +91,7 @@ export function noteIndependentWork(id, item) {
 }
 
 export function open() {
-  return state.list('uncertainties').filter((u) => u.status !== 'resolved');
+  return state.listForSession('uncertainties').filter((u) => u.status !== 'resolved');
 }
 
 /**

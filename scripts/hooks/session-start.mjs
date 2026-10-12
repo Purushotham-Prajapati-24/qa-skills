@@ -25,9 +25,11 @@ function emit(additionalContext) {
 }
 
 try {
-  const stateDir = process.env.AST_STATE_DIR
-    ? path.resolve(process.env.AST_STATE_DIR)
-    : path.join(ROOT, 'state');
+  // Same resolution as the CLI (flag/env, in-project runtime, or <project>/.testing-state), so
+  // the hook never looks at a different state directory than the agent's commands write to.
+  const { pathToFileURL: toUrl } = await import('node:url');
+  const { stateRoot } = await import(toUrl(path.join(ROOT, 'engine', 'core', 'paths.mjs')).href);
+  const stateDir = stateRoot();
   const sessionFile = path.join(stateDir, 'testing-state.json');
 
   if (!fs.existsSync(sessionFile)) process.exit(0);
@@ -46,8 +48,19 @@ try {
     );
   }
   if (blockers) lines.push(`${blockers} blocker(s) are still open.`);
+  try {
+    const { pathToFileURL } = await import('node:url');
+    const { setStateRoot } = await import(pathToFileURL(path.join(ROOT, 'engine', 'core', 'paths.mjs')).href);
+    setStateRoot(stateDir);
+    const { outstanding } = await import(pathToFileURL(path.join(ROOT, 'engine', 'evaluation-engine', 'process-completeness.mjs')).href);
+    const q = outstanding();
+    if (!q.done) lines.push(`${q.count} item(s) are still owed before validate --final can pass (committed scenarios, unrun tests, unproven defects and the like).`);
+  } catch {
+    // The count is a courtesy; the instruction below stands without it.
+  }
+  const cli = `node "${path.join(ROOT, 'bin', 'ast.mjs').replace(/\\/g, '/')}"`;
   lines.push(
-    'Before starting anything new, run `node bin/ast.mjs session resume` from the plugin root and follow skills/testing-orchestrator/workflows/recovery.md.',
+    `Do NOT start a new session. Continue this one: run \`${cli} session resume\` (it lists what is owed and the next action), then loop on \`${cli} todo\`. Follow skills/testing-orchestrator/workflows/recovery.md.`,
   );
 
   emit(lines.join('\n'));

@@ -3,6 +3,239 @@
 Semantic versioning. See [docs/versioning.md](docs/versioning.md) for what is versioned
 independently — document schemas and policy files carry their own versions.
 
+## [0.13.0] - 2026-10-12
+
+Driven by one complaint: an agent would plan the testing, run a fraction of it, and report
+the session as finished -- and needed a human, several times, to make it actually execute what
+it had planned. The theme is **execution you can rely on without supervision**: a plan is a
+commitment the engine enforces, a written test must run, a defect must be proven by a failing
+repro check, a hold must name a real blocker, and a session survives interruptions,
+compactions and parallel explorers without losing or inventing work.
+
+### Changed (behaviour) -- read before upgrading
+
+- **State location for shared runtimes.** With no `--state`/`AST_STATE_DIR`, a user-scope
+  (`--user`) or plugin install now keeps state in `<project root>/.testing-state/` instead of
+  beside the runtime. Project installs are unchanged (`.claude/ast/state/`). An existing
+  user-scope or plugin session is not moved: point `AST_STATE_DIR` at the old directory to
+  finish it.
+- **What counts as coverage is stricter**, for every floor: a finished run backed by real
+  evidence (an artifact or a completed command that ran something), or a hold linked to an open
+  blocker the agent cannot clear itself (a user-owned hold must quote the user). Interrupted
+  runs, evidence-less claims, hand-typed evidence, `echo PASSED`, timed-out commands and the
+  agent's own deferrals no longer count. Sessions that passed `validate --final` on 0.12.0 may
+  not pass on 0.13.0 -- that is the point.
+- **`validate --final` demands more**: a persisted plan with must-test scenarios covering every
+  floor category and high/critical feature; every committed scenario run (or legitimately
+  held); every test file written during the session run; every major+ defect claim confirmed by a
+  failing repro check, held, or rejected with a citation; a disposition for every applicable
+  P2/P3 category.
+- **Results are final.** A finished execution cannot be re-finished; a re-run is a new execution.
+- **`session start` refuses to replace a recent unfinished session**; use `session resume`, or
+  `--new` to abandon it deliberately.
+- **Unconfirmed defects are not filed** to GitHub or Jira unless the user asks
+  (`--allow-unverified`).
+- **Judgements are per session**: a new session no longer inherits the previous session's runs,
+  decisions, findings or applicability matrix.
+- **Hooks**: `--hooks` now also wires `UserPromptSubmit` and a `Stop` gate that refuses to end the
+  turn while `ast todo` lists owed work; `SessionStart` also fires after compaction.
+
+### Added
+
+- **Ideas adopted from tester-army/e2e, enforced in code** (`tests/defect-confirmation.test.mjs`,
+  14 tests, each rule seen failing under a targeted mutation). Source: the tester-army/e2e
+  comparison of 2026-10-08.
+  - **Confirmed defects.** A defect claim (`defect`, `regression`, `security-issue`,
+    `accessibility-violation`, `performance-issue`, `data-integrity-issue`) is confirmed only
+    by a linked execution that is a repro check failing today: a real run, FAILED, classified
+    `product-defect` (not locator/timeout/environment/setup), with a captured non-zero exit or
+    a failing per-test result from a command that ran something, and a recorded command to
+    re-run it. Link with the run it was found in, or a later run with the new `reproduces`
+    field. Otherwise it is `held` (repro on a real blocker), `refuted` (repro passed),
+    `rejected` or `unverified`. Computed, never stored. `validate --final` fails while a
+    `major`+ claim is unverified or refuted (`unconfirmed-defect`); minor ones are advisory.
+    e2e describes this rule in prose that its CLI does not check; here it is a gate.
+  - **Issues are filed only for confirmed defects.** `finding promote` and the GitHub/Jira
+    adapters refuse an unconfirmed defect unless the user explicitly asks
+    (`--allow-unverified`). The rendered issue then leads with "Unverified"; a confirmed
+    one leads with its repro command.
+  - **`finding reject`** with a required `--class` (`explorer-artifact`, `environment`,
+    `intended-design`, `fixture-gap`, `not-reproduced`, `out-of-scope`), `--reason` and
+    `--cite`. **`finding verify`** shows each finding's status and why. The report labels
+    every defect, keeps rejected candidates out of "Needs attention", and lists them under
+    "Rejected candidates" with their citation.
+  - **Exploratory charters.** `plan charters --areas … [--postures …]` generates one
+    must-test `exploratory` scenario per area × posture. The five postures and their personas
+    are borrowed from e2e's bug bash. New scenario fields: `area`, `posture`, `persona`. The
+    scenario floor enforces that every charter was explored. Planning §8c covers fan-out to
+    up to four `browser-explorer` subagents, triage, proof and reporting; the agent runs one
+    charter, records its run, and files candidates only.
+  - **Classifier triage signals**: `explorer-artifact` (test-defect), `seed-data-gap`
+    (data-failure), `by-design` (expected-behaviour-mismatch).
+  - **Locator and secret rules** for authored browser tests: every locator must resolve to
+    exactly one element on the live page before it is committed; secrets come from the
+    environment, and nothing is screenshotted after a secret is typed.
+  - Not adopted: an `e2e` execution backend. It needs Node ≥ 22.22.3, WSL on Windows, a model
+    key and telemetry opt-out, and it is pre-1.0 with fast churn. It contradicts this
+    project's zero-dependency, offline design. A repository that already uses e2e is still
+    tested through its own suite (`existing-suite`).
+- **Plan persistence and the scenario coverage floor.** Plans are now first-class state
+  objects: `plan save` persists a plan (validated against `testing-plan.schema.json`) and
+  links it to the session via `plan_ref`; `plan show` prints the active plan; `plan progress`
+  shows which `must-test` scenarios have linked executions and which remain. The execution
+  schema gains `plan_scenario_id`, which tags an execution to a specific plan scenario.
+  `validate --final` enforces a third coverage floor: every `must-test` scenario in the
+  persisted plan must have an execution linked via `plan_scenario_id` — a real run of any
+  outcome, or a BLOCKED/DEFERRED `exec not-run` that links an uncertainty. A plan that lives
+  only in a Markdown document is invisible to the floor and cannot satisfy it. The planning
+  workflow now mandates `plan save` after writing the plan, the execution workflow documents
+  `planScenarioId` and directs the agent to execute every must-test scenario without stopping
+  between them, and the escalation policy explicitly bars stopping to ask between planned
+  scenarios. The demo session exercises plan persistence and progress checking.
+- **Plan-to-execution hardening** (`tests/plan-execution-gap.test.mjs`, 21 adversarial
+  tests, each seen failing first). One coverage judge now decides for every floor, `plan
+  progress` and `todo`:
+  - A run counts only when it finished **and** left evidence. INTERRUPTED runs and
+    evidence-less claims no longer satisfy any floor (previously any non-`not-executed`
+    record counted, including a run that was opened and abandoned).
+  - A hold counts only while it links an **open** uncertainty the agent cannot clear itself
+    (a blocking status, or owner `user`/`external`). Agent-owned `deferred` uncertainties no
+    longer satisfy anything. A hold whose blockers are all resolved becomes owed work again
+    (`unblocked-not-rerun`).
+  - NOT_APPLICABLE discharges a scenario or category when backed by a recorded decision
+    (`exec not-run` now accepts `decisionId`) — the legitimate exit that previously forced
+    agents to mislabel inapplicable work as BLOCKED.
+  - Plan commitments ratchet: re-saving a plan (same id or new) cannot drop or downgrade a
+    must-test/blocked scenario; `plan save` warns and the floor keeps enforcing it.
+    `blocked` scenarios need a recorded not-run; `should-test` scenarios need a disposition;
+    a plan with no must-test scenario, or no plan once real work ran, fails `--final`;
+    executions naming an unknown scenario id fail `--final`.
+  - **Authored-test floor**: test files written or changed this session (detected from git
+    since the session's start) must be run by some execution (named in the command, in the
+    new `test_files` field, or in per-test results). A written test is a draft until it runs.
+  - **`ast todo`**: the outstanding-work queue with a next command per item; the orchestrator
+    loops on it until `"done": true` instead of judging completion itself.
+  - Prose: the escalation policy's worked example no longer models "draft the spec so it is
+    ready" (write it and run it against a mock); a five-rung hold ladder defines "no option
+    left"; the non-functional checkpoint no longer stops the session to ask about
+    accessibility, perf-baseline or the security baseline; a self-estimated time budget can
+    no longer justify deferring committed work; `test-author` runs its tests through the CLI
+    so the run is on record; orchestrator rule 5 added.
+- **Residual plan-to-execution gaps closed** (12 more adversarial tests, each seen failing
+  under a targeted mutation of the rule it guards):
+  - **Stop hook** (`scripts/hooks/stop-gate.mjs`): refuses to end the turn while `ast todo`
+    lists owed work and hands the queue back. Progress means an owed item was discharged or a
+    new execution was recorded, so legitimate work that surfaces new gaps is never penalised.
+    After three refusals without progress it releases (it can never trap a session). Sessions
+    idle for 12h are not gated; `AST_STOP_GATE=off` disables it.
+  - **UserPromptSubmit hook** (`scripts/hooks/record-user-prompt.mjs`) records what the user
+    says into `user_statements`; `session said --quote` is the labelled fallback. A user-owned
+    hold with a non-blocking status now counts only when its new `user_quote` is found in the
+    request or a recorded statement. Calling your own deferral the user's no longer works.
+  - **Evidence must be real**: a run counts only with at least one `anchored` evidence item
+    from a command that ran something. Hand-typed evidence (`asserted`) and no-op commands
+    (`echo PASSED`, `node -e 0`, `cmd /c echo`) never make a run count. `evidence capture` now
+    quotes argv elements containing spaces, so the recorded command is faithful.
+  - **Category-matched links**: a run of a different category linked to a scenario does not
+    discharge it (`scenario-category-mismatch`). Runs linked to a scenario inherit its
+    category and feature when they state none.
+  - **Authored tests by content**: a snapshot of every test file's hash is taken at session
+    start, so new or rewritten tests are found regardless of mtime, and outside git too.
+  - **Plan quality is enforced**: the plan must contain a committed scenario for every floor
+    category and for every high inventory item (two for a critical one, happy path and edge
+    case), via the new scenario `feature` field.
+  - **Disposition floor**: every applicable P2/P3 category needs a run or a recorded skip.
+  - **Report**: new "Plan vs executed" section (ran / held / not covered, never conflated) and
+    "Tests written this session" section; `plan_progress` and `authored_tests` on the record.
+
+### Fixed (continuity and workflow audit, round two, 2026-10-12)
+
+`tests/continuity-round2.test.mjs` (9 tests; 7 targeted mutations, all caught).
+
+- **Every project shared one session under a user-scope or plugin install.** State defaulted
+  to `<runtime>/state`, and a user-scope runtime (`~/.claude/ast`) or a plugin serves every
+  project. Project TWO saw project ONE's session; starting it either archived ONE's live
+  session (before the restart guard) or was refused because ONE was unfinished. A plugin update
+  installs a new versioned cache directory, so the session silently "disappeared". With no
+  `--state`/`AST_STATE_DIR`, a runtime outside the project now keeps state in
+  `<project root>/.testing-state/`, which gets a `.gitignore` of `*`. In-project installs keep
+  `.claude/ast/state/`. The hooks use the same resolver as the CLI.
+- **Redaction hung on long runs of word characters.** The free-text `KEY: value` pattern
+  started anywhere with an unbounded prefix and backtracked quadratically: 256 KB of plain
+  text took 242 seconds, and a 40 MB test log hung `evidence capture` (and the agent's tool
+  call) until killed. Matches now start only at a token boundary with a bounded prefix and
+  suffix: 40 MB in 0.3s, with the same keys masked.
+- **`evidence capture` left orphaned processes and choked on big output.** On Windows the
+  command runs through a shell; a timeout killed only the shell, leaving the real process (a
+  hung test, a dev server started by mistake) running. Output was buffered with a 32 MB
+  ceiling. The capture now streams output, keeping the first and last 4 MB of each stream with
+  a truncation marker, and kills the whole process tree on timeout.
+- **Evidence from a command that never finished could back PASSED.** A timed-out or killed
+  command has no exit code, and the gate only refused a non-zero one. Such evidence now
+  downgrades a success claim to INCONCLUSIVE and never counts as coverage.
+- **The queue said "done" while `validate --final` failed.** Open runs, dangling references
+  and schema errors were checked only inside the CLI's `validate`, so `todo` and the Stop gate
+  never saw them, and an agent following the queue stopped one step short. These checks now
+  live in `engine/evaluation-engine/integrity.mjs`, shared by `validate`, `todo` and the Stop
+  gate. With no session at all, `todo` reports `no-session` instead of `done: true`.
+- **`browser-explorer` could not reach a browser.** Its `tools:` allowlist (Read, Glob, Grep,
+  Bash) excluded the MCP browser tools its instructions require, and an allowlist cannot name
+  them here. The allowlist is removed; its instructions bound it instead.
+- **Specialist skills' `exec start` examples never linked a plan scenario** (api, unit, e2e,
+  regression, both browser guides), so runs copied from them counted toward no commitment.
+
+### Fixed (continuity and workflow audit, 2026-10-09)
+
+Found by driving real multi-session, interruption, compaction and parallel flows through the
+CLI, and by executing every documented command and payload. Regression tests:
+`tests/continuity.test.mjs` (11), `tests/docs-workflows.test.mjs` (3) and
+`tests/queue-driven-agent.test.mjs` (2). Each fix was seen failing under a targeted mutation.
+
+- **A second session inherited the first one's work.** Floors, the work queue, metrics, the
+  report and traceability counted every record in the state directory. Yesterday's run
+  covered today's scenario, yesterday's decisions satisfied "no decisions", yesterday's
+  unproven finding blocked an unrelated session, and the report listed another session's
+  runs. All judgements now read `state.listForSession()`. The persisted applicability matrix
+  belongs to the session that evaluated it. Duplicate suppression stays global on purpose.
+- **`session resume` killed live work.** It marked every open run INTERRUPTED, including one a
+  parallel explorer was still running, and wrote the session without the lock. It now
+  finalises only runs with no activity (start or captured evidence) for 10 minutes, or none
+  since a recorded `session interrupt`. Recent runs are listed as `in_flight_executions`.
+  `--interrupt-all` covers the case where nothing else is running. Session writes are locked.
+- **A finished result could be rewritten.** `exec finish` on a run already finished as FAILED
+  turned it into PASSED with no trace. Results are now final: a re-run is a new execution, and
+  both stay on record. `evidence capture` refuses a finished run instead of attaching to nothing.
+- **Resume did not say what was owed.** After a compaction, `session resume` returned the
+  session-start placeholder as `next_action` and no plan state. It now returns `plan_progress`,
+  the first ten `owed` items with next commands, and a `next_action` derived from the queue
+  (`recorded_next_action` keeps the stored one).
+- **Restarting silently abandoned the real session.** `session start` over a recent session with
+  open runs or uncovered commitments now refuses, pointing to `session resume`; `--new`
+  abandons it deliberately. Either way, the old session's open runs are finalised as
+  INTERRUPTED instead of staying "in progress" forever.
+- **The SessionStart hook did not fire after compaction**, the moment continuity is lost. Its
+  matcher now includes `compact`. It reports how much is owed, says not to start a new
+  session, and names the exact CLI path (it used to say "from the plugin root").
+- **`decision next` crashed** with a TypeError on any class it did not know, including
+  `unclassified-no-signals`, which the classifier itself returns when given no signals. The
+  documented classify-then-decide flow broke whenever signals were missing. Every classifier
+  class now has guidance, and an unknown class gets a warning instead of a crash.
+- **The work queue could send an agent to do the same work twice**: a category gap and the
+  committed scenario that covers it were listed as separate items. A gap that an owed scenario
+  discharges is now folded into it (`also_covers`), and the queue is ordered: set-up, then
+  committed work, then proof, then tidying up.
+- **A scenario-id typo was silent until the end.** `exec start` now warns at once when
+  `plan_scenario_id` matches no planned scenario.
+- **Documented payloads the CLI rejected**: discovery.md (missing `affectedScope`), the Jira
+  integration doc (placeholder question), walkthrough C (a placeholder raise of an
+  already-raised blocker) and the orchestrator's `decision next` example (a `"..."` class).
+- **New `uncertainty note`** exposes recording independent work against a blocker, which the
+  escalation policy asked for and no command offered.
+- **`--example` for every command a skill feeds a payload**: added for `exec not-run`,
+  `uncertainty partition`, `decision next`, `evidence add`, `failure classify`,
+  `browser should-automate`, `auth check`, `adapter complete`, `evidence verify`,
+  `write check` and `jira comment`. The orchestrator now says never to write a payload from memory.
+
 ## [0.12.0] - 2026-10-05
 
 Driven by two rounds of field-trial feedback: a Sonnet session that hit friction on an

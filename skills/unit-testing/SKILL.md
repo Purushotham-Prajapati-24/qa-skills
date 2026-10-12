@@ -4,7 +4,7 @@ description: Write, run and assess unit and component tests — the repository's
 when_to_use: "write unit tests", "run the unit suite", "is this covered by tests", "add tests for this function"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.12.0
+  system_version: 0.13.0
   role: specialist
 ---
 
@@ -28,7 +28,7 @@ fixture usage. A test that ignores local convention gets deleted by whoever main
 `exec.json`:
 
 ```json
-{"goal":"Baseline the existing unit suite","method":"existing-suite","testCategory":"unit","command":"npm test","environment":"local"}
+{"goal":"Baseline the existing unit suite","method":"existing-suite","plan_scenario_id":"S-01","testCategory":"unit","command":"npm test","environment":"local"}
 ```
 
 ```bash

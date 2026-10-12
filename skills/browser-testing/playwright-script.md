@@ -52,6 +52,8 @@ has to maintain it.
 | Meaningful failure messages | The person reading CI at 6pm is not you and has no context. |
 | Fast | Over ~10 minutes and it gets skipped, then deleted. |
 | No duplicates | Check whether an existing spec covers this before adding another. |
+| Resolve every locator before you commit it | Against the live page, each locator must match **exactly one** element (`await page.getByRole(...).count()` in a quick probe, or the browser snapshot). Zero means the test is wrong before it runs; two means it will click the wrong one some day. |
+| Secrets come from the environment, never the source | `await page.getByLabel('Password').fill(process.env.TEST_PASSWORD)`. Never hard-code, log or screenshot them; take no screenshot after a secret is typed — redaction covers text, not pixels. Prefer a stored auth state (`storageState`) created once in a setup step. |
 
 A test that exercises code without meaningful assertions is not coverage. It is a
 coverage *number*, which is worse than none because it creates false confidence.
@@ -84,7 +86,7 @@ test.describe('guest checkout', () => {
 `exec.json`:
 
 ```json
-{"goal":"Guest checkout creates an order","method":"playwright-script","testCategory":"e2e","decisionId":"DEC-00007","command":"npx playwright test checkout --reporter=json --trace=on","environment":"local-docker"}
+{"goal":"Guest checkout creates an order","method":"playwright-script","plan_scenario_id":"S-01","testCategory":"e2e","decisionId":"DEC-00007","command":"npx playwright test checkout --reporter=json --trace=on","environment":"local-docker"}
 ```
 
 ```bash

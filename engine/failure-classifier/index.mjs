@@ -58,7 +58,7 @@ const RULES = [
   },
   {
     class: 'data-failure',
-    any: ['fixture-missing', 'seed-mismatch', 'unique-constraint', 'stale-test-data', 'foreign-key-violation'],
+    any: ['fixture-missing', 'seed-mismatch', 'seed-data-gap', 'unique-constraint', 'stale-test-data', 'foreign-key-violation'],
     weight: 0.7,
     note: 'Test data did not match what the test assumed.',
   },
@@ -73,13 +73,13 @@ const RULES = [
     // harness-invocation-error / no-tests-executed: the runner died or matched nothing before
     // any test ran (a wrong path, a bad flag, a filter that selects zero tests). That run says
     // nothing about the product, and before these existed there was no token to say so.
-    any: ['brittle-selector', 'hardcoded-date', 'test-order-dependency', 'assertion-typo', 'obsolete-expectation', 'harness-invocation-error', 'no-tests-executed'],
+    any: ['brittle-selector', 'hardcoded-date', 'test-order-dependency', 'assertion-typo', 'obsolete-expectation', 'harness-invocation-error', 'no-tests-executed', 'explorer-artifact'],
     weight: 0.75,
     note: 'The test is wrong. Fix it and re-run; this is not a product signal.',
   },
   {
     class: 'expected-behaviour-mismatch',
-    any: ['spec-disagrees-with-test', 'acceptance-criteria-conflict'],
+    any: ['spec-disagrees-with-test', 'acceptance-criteria-conflict', 'by-design'],
     weight: 0.65,
     note: 'The test and the requirement disagree. Resolve the requirement before touching either.',
   },

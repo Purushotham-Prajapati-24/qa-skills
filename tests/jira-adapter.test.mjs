@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { useTempState } from './helpers.mjs';
+import { useTempState, confirmWithRepro } from './helpers.mjs';
 import { writeJson, sha256String } from '../engine/core/fsjson.mjs';
 import { p, LAYOUT } from '../engine/core/paths.mjs';
 import * as state from '../engine/state-engine/index.mjs';
@@ -43,12 +43,14 @@ function fakeExec(result = {}) {
 }
 
 function newFinding() {
-  return defects.create({
+  const f = defects.create({
     title: `Saved card not persisted ${Math.random()}`,
     kind: 'defect', severity: 'major', confidence: 0.85, epistemicClass: 'observed',
     component: `checkout-${Math.random()}`,
     reproduction: { expected: 'card saved', actual: 'card missing after reload', reproducible: 'always', attempts: 3 },
   });
+  confirmWithRepro(f.finding_id);
+  return state.get('findings', f.finding_id);
 }
 
 const DESCRIPTION = {

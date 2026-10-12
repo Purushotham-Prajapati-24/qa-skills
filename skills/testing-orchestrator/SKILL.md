@@ -4,7 +4,7 @@ description: Plan and run software testing for a repository, a pull request, a c
 when_to_use: "test this repo", "test this PR", "test the checkout flow", "what should we test", "create a test plan", "explore the app for bugs", "create regression tests", "read this Jira ticket and plan testing", "continue testing", "what's untested", "run QA on this"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.12.0
+  system_version: 0.13.0
   role: orchestrator
 ---
 
@@ -14,7 +14,7 @@ You are acting as a senior SDET. Your job is **not** to run every kind of test. 
 work out what is worth testing here, prove what you find, and be precise about what you
 did not do.
 
-Four rules override everything else in this skill:
+Five rules override everything else in this skill:
 
 1. **No claim without evidence.** "Absence of failure" is not "works". If you cannot
    point at execution evidence, the status is `INCONCLUSIVE`.
@@ -25,6 +25,9 @@ Four rules override everything else in this skill:
 4. **The report you hand the user is the one the CLI rendered.** If you wrote prose
    instead, you did not run this system — a rendered report is provable
    (`ast report verify`); hand-written prose is not, no matter how accurate.
+5. **A plan is a commitment and a written test is a draft until it runs.** Persist the plan,
+   execute every committed scenario, run every test you write, and hold work only when no
+   option is left. `ast todo` must be empty before you finish — not your sense that you are.
 
 ## The CLI does the bookkeeping
 
@@ -58,6 +61,10 @@ unvalidated state directory is a corrupt session.
 
 Everything it prints is JSON. Feed it straight back into your reasoning. If a command
 fails, that is a real signal — do not work around it by writing state files by hand.
+
+**Never write an `--input` payload from memory.** Every command that takes one prints a valid
+example of it: `<command> --example > file.json`, then edit the values. Wrong field names are
+the most common way a correct plan fails to execute.
 
 ## The loop
 
@@ -116,6 +123,9 @@ per-feature coverage, the same `validate --final` floors.
    profile. The floors then make every applicable P0/P1 category, every applicable mandatory
    baseline and every critical feature either run or be recorded BLOCKED with a linked
    uncertainty.
+6. `plan save` — one must-test scenario per floor category and per critical inventory item
+   (happy path plus an edge case), then loop on `ast todo` until it is empty. No pauses
+   between scenarios.
 
 Record the user's instruction as both the authorisation quote and the depth decision
 rationale. This eliminates multiple back-and-forth exchanges. The user said "test
@@ -314,8 +324,11 @@ deciding, you were defaulting.
 `next.json`:
 
 ```json
-{"status":"FAILED","failureClass":"...","remainingWork":["..."]}
+{"status":"FAILED","failureClass":"data-failure","remainingWork":["accessibility scan of /checkout"]}
 ```
+
+`failureClass` is the `class` that `failure classify` returned. Then take the next owed item
+from `ast todo` — the queue, not your memory, says what is left.
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" decision next --input next.json
@@ -336,10 +349,12 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" failure classify --input signals.json
 
 ## Finishing
 
-You are done when every planned item has a terminal status *and* you can state what was
-not tested.
+You are done when `ast todo` says `"done": true` *and* you can state what was not tested.
+Loop on it during execution — take the next item, run it, ask again — rather than deciding
+for yourself that the session is complete.
 
 ```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" todo
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" validate --final
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" report generate --input context.json
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" report verify <the markdown_path just printed>
@@ -347,7 +362,7 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" report verify <the markdown_path just p
 
 `ast validate --final` checks every record against its schema, flags dangling references
 and unfinished executions, and — only under `--final` — turns a blocking process gap into a
-failure rather than a warning. The blocking gaps now include two **coverage floors**:
+failure rather than a warning. The blocking gaps include these **coverage floors**:
 
 - **Category floor** — every applicable P0/P1 category in the persisted applicability matrix,
   and every applicable `mandatory` baseline (`security`, `input-validation`, `accessibility`,
@@ -359,6 +374,32 @@ failure rather than a warning. The blocking gaps now include two **coverage floo
   `functionality_inventory` must have an execution tagged with its `feature` id. A profile
   that shows a UI, an API or a critical component but has **no** inventory fails too, so
   skipping the inventory does not skip the floor — on a URL or a repository.
+- **Scenario floor** — every scenario any plan this session committed to (`must-test` or
+  `blocked`, at the strongest obligation it ever had) needs a qualifying execution of the
+  same category linked via `plan_scenario_id`; every `should-test` needs at least a recorded
+  disposition. No plan, a plan with no must-test scenario, or a plan that leaves out a floor
+  category or under-plans a feature (one scenario per high item, two per critical) also fails.
+- **Disposition floor** — every other applicable category (P2/P3) needs a run or a
+  recorded skip with its reason. Nothing applicable vanishes.
+- **Authored-test floor** — every test file written or changed this session (found by
+  content against a snapshot taken at session start, with or without git) must have been
+  run by some execution.
+- **Defect-proof floor** — every `major`+ defect claim must be **confirmed** by a repro
+  check that fails today on the assertion encoding the bug (`"reproduces": "FIND-…"`), held
+  on a real blocker, or rejected with a cited reason (`finding reject`). `finding verify`
+  shows where each stands; the report labels each one. See the `defect-reporting` skill.
+
+What qualifies, for every floor: a finished run backed by real evidence — an artifact or
+captured output, from a command that actually ran something — whatever the outcome; or a
+hold linked to an *open* uncertainty you cannot clear yourself (a blocking status, or a
+user-owned hold whose `user_quote` matches the user's recorded words); or NOT_APPLICABLE
+backed by a decision. INTERRUPTED runs, claims with no evidence, your own sentences filed as
+evidence, `echo PASSED`, your own deferrals, and holds whose blocker was resolved do not.
+
+**Hooks make this structural.** With hooks installed, the Stop hook refuses to end the turn
+while `ast todo` lists owed work (it releases after three refusals without progress), and
+the UserPromptSubmit hook records what the user says, so user-attributed holds can be
+checked against the user's actual words.
 
 Together these convert "honest thin report" into "cannot finish until breadth is real or
 explicitly blocked". Fix what it finds before generating the report, not after.

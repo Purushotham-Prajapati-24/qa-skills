@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { useTempState } from './helpers.mjs';
+import { useTempState, confirmWithRepro } from './helpers.mjs';
 import { writeJson, sha256String } from '../engine/core/fsjson.mjs';
 import { p, LAYOUT } from '../engine/core/paths.mjs';
 import * as state from '../engine/state-engine/index.mjs';
@@ -49,13 +49,15 @@ function fakeExec(result = {}) {
 }
 
 function newFinding(overrides = {}) {
-  return defects.create({
+  const f = defects.create({
     title: overrides.title ?? `Order is not persisted after payment ${Math.random()}`,
     kind: 'defect', severity: 'critical', confidence: 0.85, epistemicClass: 'observed',
     component: overrides.component ?? `checkout-${Math.random()}`,
     reproduction: { expected: 'an order row exists', actual: 'no order row', reproducible: 'always', attempts: 3 },
     ...overrides,
   });
+  confirmWithRepro(f.finding_id);
+  return state.get('findings', f.finding_id);
 }
 
 test('setup: a session and an authenticated gh CLI', () => {

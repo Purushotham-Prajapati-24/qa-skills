@@ -55,7 +55,7 @@ Open an execution record first — exploration is real work and belongs in the r
 `exec.json`:
 
 ```json
-{"goal":"Explore the changed checkout flow","method":"playwright-mcp","testCategory":"exploratory","decisionId":"DEC-00007","environment":"local"}
+{"goal":"Explore the changed checkout flow","method":"playwright-mcp","plan_scenario_id":"S-01","testCategory":"exploratory","decisionId":"DEC-00007","environment":"local"}
 ```
 
 ```bash

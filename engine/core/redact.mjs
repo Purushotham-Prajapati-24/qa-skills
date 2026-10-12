@@ -73,8 +73,12 @@ export function redactText(input) {
   // a whole segment (db_pass, pass_hash, password(s), passwd, passphrase, passcode, passport) -- the
   // KEY_HINTS lesson again: an open-ended `pass` matched `passed`/`PASSED`/`bypass`, so every
   // downgrade reason read 'from PASSED: "[REDACTED]"' and test counts lost their values.
+  // The key may only START at a token boundary, and its prefix/suffix are bounded. Unbounded
+  // `[A-Za-z0-9_.-]*` that may start anywhere backtracks quadratically over any long run of
+  // word characters (a base64 blob, a minified bundle, a hex dump in a test log): 256 KB took
+  // minutes and a 40 MB capture hung the CLI. Bounded and anchored, it is linear.
   out = out.replace(
-    /(["']?[A-Za-z0-9_.-]*(?:(?<![a-z])pass(?:word|wd|phrase|code|port)?s?(?![a-z])|secret|token|api[-_]?key|apikey|credential|bearer|private[-_]?key|client[-_]?secret|access[-_]?key)[A-Za-z0-9_.-]*["']?\s*[:=]\s*)(["']?)([^\s"',;)]{4,})\2/gi,
+    /(?<![A-Za-z0-9_.-])(["']?[A-Za-z0-9_.-]{0,64}(?:(?<![a-z])pass(?:word|wd|phrase|code|port)?s?(?![a-z])|secret|token|api[-_]?key|apikey|credential|bearer|private[-_]?key|client[-_]?secret|access[-_]?key)[A-Za-z0-9_.-]{0,64}["']?\s*[:=]\s*)(["']?)([^\s"',;)]{4,})\2/gi,
     (_m, head, quote) => `${head}${quote}[REDACTED]${quote}`,
   );
   return out;

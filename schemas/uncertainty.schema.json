@@ -31,6 +31,7 @@
     },
     "next_action": { "type": "string", "minLength": 3 },
     "owner": { "type": "string", "enum": ["agent", "user", "external"] },
+    "user_quote": { "type": "string", "description": "The user's own words that put this on hold (\"you have 30 minutes\"). A user-owned hold with a non-blocking status counts toward the coverage floors only when this quote is found in the session request or a recorded user statement." },
     "raised_by_execution": { "$ref": "common.schema.json#/definitions/executionId" },
     "evidence": { "$ref": "common.schema.json#/definitions/evidenceRefs" },
     "workaround_applied": { "type": "string" },

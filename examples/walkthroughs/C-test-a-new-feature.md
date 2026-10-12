@@ -132,14 +132,9 @@ test('a declined card shows the decline reason and creates no order', async ({ p
 });
 ```
 
-`uncertainty-2.json`:
-
-```json
-{"...":"..."}
-```
-
 ```bash
-node bin/ast.mjs uncertainty raise --input uncertainty-2.json   # (already raised)
+node bin/ast.mjs uncertainty note U-00019 --work "Unit tests for amount validation written and run: 14/14, 2 failing on real defects"
+node bin/ast.mjs uncertainty note U-00019 --work "Payment E2E written and run with the provider mocked at the HTTP boundary: 5/5"
 ```
 
 And the independent work is recorded against the blocker, which is the evidence the agent

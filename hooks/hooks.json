@@ -4,19 +4,46 @@
     "itself -- they are not the agent, and they cannot reason. Keep them small, fast and",
     "fail-open: a hook that crashes must not break the session.",
     "",
-    "Both hooks here are written in Node so they behave identically on Windows and POSIX.",
-    "Both exit 0 on any internal error, on purpose."
+    "Every hook here is written in Node so they behave identically on Windows and POSIX.",
+    "Every hook exits 0 on any internal error, on purpose.",
+    "",
+    "Stop refuses to end the turn while `ast todo` lists owed work, and releases after",
+    "three blocks without progress (AST_STOP_GATE=off disables it). UserPromptSubmit records",
+    "the user's words so user-attributed holds can be verified."
   ],
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "startup|resume|clear",
+        "matcher": "startup|resume|clear|compact",
         "hooks": [
           {
             "type": "command",
             "command": ["node", "${CLAUDE_PLUGIN_ROOT}/scripts/hooks/session-start.mjs"],
             "timeout": 15,
             "statusMessage": "Checking for in-progress testing state..."
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ["node", "${CLAUDE_PLUGIN_ROOT}/scripts/hooks/record-user-prompt.mjs"],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ["node", "${CLAUDE_PLUGIN_ROOT}/scripts/hooks/stop-gate.mjs"],
+            "timeout": 30,
+            "statusMessage": "Checking the testing work queue before stopping..."
           }
         ]
       }

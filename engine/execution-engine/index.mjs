@@ -25,6 +25,9 @@ export function start({
   feature = null,
   decisionId = null,
   planId = null,
+  planScenarioId = null,
+  reproduces = null,
+  testFiles = null,
   command = null,
   cwd = null,
   environment = null,
@@ -38,6 +41,14 @@ export function start({
   now = new Date(),
 } = {}) {
   const session = state.requireSession();
+  if (planScenarioId && (!testCategory || !feature)) {
+    const planned = state.planCommitments()[planScenarioId];
+    testCategory ??= planned?.category ?? null;
+    feature ??= planned?.feature ?? null;
+  }
+  if (reproduces && !state.get('findings', reproduces)) {
+    throw new Error(`"reproduces": ${reproduces} is not a recorded finding. Record the candidate with "finding add" first, then link its repro run to that id.`);
+  }
   const id = nextId('execution', now);
 
   const rec = {
@@ -58,6 +69,9 @@ export function start({
   if (feature) rec.feature = feature;
   if (decisionId) rec.decision_id = decisionId;
   if (planId) rec.plan_id = planId;
+  if (planScenarioId) rec.plan_scenario_id = planScenarioId;
+  if (reproduces) rec.reproduces = reproduces;
+  if (Array.isArray(testFiles) && testFiles.length) rec.test_files = testFiles.map((f) => String(f).replace(/\\/g, '/'));
   if (command) rec.command = command;
   if (cwd) rec.cwd = cwd;
   if (environment) rec.environment = environment;
@@ -93,6 +107,12 @@ export function finish(executionId, {
 } = {}) {
   const rec = state.get('executions', executionId);
   if (!rec) throw new Error(`No such execution: ${executionId}`);
+  // A finished result is a fact. Re-finishing would let a FAILED run be rewritten as PASSED
+  // with no trace; a re-run is a new execution, and both results stay on record.
+  if (rec.finished_at) {
+    throw new Error(`${executionId} already finished as ${rec.status} at ${rec.finished_at}. Results are never rewritten: `
+      + 'start a new execution for the re-run (same plan_scenario_id / reproduces), and both runs stay on record.');
+  }
 
   // One suite run is one execution, so without per-test results a run with 9 passing and 3
   // failing tests reads as nothing but FAILED, and the 9 never reach "What was proven".
@@ -177,8 +197,11 @@ export function finish(executionId, {
  * BLOCKED / SKIPPED / NOT_APPLICABLE items get a first-class, auditable record
  * instead of vanishing from the report.
  */
-export function recordNonExecution({ goal, status, reason, testCategory = null, feature = null, uncertainties = [], now = new Date() }) {
-  const rec = start({ goal, method: 'not-executed', testCategory, feature, now });
+export function recordNonExecution({
+  goal, status, reason, testCategory = null, feature = null, planScenarioId = null,
+  decisionId = null, testFiles = null, reproduces = null, uncertainties = [], now = new Date(),
+}) {
+  const rec = start({ goal, method: 'not-executed', testCategory, feature, planScenarioId, decisionId, testFiles, reproduces, now });
   return finish(rec.execution_id, {
     status,
     statusReason: reason,

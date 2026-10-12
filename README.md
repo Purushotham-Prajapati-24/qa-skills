@@ -8,7 +8,7 @@ about what you did not do.
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node.js-%3E%3D20.6.0-43853D?style=flat-square&logo=node.js&logoColor=white" alt="Node version"></a>
   <a href="#claude-code-plugin-marketplace"><img src="https://img.shields.io/badge/Claude%20Code-Plugin-6B4FBB?style=flat-square" alt="Claude Code Plugin"></a>
   <a href="https://playwright.dev"><img src="https://img.shields.io/badge/Playwright-supported-2EAD33?style=flat-square&logo=playwright&logoColor=white" alt="Playwright"></a>
-  <a href="https://github.com/Purushotham-Prajapati-24/qa-skills/actions"><img src="https://img.shields.io/badge/Tests-361%20passing-success?style=flat-square" alt="Tests"></a>
+  <a href="https://github.com/Purushotham-Prajapati-24/qa-skills/actions"><img src="https://img.shields.io/badge/Tests-444%20passing-success?style=flat-square" alt="Tests"></a>
   <a href="evaluation/README.md"><img src="https://img.shields.io/badge/Benchmark-51%2F51%20passed-blue?style=flat-square" alt="Benchmark"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License"></a>
 </p>
@@ -48,6 +48,12 @@ execution evidence is mechanically downgraded to `INCONCLUSIVE`. A non-zero exit
 test report that ran zero cases, contradicts a `PASSED` claim outright and is rejected
 regardless of what the agent says about it.
 
+**A defect has to be proven.** A bug is *confirmed* only when a repro check fails today on
+the assertion that encodes it, and that check is recorded with its command so it goes green
+when fixed. Until then it is reported as unverified, `validate --final` refuses a serious
+unproven claim, and it cannot be filed to GitHub or Jira. Candidates that turn out to be
+explorer artifacts or intended design are rejected with a cited reason, never silently dropped.
+
 **Breadth is enforced, not hoped for.** The agent lists every page, endpoint and flow it
 finds, from the UI on a website or from routes and handlers in a repository. A repository
 gets the same running-system testing a URL does; passing its unit suite is the starting
@@ -56,9 +62,13 @@ point, not the finish. `validate --final` refuses to finish a session that has:
 - an applicable high-priority category with nothing run;
 - an applicable baseline (security sweep, input edge cases, accessibility, performance
   baseline) with nothing run;
-- a critical feature with no execution tagged to it.
+- a critical feature with no execution tagged to it;
+- a planned must-test scenario that never ran, or no persisted plan at all;
+- a test file written during the session that was never executed.
 
-"Blocked" counts only when the record says why.
+"Blocked" counts only while an open blocker the agent cannot clear itself says why. An
+interrupted run, a claim with no evidence, or the agent's own "out of time" does not count,
+and a hold whose blocker gets resolved becomes owed work again. `ast todo` lists all of it.
 
 **Testing depth is a scored decision, not a guess.** 48 test categories are evaluated
 against an applicability matrix; risk is scored across weighted factors with an explicit
@@ -168,7 +178,7 @@ npx --yes github:Purushotham-Prajapati-24/qa-skills --user
 
 ```bash
 # Pin to a specific tagged release
-npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.12.0
+npx --yes github:Purushotham-Prajapati-24/qa-skills#v0.13.0
 
 # See what would change without writing anything
 npx --yes github:Purushotham-Prajapati-24/qa-skills --dry-run
@@ -177,7 +187,7 @@ npx --yes github:Purushotham-Prajapati-24/qa-skills --dry-run
 npx --yes github:Purushotham-Prajapati-24/qa-skills --only unit-testing,api-testing,browser-testing
 
 # Wire safety hooks into .claude/settings.json
-npx --yes github:Purushotham-Prajapati-24/qa-skills --hooks
+npx --yes github:Purushotham-Prajapati-24/qa-skills --hooks   # recommended: Stop gate on `ast todo`
 
 # Overwrite an existing install
 npx --yes github:Purushotham-Prajapati-24/qa-skills --force
@@ -268,11 +278,21 @@ node bin/ast.mjs session resume            # inspect and resume an in-progress s
 node bin/ast.mjs caps probe                # probe local environment and providers
 node bin/ast.mjs caps declare <verb> <bool>
 
+# Planning
+node bin/ast.mjs plan save --input plan.json   # persist a plan and link it to the session
+node bin/ast.mjs plan show                     # print the active plan (or --id PLAN-00001)
+node bin/ast.mjs plan progress                 # each committed scenario, every attempt, whether it counted
+node bin/ast.mjs plan charters --areas a,b      # exploratory charters (area x posture) for a bug bash
+node bin/ast.mjs todo                          # the work queue: everything still owed before --final passes
+node bin/ast.mjs session said --quote "..."    # record the user's words (the UserPromptSubmit hook does this itself)
+
 # Decision and reasoning
 node bin/ast.mjs risk score --explain      # weighted risk score with confidence band
 node bin/ast.mjs applicability eval        # the 48-category applicability matrix
 node bin/ast.mjs browser decide            # pick a browser testing strategy
 node bin/ast.mjs failure classify          # classify a failure before filing a defect
+node bin/ast.mjs finding verify            # is each defect confirmed by a failing repro check?
+node bin/ast.mjs finding reject <id> --class ... --reason ... --cite ...   # triage a candidate out
 
 # Evidence and integrity
 node bin/ast.mjs evidence capture -- <cmd> # run a real command and hash its output
@@ -342,7 +362,7 @@ see the walkthroughs in [examples/](examples/). Full documentation:
 ## Running the verification suite locally
 
 ```bash
-node --test "tests/*.test.mjs"     # 361 tests
+node --test "tests/*.test.mjs"     # 444 tests
 node bin/ast.mjs eval run          # 51 checks across 22 cases
 node scripts/validate-repo.mjs     # links, schemas, and catalog cross-references
 ```

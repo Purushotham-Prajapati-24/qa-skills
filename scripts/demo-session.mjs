@@ -50,7 +50,7 @@ console.log(`\nSimulated testing session\n  state: ${stateDir}\n`);
 /* ------------------------------------------------------------------ 1. session */
 
 const session = state.startSession({
-  request: 'Test PR #412 — saved-card support in guest checkout',
+  request: 'Test PR #412 — saved-card support in guest checkout. You have 150 minutes.',
   trigger: 'pull-request',
   git: GIT,
   goals: [{
@@ -117,6 +117,38 @@ const browserChoice = browser.decide({
 });
 log('browser method chosen', `${browserChoice.selected} (confidence ${browserChoice.confidence})`);
 
+/* ------------------------------------------------------- 4b. persist a plan */
+
+const savedPlan = state.savePlan({
+  plan_id: 'PLAN-00001',
+  created_at: new Date().toISOString(),
+  objective: 'Validate saved-card payment flow for guest checkout',
+  scope: { in_scope: ['checkout', 'payments', 'saved cards'], out_of_scope: ['inventory', 'shipping'] },
+  applicability: [
+    { category: 'e2e', applicable: true, reason: 'multi-step user paths present' },
+    { category: 'authn-authz', applicable: true, reason: 'card ownership must be enforced' },
+    { category: 'regression', applicable: true, reason: 'existing suite covers cart and tax logic' },
+    { category: 'localization', applicable: false, reason: 'no i18n resources in the repository' },
+  ],
+  scenarios: [
+    { id: 'S-01', title: 'Baseline unit suite at head', category: 'regression', method: 'existing-suite', obligation: 'must-test' },
+    { id: 'S-02', title: 'Cross-user card isolation (IDOR)', category: 'authn-authz', method: 'api-client', obligation: 'must-test' },
+    { id: 'S-03', title: 'Accessibility scan of checkout', category: 'accessibility', method: 'static-analysis', obligation: 'must-test' },
+    { id: 'S-04', title: 'Payment E2E with real provider', category: 'e2e', method: 'playwright-script', obligation: 'should-test' },
+    // Every category the coverage floor will demand gets a committed scenario now, so the plan
+    // is the complete list the session works from -- not a subset the floor tops up at the end.
+    ...completeness.floorCategories(matrix.matrix)
+      .filter((r) => !['regression', 'authn-authz', 'accessibility'].includes(r.category))
+      .map((r, i) => ({ id: `S-${String(10 + i).padStart(2, '0')}`, title: `${r.category} baseline for the payment path`, category: r.category, method: 'api-client', obligation: 'must-test' })),
+  ],
+  exit_criteria: [
+    'All must-test scenarios have a terminal execution',
+    'No blocker-severity finding is open',
+  ],
+  provenance: { skill_version: '0.13.0', created_at: new Date().toISOString(), created_by: 'agent' },
+});
+log('plan saved', savedPlan.plan_id);
+
 const dec = decisions.record({
   question: 'How should the changed saved-card checkout UI be tested?',
   category: 'browser-method',
@@ -150,6 +182,7 @@ const e1 = execution.start({
   goal: 'Baseline: full unit suite at head',
   method: 'existing-suite', testCategory: 'regression', git: GIT,
   environment: 'local', command: 'npm test', decisionId: dec.decision_id,
+  planScenarioId: 'S-01',
 });
 const ev1 = evidence.captureOutput({
   argv: 'npm test', cwd: '/repo', exitCode: 0, durationMs: 12480,
@@ -173,6 +206,7 @@ const e2 = execution.start({
   goal: "User A cannot select user B's saved card",
   method: 'api-client', testCategory: 'authn-authz', git: GIT,
   environment: 'local-docker', command: 'npm run test:api -- saved-cards', decisionId: dec.decision_id,
+  planScenarioId: 'S-02',
 });
 const ev2 = evidence.captureOutput({
   argv: 'npm run test:api -- saved-cards', cwd: '/repo', exitCode: 1, durationMs: 3120,
@@ -183,7 +217,7 @@ const finished = execution.finish(e2.execution_id, {
   status: 'FAILED',
   statusReason: "GET /api/payment-methods/:id returned another user's card with HTTP 200.",
   evidence: [ev2.evidence_id],
-  signals: ['assertion-mismatch', 'http-403'],
+  signals: ['assertion-mismatch'],
   testResults: [{ name: "saved card belonging to another user is not selectable", status: 'FAILED', file: 'test/api/saved-cards.test.ts', validates_requirements: ['REQ-3'] }],
 });
 log('failure classified', `${finished.record.failure_classification.class} (confidence ${finished.record.failure_classification.confidence})`);
@@ -215,6 +249,21 @@ const dup = defects.create({
 });
 log('duplicate suppressed', `${dup.finding_id} -> duplicate_of ${dup.duplicate_of}`);
 
+// An explorer candidate, triaged out before anyone writes a repro for it. The rejection needs a
+// class, a reason and a citation, and it stays visible in the report.
+const candidateFinding = defects.create({
+  title: 'Terms link on checkout opens nothing when clicked',
+  kind: 'defect', severity: 'minor', confidence: 0.5, epistemicClass: 'observed',
+  component: 'checkout/footer',
+  reproduction: { expected: 'terms page opens', actual: 'explorer saw no navigation', reproducible: 'once', attempts: 1 },
+});
+defects.reject(candidateFinding.finding_id, {
+  reasonClass: 'explorer-artifact',
+  reason: 'The link opens the terms in a new tab (target=_blank), which the explorer does not follow; it works for a user.',
+  citation: 'src/checkout/Footer.tsx:22',
+});
+log('candidate rejected', `${candidateFinding.finding_id} explorer-artifact (cited)`);
+
 /* --------------------------------------- 8. a blocker that does not stop work */
 
 const u1 = uncertainty.raise({
@@ -227,7 +276,7 @@ const u1 = uncertainty.raise({
   independentWork: [
     'Ran the unit suite (211/211 at abc1234)',
     'Ran API tests against a mocked provider (11/12)',
-    'Drafted e2e/payment.spec.ts so it is ready either way',
+    'Wrote e2e/payment.spec.ts and ran it with the provider mocked at the HTTP boundary (5/5)',
   ],
 });
 execution.recordNonExecution({
@@ -261,7 +310,7 @@ const recovery = state.recover();
 log('recovery ran', `${recovery.orphaned_executions.length} execution(s) marked INTERRUPTED`);
 
 // Resume: the interrupted scan is re-run from the start as a new execution, never "continued".
-const e4 = execution.start({ goal: 'Accessibility scan of the checkout pages (restarted after interruption)', method: 'static-analysis', testCategory: 'accessibility', git: GIT, environment: 'local', command: 'npx axe http://localhost:3000/checkout' });
+const e4 = execution.start({ goal: 'Accessibility scan of the checkout pages (restarted after interruption)', method: 'static-analysis', testCategory: 'accessibility', git: GIT, environment: 'local', command: 'npx axe http://localhost:3000/checkout', planScenarioId: 'S-03' });
 const ev4 = evidence.captureOutput({
   argv: 'npx axe http://localhost:3000/checkout', cwd: '/repo', exitCode: 0, durationMs: 4100,
   stdout: '0 violations found on /checkout (WCAG 2.1 AA ruleset)', summary: 'axe: 0 violations on /checkout',
@@ -269,6 +318,20 @@ const ev4 = evidence.captureOutput({
 });
 execution.finish(e4.execution_id, { status: 'PASSED', statusReason: 'axe WCAG 2.1 AA ruleset on /checkout at abc1234: 0 violations.', evidence: [ev4.evidence_id] });
 log('interrupted scan restarted', `${e4.execution_id} PASSED`);
+
+/* ---------------------------------------------- 10a. plan progress check */
+
+const progress = completeness.planProgress();
+log('plan progress', `${progress.must_test_executed}/${progress.must_test} must-test scenarios covered`);
+
+// S-04 is should-test: it needs a visible disposition, not silence. The real-provider run is
+// held by U-00001 (user-input-required), so it is recorded as such and linked to the scenario.
+execution.recordNonExecution({
+  goal: 'Payment E2E with the real provider (should-test S-04)',
+  status: 'NEEDS_USER_INPUT',
+  reason: 'The mocked-provider run covered the journey; only the real provider hop needs a sandbox key.',
+  testCategory: 'e2e', planScenarioId: 'S-04', uncertainties: [u1.id],
+});
 
 /* ------------------------------ 10b. waiting on the user, recorded as such */
 
@@ -334,35 +397,51 @@ log('assignment without a name', `allowed=${assignAttempt.allowed}`);
 const mergeAttempt = auth.check({ action: 'github.merge_pr', target: '#418', userAuthorised: true });
 log('merge refused by default', `allowed=${mergeAttempt.allowed} (${mergeAttempt.level})`);
 
-/* ----------------- 11b. the coverage floor: no applicable category silently dropped */
+/* ----------------- 11b. the coverage floor: no committed or applicable work silently dropped */
 
-// The matrix was persisted in step 3. Every category the floor enforces (applicable P0/P1,
-// plus applicable mandatory baselines) that this session never reached gets an explicit
-// DEFERRED record tied to one uncertainty -- the same rule `validate --final` applies, taken
-// from the engine rather than restated here, so the demo cannot drift from it.
-const reached = new Set(state.list('executions').filter(completeness.countsAsCoverage).map((e) => e.test_category).filter(Boolean));
-const unreached = completeness.floorCategories(matrix.matrix)
-  .filter((r) => !reached.has(r.category))
-  .map((r) => r.category);
-if (unreached.length) {
+// Whatever the plan committed to and the session did not reach gets an explicit DEFERRED
+// record, linked to its scenario and to one uncertainty. The deferral is user-owned and quotes
+// the user's own words from the request ("You have 150 minutes"); an agent-owned "out of
+// time", or a user-owned one without the user's words, would not count toward any floor.
+// The judgement comes from the engine (planProgress), so the demo cannot drift from it.
+const owed = completeness.planProgress().scenarios.filter((s) => ['must-test', 'blocked'].includes(s.obligation) && !s.executed);
+if (owed.length) {
   const uFloor = uncertainty.raise({
-    question: `Categories the coverage floor enforces, not reached in this time-boxed session: ${unreached.join(', ')}`,
+    question: `Committed scenarios not reached inside the user's 150-minute budget: ${owed.map((s) => s.id).join(', ')}`,
     status: 'deferred',
-    impact: 'security, input and data behaviour of the payment path is untested until a follow-up pass runs',
-    affectedScope: unreached, blocksCategories: unreached,
-    nextAction: 'schedule a follow-up session for the security sweep and input edge cases on staging, plus a disposable database for data and migration tests',
     owner: 'user',
+    userQuote: 'You have 150 minutes',
+    impact: 'security, input and data behaviour of the payment path is untested until a follow-up pass runs',
+    affectedScope: owed.map((s) => s.id), blocksCategories: [...new Set(owed.map((s) => s.category))],
+    nextAction: 'schedule a follow-up session for the security sweep and input edge cases on staging, plus a disposable database for data and migration tests',
   });
-  for (const category of unreached) {
+  for (const sc of owed) {
     execution.recordNonExecution({
-      goal: `${category} testing`,
+      goal: sc.title,
       status: 'DEFERRED',
-      reason: 'The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.',
-      testCategory: category, uncertainties: [uFloor.id],
+      reason: 'The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.',
+      testCategory: sc.category, planScenarioId: sc.id, uncertainties: [uFloor.id],
     });
   }
 }
-log('coverage floor', unreached.length ? `${unreached.length} unreached floor categor${unreached.length === 1 ? 'y' : 'ies'} recorded DEFERRED` : 'every floor category reached');
+
+// Applicable categories below the floor (P2/P3) do not have to run, but they may not vanish:
+// each gets a visible SKIPPED disposition with its reason.
+const floorSet = new Set(completeness.floorCategories(matrix.matrix).map((r) => r.category));
+const touched = new Set(state.list('executions').filter((e) => e.finished_at && e.status !== 'INTERRUPTED').map((e) => e.test_category).filter(Boolean));
+const below = matrix.matrix.filter((r) => r.applicable && !floorSet.has(r.category) && !touched.has(r.category));
+for (const r of below) {
+  execution.recordNonExecution({
+    goal: `${r.category} testing`,
+    status: 'SKIPPED',
+    reason: `${r.priority}: below the coverage floor and outside the user's 150-minute budget.`,
+    testCategory: r.category,
+  });
+}
+log('coverage floor', `${owed.length} committed scenario(s) deferred on the user's budget; ${below.length} lower-priority categor${below.length === 1 ? 'y' : 'ies'} recorded SKIPPED`);
+
+const queue = completeness.outstanding();
+log('work queue (ast todo)', queue.done ? 'empty' : `${queue.count} item(s): ${[...new Set(queue.items.map((i) => i.check))].join(', ')}`);
 
 /* ----------------------------------------------------------- 12. remaining work */
 
