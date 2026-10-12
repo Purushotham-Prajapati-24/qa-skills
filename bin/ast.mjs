@@ -18,16 +18,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync, spawn } from 'node:child_process';
 
+// Measured in characters (JavaScript string length), not bytes: output is decoded as UTF-8 first.
 const CAPTURE_HALF = 4 * 1024 * 1024;
 
-/** Keep the first and last CAPTURE_HALF bytes of a stream; drop and count the middle. */
+/** Keep the first and last CAPTURE_HALF characters of a decoded stream; drop and count the middle. */
 function cappedSink() {
   let head = '';
   let tail = '';
   let dropped = 0;
   return {
-    push(chunk) {
-      const s = chunk.toString('utf8');
+    push(s) {
       if (head.length < CAPTURE_HALF) {
         const take = Math.min(s.length, CAPTURE_HALF - head.length);
         head += s.slice(0, take);
@@ -42,7 +42,7 @@ function cappedSink() {
       }
     },
     text() {
-      return dropped ? `${head}\n[... ${dropped} bytes of output truncated by ast evidence capture ...]\n${tail}` : head + tail;
+      return dropped ? `${head}\n[... ${dropped} characters of output truncated by ast evidence capture ...]\n${tail}` : head + tail;
     },
   };
 }
@@ -65,6 +65,10 @@ function runCaptured(command, args, { cwd, timeout, shell }) {
     const err = cappedSink();
     let timedOut = false;
     let settled = false;
+    // The stream decoder carries an incomplete multibyte sequence over to the next chunk;
+    // decoding each chunk on its own turned split characters into U+FFFD in the evidence.
+    child.stdout?.setEncoding('utf8');
+    child.stderr?.setEncoding('utf8');
     child.stdout?.on('data', (c) => out.push(c));
     child.stderr?.on('data', (c) => err.push(c));
     const killTree = () => {
@@ -634,7 +638,7 @@ const COMMANDS = {
       + '  evidence capture --exec EXEC-2026-00001 --script <file> [--summary "..."] [--cwd dir] [--timeout ms]\n'
       + 'The --script form runs the file directly (shell:false) — no quote mangling, safe on Windows/PowerShell.\n'
       + 'Supported: .js/.mjs (via node), .ps1 (via powershell), .sh (via bash), .py (via python).\n'
-      + 'On timeout the whole process tree is killed. Output beyond 8 MB per stream keeps its first and last 4 MB.',
+      + 'On timeout the whole process tree is killed. Output beyond 8M characters per stream keeps its first and last 4M.',
     run: async ({ flags, rest }) => {
       const hasScript = Boolean(flags.script);
       if (!hasScript && !rest.length) {

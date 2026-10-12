@@ -12,6 +12,7 @@
  */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -40,8 +41,18 @@ export function projectRoot(cwd = process.cwd()) {
   return projectRoots.get(cwd);
 }
 
+// Compare real, canonical paths. The same directory can be spelled differently: Windows 8.3
+// short names (C:\Users\RUNNER~1 from os.tmpdir() vs C:/Users/runneradmin from git), drive-letter
+// case, macOS /var vs /private/var, symlinks. A string comparison called an in-project runtime
+// "outside" and moved its state.
+const canonical = (p) => {
+  let real = path.resolve(p);
+  try { real = fs.realpathSync.native(real); } catch { /* not created yet: compare as given */ }
+  return process.platform === 'win32' ? real.toLowerCase() : real;
+};
+
 const isInside = (child, parent) => {
-  const rel = path.relative(parent, child);
+  const rel = path.relative(canonical(parent), canonical(child));
   return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
 };
 

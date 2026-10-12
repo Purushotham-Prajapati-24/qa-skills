@@ -148,6 +148,35 @@ compactions and parallel explorers without losing or inventing work.
   - **Report**: new "Plan vs executed" section (ran / held / not covered, never conflated) and
     "Tests written this session" section; `plan_progress` and `authored_tests` on the record.
 
+### Fixed (PR #29 review and CI)
+
+Eight more tests in `tests/continuity-round2.test.mjs`; each fix was seen failing under a
+targeted mutation.
+
+- **An in-project install could still move its state on Windows CI.** The "is the runtime inside
+  the project?" check compared path strings. On a Windows runner the temp directory is reported
+  in 8.3 short form (`C:\Users\RUNNER~1`) while git reports the long form, so a runtime inside
+  the project read as outside. The same mismatch occurs with symlinks and macOS `/var`. Paths
+  are now canonicalised (realpath, case-folded on Windows) before comparing.
+- **A second `session resume` killed a run the first one had left in flight.** Recovery counted
+  its own `restart` bookkeeping entry as a stop signal. Only real interruptions count now.
+- **`savePlan` with no session wrote the plan and commitment ledger before throwing**, leaving an
+  orphan for the next session to inherit. It now fails before any write.
+- **An agent transcription could discharge a user-owned hold even when hooks were recording.**
+  Once any hook-recorded prompt exists, `session said` transcriptions no longer count. The
+  report shows each hold's `user_quote` and where it was verified.
+- **Re-running `--hooks` duplicated hooks.** A duplicate Stop hook strikes twice per stop and
+  releases the gate early. The installer now replaces its own entries by script name and
+  leaves the user's hooks alone.
+- **Captured output corrupted characters split across pipe chunks**, and its "bytes" were really
+  characters. Streams are decoded with a carry-over decoder, and the limits and marker say
+  "characters".
+- **A batch `test_files` declaration counted as proof that each file ran.** A declared file
+  counts only if it is the run's only declared file, the command names it, or per-test results
+  list it.
+- **Example artifacts leaked a local temp path** (with a username). The demo now rewrites
+  state paths and refuses to emit any file containing the home directory.
+
 ### Fixed (continuity and workflow audit, round two, 2026-10-12)
 
 `tests/continuity-round2.test.mjs` (9 tests; 7 targeted mutations, all caught).

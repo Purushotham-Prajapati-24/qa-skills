@@ -113,7 +113,12 @@ export function verifyUserQuote(quote) {
   const s = loadSession();
   if (!s) return null;
   if (squash(s.user_request).includes(q)) return 'request';
-  const hit = (s.user_statements ?? []).find((u) => squash(u.quote).includes(q));
+  const statements = s.user_statements ?? [];
+  if (statements.some((u) => u.source === 'hook' && squash(u.quote).includes(q))) return 'hook';
+  // Once the hook is recording real prompts, the agent's own transcription is no longer
+  // accepted as the user's words -- it could otherwise discharge a hold the user never gave.
+  if (statements.some((u) => u.source === 'hook')) return null;
+  const hit = statements.find((u) => squash(u.quote).includes(q));
   return hit ? hit.source : null;
 }
 
@@ -256,8 +261,10 @@ export function loadApplicability() {
 /* -------------------------------------------------------------------- plans */
 
 export function savePlan(plan) {
-  const session = loadSession();
-  if (session && !plan.session_id) plan = { ...plan, session_id: session.session_id };
+  // Fail before any write: a plan saved with no session would be orphaned and then picked up by
+  // the next session as if it were its own.
+  const session = requireSession();
+  if (!plan.session_id) plan = { ...plan, session_id: session.session_id };
   assertValid(plan, 'testing-plan');
   const safe = redact(plan);
   recordCommitments(safe, session);
@@ -370,7 +377,11 @@ export function recover({ now = new Date(), interruptAll = false, idleMinutes = 
   }
   // An explicitly recorded interruption (`session interrupt`) is a precise signal: a run with no
   // activity since then was stopped by it, however recently it started.
-  const lastInterrupt = Math.max(0, ...(state.interruptions ?? []).map((i) => new Date(i.at).getTime()));
+  // Recovery's own 'restart' entries are bookkeeping, not a stop signal: counting them made a
+  // second resume kill the runs the first one had deliberately left in flight.
+  const lastInterrupt = Math.max(0, ...(state.interruptions ?? [])
+    .filter((i) => i.kind !== 'restart')
+    .map((i) => new Date(i.at).getTime()));
   const orphaned = [];
   const inFlight = [];
   const close = new Set();

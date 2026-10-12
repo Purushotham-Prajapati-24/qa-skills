@@ -210,6 +210,9 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
       resolved: u.status === 'resolved',
       blocking: BLOCKING_STATUSES.has(u.status),
       raised_by_execution: u.raised_by_execution ?? null,
+      // A hold attributed to the user shows the words relied on and where they were verified:
+      // the request, a hook-recorded prompt, or the agent's own transcription.
+      ...(u.user_quote ? { user_quote: u.user_quote, user_quote_source: state.verifyUserQuote(u.user_quote) ?? 'not found' } : {}),
     })),
     coverage_gaps: (plan?.change_summary?.coverage_gaps ?? []).concat(
       applicability.filter((a) => a.applicable && a.existing_coverage === 'none').map((a) => `${a.category}: no existing coverage`),

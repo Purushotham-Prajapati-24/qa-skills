@@ -133,7 +133,7 @@ test('a huge command output is captured quickly, with its head and tail kept', (
   const blob = fs.readFileSync(path.isAbsolute(ev.artifact.path) ? ev.artifact.path : path.join(s, ev.artifact.path), 'utf8');
   assert.match(blob, /BEGIN-MARK/);
   assert.match(blob, /END-MARK/);
-  assert.match(blob, /bytes of output truncated by ast evidence capture/);
+  assert.match(blob, /characters of output truncated by ast evidence capture/);
 });
 
 test('redaction is linear: long runs of word characters no longer hang it, and secrets are still masked', () => {
@@ -167,4 +167,114 @@ test('every specialist exec example links the run to a plan scenario', () => {
     }
   }
   assert.deepEqual(missing, []);
+});
+
+/* ------------------------------------------------ PR #29 review findings */
+
+test('the runtime-inside-project check compares real paths (8.3 short names, symlinks)', () => {
+  // An in-project install, run from a different spelling of the same directory, must keep its
+  // state beside itself. CI's Windows runner hands out 8.3 short temp paths; git reports long ones.
+  const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'a-long-project-directory-name-'));
+  created.push(proj);
+  execFileSync('git', ['init', '-q'], { cwd: proj });
+  execFileSync(process.execPath, [path.join(ROOT, 'bin', 'install.mjs'), '--target', proj], { cwd: proj, stdio: 'ignore' });
+  let alias = null;
+  if (process.platform === 'win32') {
+    try { alias = execFileSync('powershell', ['-NoProfile', '-Command', `(New-Object -ComObject Scripting.FileSystemObject).GetFolder('${proj}').ShortPath`], { encoding: 'utf8' }).trim(); } catch { /* COM unavailable */ }
+  } else {
+    alias = `${proj}-link`;
+    fs.symlinkSync(proj, alias, 'dir');
+    created.push(alias);
+  }
+  if (!alias || alias === proj) return; // no alternative spelling on this volume
+  const env = envNoState();
+  const out = JSON.parse(execFileSync(process.execPath, [path.join(alias, '.claude', 'ast', 'bin', 'ast.mjs'), 'version'], { cwd: alias, env, encoding: 'utf8' }));
+  assert.match(out.state_root, /[\\/]\.claude[\\/]ast[\\/]state$/, `from ${alias}: ${out.state_root}`);
+});
+
+test('a second resume does not kill a run the first resume left in flight', async () => {
+  const { useTempState } = await import('./helpers.mjs');
+  const t = useTempState('r2-resume-twice');
+  created.push(t.dir);
+  const state = await import('../engine/state-engine/index.mjs');
+  const execution = await import('../engine/execution-engine/index.mjs');
+  state.startSession({ request: 'resume twice', git: null });
+  const t0 = Date.parse('2026-10-12T10:00:00Z');
+  execution.start({ goal: 'abandoned run', method: 'api-client', git: null, now: new Date(t0) });
+  const live = execution.start({ goal: 'explorer run', method: 'api-client', git: null, now: new Date(t0 + 28 * 60_000) });
+  const first = state.recover({ now: new Date(t0 + 30 * 60_000) });
+  assert.equal(first.orphaned_executions.length, 1, 'the idle run is finalised, which records a restart');
+  const second = state.recover({ now: new Date(t0 + 31 * 60_000) });
+  assert.deepEqual(second.in_flight_executions.map((r) => r.execution_id), [live.execution_id]);
+  assert.equal(state.get('executions', live.execution_id).status, 'PARTIAL');
+});
+
+test('savePlan with no session fails before writing anything', async () => {
+  const { useTempState } = await import('./helpers.mjs');
+  const t = useTempState('r2-plan-nosession');
+  created.push(t.dir);
+  const state = await import('../engine/state-engine/index.mjs');
+  assert.throws(() => state.savePlan(plan(['S-01'])), /No active session/);
+  assert.equal(state.list('plans').length, 0, 'no orphaned plan for the next session to inherit');
+  assert.ok(!fs.existsSync(path.join(t.dir, 'plan-commitments.json')));
+});
+
+test('once the hook records prompts, an agent transcription no longer counts as the user\'s words', async () => {
+  const { useTempState } = await import('./helpers.mjs');
+  const t = useTempState('r2-quote');
+  created.push(t.dir);
+  const state = await import('../engine/state-engine/index.mjs');
+  state.startSession({ request: 'test checkout', git: null });
+  state.recordUserStatement('skip the load tests today', { source: 'agent' });
+  assert.equal(state.verifyUserQuote('skip the load tests'), 'agent', 'with no hook, the labelled transcription is all there is');
+  state.recordUserStatement('please focus on checkout', { source: 'hook' });
+  assert.equal(state.verifyUserQuote('skip the load tests'), null, 'the hook is recording and never heard this');
+  assert.equal(state.verifyUserQuote('focus on checkout'), 'hook');
+});
+
+test('re-running --hooks does not duplicate hooks (a duplicate Stop gate would release early)', () => {
+  const proj = tmp('hooks-twice');
+  execFileSync('git', ['init', '-q'], { cwd: proj });
+  fs.mkdirSync(path.join(proj, '.claude'), { recursive: true });
+  fs.writeFileSync(path.join(proj, '.claude', 'settings.json'), JSON.stringify({ hooks: { Stop: [{ hooks: [{ type: 'command', command: 'echo user-own-hook' }] }] } }));
+  for (let i = 0; i < 2; i++) execFileSync(process.execPath, [path.join(ROOT, 'bin', 'install.mjs'), '--target', proj, '--hooks', '--force'], { cwd: proj, stdio: 'ignore' });
+  const hooks = JSON.parse(fs.readFileSync(path.join(proj, '.claude', 'settings.json'), 'utf8')).hooks;
+  const count = (event, name) => hooks[event].filter((e) => JSON.stringify(e).includes(name)).length;
+  assert.equal(count('Stop', 'stop-gate.mjs'), 1);
+  assert.equal(count('UserPromptSubmit', 'record-user-prompt.mjs'), 1);
+  assert.equal(count('SessionStart', 'session-start.mjs'), 1);
+  assert.equal(count('PreToolUse', 'guard-destructive.mjs'), 1);
+  assert.equal(count('Stop', 'user-own-hook'), 1, 'the user\'s own hooks are left alone');
+});
+
+test('captured output keeps multibyte characters intact across chunk boundaries', () => {
+  const s = tmp('utf8');
+  const c = cli(AST, s, { state: s });
+  c.run(['session', 'start', '--request', 'utf8 capture']);
+  const ex = c.input(['exec', 'start'], { goal: 'unicode output run', method: 'api-client', git: null });
+  // 3-byte characters: pipe chunks (64 KiB) are not a multiple of 3, so characters straddle chunk
+  // boundaries. 4-byte emoji divide evenly into the chunks and would hide the bug.
+  const script = path.join(s, 'euro.mjs');
+  fs.writeFileSync(script, "process.stdout.write(String.fromCodePoint(0x20AC).repeat(300000));\n");
+  const ev = c.run(['evidence', 'capture', '--exec', ex.execution_id, '--summary', 'unicode output', '--script', script]);
+  const blob = fs.readFileSync(path.isAbsolute(ev.artifact.path) ? ev.artifact.path : path.join(s, ev.artifact.path), 'utf8');
+  assert.ok(!blob.includes(String.fromCodePoint(0xFFFD)), 'no replacement characters from split sequences');
+  assert.equal(blob.split(String.fromCodePoint(0x20AC)).length - 1, 300000);
+});
+
+test('a batch test_files declaration is not proof that each listed file ran', async () => {
+  const { executionRanFile } = await import('../engine/core/authored-tests.mjs');
+  assert.equal(executionRanFile({ test_files: ['tests/a.test.js'], command: 'npm test' }, 'tests/a.test.js'), true, 'one declared file under a whole-suite command');
+  assert.equal(executionRanFile({ test_files: ['tests/a.test.js', 'tests/b.test.js'], command: 'node --test tests/a.test.js' }, 'tests/b.test.js'), false, 'declared, but the command only ran a');
+  assert.equal(executionRanFile({ test_files: ['tests/a.test.js', 'tests/b.test.js'], command: 'node --test tests/a.test.js' }, 'tests/a.test.js'), true);
+  assert.equal(executionRanFile({ test_files: ['tests/a.test.js', 'tests/b.test.js'], command: 'npm test', test_results: [{ name: 'b', status: 'PASSED', file: 'tests/b.test.js' }] }, 'tests/b.test.js'), true, 'per-test results are proof');
+});
+
+test('published example artifacts carry no local machine paths', () => {
+  const home = os.homedir();
+  for (const f of fs.readdirSync(path.join(ROOT, 'examples', 'artifacts'))) {
+    const text = fs.readFileSync(path.join(ROOT, 'examples', 'artifacts', f), 'utf8');
+    for (const v of [home, home.replace(/\\/g, '/'), home.replace(/\\/g, '\\\\')]) assert.ok(!text.includes(v), `${f} contains ${v}`);
+    assert.doesNotMatch(text, /ast-demo-[A-Za-z0-9]{6}/, `${f} contains a temp state path`);
+  }
 });

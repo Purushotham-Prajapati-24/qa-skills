@@ -481,7 +481,20 @@ log('traceability', `${untested.uncovered.length} requirement(s) uncovered: ${un
 const emit = arg('emit');
 if (emit) {
   fs.mkdirSync(emit, { recursive: true });
-  const write = (name, content) => {
+  // Published examples must not carry this machine's paths (they leak a username and mean
+  // nothing to a reader). Rewrite the state directory to a neutral name, in every spelling
+  // it can appear in, then refuse to write anything that still mentions the home directory.
+  const scrub = (text) => {
+    let out = text;
+    for (const v of [stateDir, stateDir.replace(/\\/g, '/'), stateDir.replace(/\\/g, '\\\\')]) out = out.split(v).join('.testing-state');
+    const home = os.homedir();
+    for (const v of [home, home.replace(/\\/g, '/'), home.replace(/\\/g, '\\\\')]) {
+      if (out.includes(v)) throw new Error(`Refusing to emit an example containing a local path (${v}).`);
+    }
+    return out;
+  };
+  const write = (name, raw) => {
+    const content = scrub(raw);
     fs.writeFileSync(path.join(emit, name), content, 'utf8');
     console.log(`  emitted ${path.join(emit, name)}`);
   };

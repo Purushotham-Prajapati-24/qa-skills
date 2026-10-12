@@ -545,7 +545,9 @@
               { "$ref": "common.schema.json#/definitions/executionId" },
               { "type": "null" }
             ]
-          }
+          },
+          "user_quote": { "type": "string", "description": "The user's words a user-owned hold relies on." },
+          "user_quote_source": { "type": "string", "enum": ["request", "hook", "agent", "not found"], "description": "Where the quote was verified: the session request, a hook-recorded prompt, the agent's own transcription, or nowhere." }
         },
         "additionalProperties": false
       }

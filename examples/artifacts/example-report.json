@@ -1,7 +1,7 @@
 {
   "report_id": "REPORT-2026-00001",
   "report_version": "1.2.0",
-  "generated_at": "2026-10-12T10:53:19.415Z",
+  "generated_at": "2026-10-12T11:19:59.673Z",
   "session_id": "SESSION-0001",
   "executive_summary": {
     "headline": "**FAILED** — 8 executions run · 2 findings, worst critical · 25 planned items not run.",
@@ -87,7 +87,7 @@
       "DEFERRED": 7,
       "SKIPPED": 14
     },
-    "total_duration_ms": 80,
+    "total_duration_ms": 74,
     "test_cases": 9
   },
   "detailed_results": [
@@ -98,8 +98,8 @@
       "method": "api-client",
       "status": "FAILED",
       "status_reason": "GET /api/payment-methods/:id returned another user's card with HTTP 200.",
-      "duration_ms": 11,
-      "wall_clock_ms": 11,
+      "duration_ms": 12,
+      "wall_clock_ms": 12,
       "command_duration_ms": 3120,
       "evidence": [
         "EV-2026-00002"
@@ -134,8 +134,8 @@
       "method": "playwright-script",
       "status": "FAILED",
       "status_reason": "\"saved card survives a reload\" failed: expected 1 saved card, found 0.",
-      "duration_ms": 12,
-      "wall_clock_ms": 12,
+      "duration_ms": 10,
+      "wall_clock_ms": 10,
       "command_duration_ms": 3700,
       "evidence": [
         "EV-2026-00005"
@@ -215,8 +215,8 @@
       "method": "existing-suite",
       "status": "INCONCLUSIVE",
       "status_reason": "Checkout works. [DOWNGRADED from PASSED: \"PASSED\" claims something was executed, but no evidence is attached. Absence of failure is not proof of correctness.]",
-      "duration_ms": 8,
-      "wall_clock_ms": 8,
+      "duration_ms": 7,
+      "wall_clock_ms": 7,
       "command_duration_ms": null,
       "evidence": [],
       "findings": [],
@@ -608,8 +608,8 @@
       "method": "static-analysis",
       "status": "PASSED",
       "status_reason": "axe WCAG 2.1 AA ruleset on /checkout at abc1234: 0 violations.",
-      "duration_ms": 12,
-      "wall_clock_ms": 12,
+      "duration_ms": 11,
+      "wall_clock_ms": 11,
       "command_duration_ms": 4100,
       "evidence": [
         "EV-2026-00003"
@@ -625,8 +625,8 @@
       "method": "playwright-script",
       "status": "PASSED",
       "status_reason": "Both checkout UI tests passed at abc1234.",
-      "duration_ms": 12,
-      "wall_clock_ms": 12,
+      "duration_ms": 11,
+      "wall_clock_ms": 11,
       "command_duration_ms": 1700,
       "evidence": [
         "EV-2026-00004"
@@ -653,8 +653,8 @@
       "method": "playwright-script",
       "status": "PASSED",
       "status_reason": "Both checkout UI tests passed at abc1234.",
-      "duration_ms": 12,
-      "wall_clock_ms": 12,
+      "duration_ms": 10,
+      "wall_clock_ms": 10,
       "command_duration_ms": 1700,
       "evidence": [
         "EV-2026-00006"
@@ -681,7 +681,7 @@
       "kind": "command-output",
       "summary": "vitest: 211/211 passed",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-hJo470\\evidence\\blobs\\output-2026-10-12T10-53-18-725Z-32868.txt",
+      "path": ".testing-state\\evidence\\blobs\\output-2026-10-12T11-19-59-010Z-66656.txt",
       "sha256": "sha256:08847719b18700defc4e5811a3e0be639fa4d8c92fcbdefd7cff7a429ac59e38"
     },
     {
@@ -689,7 +689,7 @@
       "kind": "command-output",
       "summary": "api: 11/12 passed, 1 failed",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-hJo470\\evidence\\blobs\\output-2026-10-12T10-53-18-746Z-32868.txt",
+      "path": ".testing-state\\evidence\\blobs\\output-2026-10-12T11-19-59-032Z-66656.txt",
       "sha256": "sha256:6860525264278abb9c4fb263992a6bcbbfd9d5d8d074c9c5f1779db558c4b2b8"
     },
     {
@@ -697,7 +697,7 @@
       "kind": "command-output",
       "summary": "axe: 0 violations on /checkout",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-hJo470\\evidence\\blobs\\output-2026-10-12T10-53-18-834Z-32868.txt",
+      "path": ".testing-state\\evidence\\blobs\\output-2026-10-12T11-19-59-121Z-66656.txt",
       "sha256": "sha256:bbacb4745aabb84bc3a3a939b8e07b53f73b807ba3f95e3389fb70e6445bcbaf"
     },
     {
@@ -705,7 +705,7 @@
       "kind": "command-output",
       "summary": "playwright checkout suite, run 1",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-hJo470\\evidence\\blobs\\output-2026-10-12T10-53-18-881Z-32868.txt",
+      "path": ".testing-state\\evidence\\blobs\\output-2026-10-12T11-19-59-164Z-66656.txt",
       "sha256": "sha256:fcf6eedae0c5ae91968ac5863ca304acb9622c37abbe13ee82f26097765faef3"
     },
     {
@@ -713,7 +713,7 @@
       "kind": "command-output",
       "summary": "playwright checkout suite, run 2",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-hJo470\\evidence\\blobs\\output-2026-10-12T10-53-18-903Z-32868.txt",
+      "path": ".testing-state\\evidence\\blobs\\output-2026-10-12T11-19-59-183Z-66656.txt",
       "sha256": "sha256:6ab2b01371879032854e860ae6e74ff4097a33e82e7fe0cddd4b44e165d74960"
     },
     {
@@ -721,7 +721,7 @@
       "kind": "command-output",
       "summary": "playwright checkout suite, run 3",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-hJo470\\evidence\\blobs\\output-2026-10-12T10-53-18-923Z-32868.txt",
+      "path": ".testing-state\\evidence\\blobs\\output-2026-10-12T11-19-59-201Z-66656.txt",
       "sha256": "sha256:fcf6eedae0c5ae91968ac5863ca304acb9622c37abbe13ee82f26097765faef3"
     }
   ],
@@ -935,7 +935,9 @@
       ],
       "resolved": false,
       "blocking": false,
-      "raised_by_execution": null
+      "raised_by_execution": null,
+      "user_quote": "You have 150 minutes",
+      "user_quote_source": "request"
     }
   ],
   "coverage_gaps": [
@@ -974,7 +976,7 @@
     }
   ],
   "metrics": {
-    "computed_at": "2026-10-12T10:53:19.467Z",
+    "computed_at": "2026-10-12T11:19:59.723Z",
     "sample_sizes": {
       "executions": 33,
       "decisions": 1,
@@ -1142,7 +1144,7 @@
     "skill_version": "0.13.0",
     "skill_name": "test-reporting",
     "engine_version": "0.13.0",
-    "created_at": "2026-10-12T10:53:19.415Z",
+    "created_at": "2026-10-12T11:19:59.673Z",
     "created_by": "agent",
     "session_id": "SESSION-0001"
   },
@@ -2261,7 +2263,7 @@
         {
           "criterion": "A user cannot select another user's saved card",
           "status": "FAILED",
-          "assessed_at": "2026-10-12T10:53:19.408Z",
+          "assessed_at": "2026-10-12T11:19:59.667Z",
           "evidence": [
             "EV-2026-00002"
           ],
@@ -2394,5 +2396,5 @@
       }
     ]
   },
-  "digest": "sha256:01c48df28a4ff0d62d61fbbbb872cd603be53d7974fb91fd1dc148a3ec053864"
+  "digest": "sha256:265bf871f4ca8ed0d0bd889ffc00466157542ffb9e9f65ccf1cf876e1d4ea69e"
 }

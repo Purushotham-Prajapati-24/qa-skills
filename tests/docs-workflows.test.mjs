@@ -107,7 +107,7 @@ test('every documented --input payload is accepted by the real CLI', () => {
       try {
         run([...p.cmd.split(' '), ...extra, '--input', f]);
       } catch (e) {
-        const msg = `${e.stderr ?? ''}${e.stdout ?? ''}`.replace(/\s+/g, ' ').slice(0, 200);
+        const msg = `${e.stderr ?? ''}${e.stdout ?? ''}${e.code ? ` [code ${e.code}]` : ''}${e.signal ? ` [signal ${e.signal}]` : ''}`.replace(/\s+/g, ' ').slice(0, 200);
         if (!DEPENDENCY.test(msg)) broken.push(`${p.where} [${p.cmd}]: ${msg}`);
       }
     } finally {

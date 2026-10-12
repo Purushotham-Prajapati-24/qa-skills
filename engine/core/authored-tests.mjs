@@ -125,12 +125,18 @@ export function authoredTestFiles({ cwd = process.cwd(), baseline = null, since 
     .sort();
 }
 
-/** Did this execution run `file`? By declared test_files, by the command line, or by per-test results. */
+/**
+ * Did this execution run `file`? The command line naming it, or a per-test result from it, is
+ * proof. A `test_files` declaration alone is accepted only when it names a single file (a
+ * whole-suite command like `npm test` that ran the one test just written). A batch declaration
+ * is not proof that each listed file ran -- only that the agent said so.
+ */
 export function executionRanFile(e, file) {
   const norm = (s) => String(s).replace(/\\/g, '/').replace(/^\.\//, '');
   const f = norm(file);
   const base = path.posix.basename(f);
-  if ((e.test_files ?? []).map(norm).some((t) => t === f || t.endsWith(`/${f}`) || f.endsWith(`/${t}`))) return true;
   if (e.command && (norm(e.command).includes(f) || norm(e.command).includes(base))) return true;
-  return (e.test_results ?? []).some((t) => t.file && norm(t.file).endsWith(base));
+  if ((e.test_results ?? []).some((t) => t.file && norm(t.file).endsWith(base))) return true;
+  const declared = (e.test_files ?? []).map(norm);
+  return declared.length === 1 && (declared[0] === f || declared[0].endsWith(`/${f}`) || f.endsWith(`/${declared[0]}`));
 }

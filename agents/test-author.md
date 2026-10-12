@@ -34,8 +34,10 @@ number, which is worse than nothing because it creates false confidence.
 A test you did not execute is a draft, and `validate --final` fails on any test file written
 this session that no recorded execution ran. For each file (or batch):
 
-1. `exec start` with `"test_files": ["<path>", ...]`, `"plan_scenario_id"` if the caller gave
-   you one, and the category.
+1. `exec start` with `"test_files": ["<path>"]` (one file per execution), `"plan_scenario_id"`
+   if the caller gave you one, and the category. Several files in one run count only when the
+   command names each one or the runner's per-test results (`junit`) list them; a bare batch
+   declaration is not proof that every file ran.
 2. `evidence capture --exec <id> -- <runner> <path>` — the runner's real output, hashed.
 3. `exec finish` with the status the output supports.
 

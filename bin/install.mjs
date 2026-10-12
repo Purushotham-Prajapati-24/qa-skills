@@ -235,22 +235,29 @@ if (flags.hooks && !DRY) {
   const settings = fs.existsSync(settingsPath) ? JSON.parse(fs.readFileSync(settingsPath, 'utf8').replace(/^﻿/, '')) : {};
   settings.hooks ??= {};
   const script = (name) => path.join(runtimeDir, 'scripts', 'hooks', name).replace(/\\/g, '/');
-  settings.hooks.SessionStart ??= [];
-  settings.hooks.SessionStart.push({
+  // Idempotent: re-running --hooks replaces our own entry (matched by script name, so a moved
+  // runtime or a changed matcher is updated) instead of appending a duplicate. A duplicate Stop
+  // hook would strike twice per stop and release the gate early. Other hooks are left alone.
+  const upsert = (event, scriptName, entry) => {
+    settings.hooks[event] ??= [];
+    const ours = (e) => (e.hooks ?? []).some((h) => JSON.stringify(h.command ?? '').includes(scriptName));
+    const first = settings.hooks[event].findIndex(ours);
+    settings.hooks[event] = settings.hooks[event].filter((e, i) => i === first || !ours(e));
+    if (first === -1) settings.hooks[event].push(entry);
+    else settings.hooks[event][settings.hooks[event].findIndex(ours)] = entry;
+  };
+  upsert('SessionStart', 'session-start.mjs', {
     matcher: 'startup|resume|clear|compact',
     hooks: [{ type: 'command', command: ['node', script('session-start.mjs')], timeout: 15 }],
   });
-  settings.hooks.PreToolUse ??= [];
-  settings.hooks.PreToolUse.push({
+  upsert('PreToolUse', 'guard-destructive.mjs', {
     matcher: 'Bash|PowerShell',
     hooks: [{ type: 'command', command: ['node', script('guard-destructive.mjs')], timeout: 10 }],
   });
-  settings.hooks.UserPromptSubmit ??= [];
-  settings.hooks.UserPromptSubmit.push({
+  upsert('UserPromptSubmit', 'record-user-prompt.mjs', {
     hooks: [{ type: 'command', command: ['node', script('record-user-prompt.mjs')], timeout: 10 }],
   });
-  settings.hooks.Stop ??= [];
-  settings.hooks.Stop.push({
+  upsert('Stop', 'stop-gate.mjs', {
     hooks: [{ type: 'command', command: ['node', script('stop-gate.mjs')], timeout: 30 }],
   });
   fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, 'utf8');
