@@ -110,6 +110,51 @@
       "type": "object"
     },
     "quarantined_tests": { "type": "array", "items": { "type": "string" }, "description": "Tests the flakiness engine proved flaky; their passes are excluded from what was proven." },
+    "plan_progress": {
+      "type": "object",
+      "description": "Every scenario committed this session beside what ran, judged by the same rule as validate --final.",
+      "required": ["committed", "covered", "remaining", "scenarios"],
+      "properties": {
+        "plan_id": { "type": ["string", "null"] },
+        "committed": { "type": "integer", "minimum": 0 },
+        "covered": { "type": "integer", "minimum": 0 },
+        "ran": { "type": "integer", "minimum": 0 },
+        "held": { "type": "integer", "minimum": 0 },
+        "remaining": { "type": "integer", "minimum": 0 },
+        "scenarios": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "obligation", "covered", "outcome"],
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "obligation": { "type": "string" },
+              "category": { "type": ["string", "null"] },
+              "covered": { "type": "boolean" },
+              "held": { "type": "boolean" },
+              "outcome": { "type": "string" },
+              "execution_id": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "authored_tests": {
+      "type": "array",
+      "description": "Test files written or changed this session, and whether an execution ran them.",
+      "items": {
+        "type": "object",
+        "required": ["file", "ran"],
+        "properties": {
+          "file": { "type": "string" },
+          "ran": { "type": "boolean" },
+          "held": { "type": "boolean" },
+          "execution_id": { "type": ["string", "null"] },
+          "status": { "type": ["string", "null"] }
+        }
+      }
+    },
     "goals": {
       "type": "array",
       "items": {
@@ -400,6 +445,17 @@
           "confidence": {
             "$ref": "common.schema.json#/definitions/confidence"
           },
+          "verification": {
+            "type": "object",
+            "description": "Computed by the engine: confirmed (a linked repro run failed on a product-defect assertion with real evidence), held, refuted, rejected, unverified or duplicate.",
+            "required": ["status"],
+            "properties": {
+              "status": { "type": "string", "enum": ["confirmed", "held", "refuted", "rejected", "unverified", "duplicate"] },
+              "execution_id": { "type": ["string", "null"] },
+              "repro": { "type": ["string", "null"] },
+              "reason": { "type": "string" }
+            }
+          },
           "component": {
             "type": "string"
           },
@@ -489,7 +545,9 @@
               { "$ref": "common.schema.json#/definitions/executionId" },
               { "type": "null" }
             ]
-          }
+          },
+          "user_quote": { "type": "string", "description": "The user's words a user-owned hold relies on." },
+          "user_quote_source": { "type": "string", "enum": ["request", "hook", "agent", "not found"], "description": "Where the quote was verified: the session request, a hook-recorded prompt, the agent's own transcription, or nowhere." }
         },
         "additionalProperties": false
       }

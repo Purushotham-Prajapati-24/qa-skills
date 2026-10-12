@@ -18,6 +18,7 @@ import { sha256String } from '../core/fsjson.mjs';
 import * as state from '../state-engine/index.mjs';
 import * as auth from '../authorization/index.mjs';
 import { inheritedGit } from '../core/git.mjs';
+import { findingVerifier, DEFECT_KINDS } from '../evaluation-engine/process-completeness.mjs';
 
 /** Below this, a finding is an observation to discuss, not an issue to file. */
 export const REPORTING_CONFIDENCE_THRESHOLD = 0.6;
@@ -128,11 +129,42 @@ export function create({
   return rec;
 }
 
+export const REJECTION_CLASSES = ['explorer-artifact', 'environment', 'intended-design', 'fixture-gap', 'not-reproduced', 'out-of-scope'];
+
+/**
+ * Triage a candidate finding out. Rejection is a judgement, so it must be checkable: a class
+ * from a fixed list, a reason, and a citation someone else can open (file:line, an evidence or
+ * execution id, a doc URL). A rejected finding is reported under "Rejected", never silently
+ * dropped.
+ */
+export function reject(findingId, { reasonClass, reason, citation, decidedBy = 'agent' } = {}) {
+  const f = state.get('findings', findingId);
+  if (!f) throw new Error(`No such finding: ${findingId}`);
+  if (!REJECTION_CLASSES.includes(reasonClass)) {
+    throw new Error(`--class must be one of: ${REJECTION_CLASSES.join(', ')}.`);
+  }
+  if (!reason || String(reason).trim().length < 10) {
+    throw new Error('--reason must say why this is not a defect (at least a sentence).');
+  }
+  if (!citation || !String(citation).trim()) {
+    throw new Error('--cite must point at something checkable: file:line, an evidence or execution id, or a doc URL.');
+  }
+  f.triage = { state: 'not-a-defect', note: String(reason).trim(), reason_class: reasonClass, citation: String(citation).trim(), decided_by: decidedBy };
+  state.put('findings', findingId, f, 'finding');
+  return { finding_id: findingId, triage: f.triage };
+}
+
+/** Verification status of every finding, as `validate --final` and the report judge it. */
+export function verifyAll() {
+  const verify = findingVerifier();
+  return state.list('findings').map((f) => ({ finding_id: f.finding_id, kind: f.kind, severity: f.severity, title: f.title, ...verify(f) }));
+}
+
 /**
  * May this finding be filed as an external issue right now?
  * Combines duplicate suppression, confidence, reproducibility and authorization.
  */
-export function assessPromotion(findingId, { system = 'github', userAuthorised = false, authorisationQuote = '', assignee = null } = {}) {
+export function assessPromotion(findingId, { system = 'github', userAuthorised = false, authorisationQuote = '', assignee = null, allowUnverified = false } = {}) {
   const f = state.get('findings', findingId);
   if (!f) throw new Error(`No such finding: ${findingId}`);
 
@@ -149,6 +181,16 @@ export function assessPromotion(findingId, { system = 'github', userAuthorised =
 
   if (f.kind === 'observation') {
     blockers.push('Kind is "observation". Observations belong in the report, not in the issue tracker.');
+  }
+
+  // An issue in someone else's tracker is the most expensive place for a false defect. A
+  // defect claim is filed only once a repro check fails on it -- or the user explicitly asks
+  // for an unverified one, in which case the body must say so.
+  const verification = DEFECT_KINDS.has(f.kind) && !f.duplicate_of ? findingVerifier()(f) : null;
+  if (verification && verification.status !== 'confirmed') {
+    const msg = `Defect is ${verification.status}, not confirmed: ${verification.reason}`;
+    if (allowUnverified) warnings.push(`${msg} Filing anyway at the user's request: the issue body MUST lead with "Unverified".`);
+    else blockers.push(`${msg} Confirm it with a failing repro check first (exec start {"reproduces":"${findingId}"}).`);
   }
 
   if (f.confidence < REPORTING_CONFIDENCE_THRESHOLD) {
@@ -185,6 +227,7 @@ export function assessPromotion(findingId, { system = 'github', userAuthorised =
     blockers,
     warnings,
     idempotency_key: f.fingerprint,
+    verification,
     authorization: authCheck,
     assignment: assignCheck,
   };
@@ -203,6 +246,12 @@ export function renderIssue(findingId, { includeAgentFooter = true } = {}) {
       : '';
 
   lines.push(confidenceBanner);
+  const verification = DEFECT_KINDS.has(f.kind) && !f.duplicate_of ? findingVerifier()(f) : null;
+  if (verification && verification.status !== 'confirmed') {
+    lines.push(`> **Unverified.** No repro check has failed on this yet (${verification.status}): ${verification.reason}\n`);
+  } else if (verification) {
+    lines.push(`> **Confirmed** by a failing repro check: \`${verification.repro}\` (${verification.execution_id}). It should pass once this is fixed.\n`);
+  }
   lines.push('## Summary', '', f.summary || f.title, '');
   lines.push('| Field | Value |', '| --- | --- |');
   lines.push(`| Severity | ${f.severity} |`);

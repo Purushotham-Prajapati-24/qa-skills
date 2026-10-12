@@ -78,10 +78,19 @@ the target's complexity:
 | Multi-app, 3+ roles | 2–4 hours | Functional + security + edge cases + journey + a11y |
 | Full QA (exhaustive) | 4–8 hours | Everything including load testing |
 
-At ~75% of the budget, trigger the non-functional checkpoint (execution.md). At ~90%,
-begin report generation regardless of remaining work — record unfinished items as
-`DEFERRED` with "time budget exhausted" as the reason. A partial report delivered on time
-is better than a complete one delivered never.
+**Who set the budget decides what it may excuse.**
+
+- **The user stated a budget** — it binds. At ~90%, generate the report; record each
+  unfinished item as `DEFERRED` linked to an uncertainty with `owner: "user"` and
+  `"user_quote"` set to the user's own words ("you have 30 minutes"). The engine looks for
+  that quote in the session request and in what the user said since (recorded by the
+  UserPromptSubmit hook, or by you with `session said --quote "…"`); without it, or with a
+  quote the user never said, the hold does not count.
+- **You estimated the budget** — it is a pacing guide, not a stopping rule. It never
+  justifies dropping a committed scenario, a floor category or a test you wrote. An
+  agent-owned "out of time" deferral does not count toward any floor, so `validate --final`
+  will still fail. If the work is genuinely larger than one session, plan fewer must-test
+  scenarios up front and say why — do not commit to work and then quietly shed it.
 
 The budget is a decision. Record the estimate and the rationale.
 
@@ -125,6 +134,56 @@ on an authorised non-production target, or record why you could not. The deeper
 `load`/`stress`/`endurance` categories still need a `perf-sensitive` signal plus explicit
 authorisation.
 
+## 6c. Persist the plan
+
+After writing the plan, **save it to the engine** so the scenario coverage floor can check
+that every `must-test` scenario was executed:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" plan save --input plan.json
+```
+
+Start from `plan save --example > plan.json` rather than writing the shape from memory.
+Every scenario needs `id` (e.g. `S-01`), `title`, `category` (a catalog test category),
+`method` and `obligation`, plus `feature` when it exercises an inventory item; `provenance`
+needs `created_at` and `created_by: "agent"`. The
+CLI generates a `plan_id` if you omit one, links the plan to the session, and validates the
+whole structure.
+
+**Why this matters:** `validate --final` checks the persisted plan for `must-test` scenarios
+and fails when any of them has no execution linked to it. A plan that lives only in a
+Markdown document or in your own reasoning is invisible to the coverage floor — it is a
+wish list, not a commitment. Persist it.
+
+What the engine holds you to once the plan is saved:
+
+- **Commitments only ratchet up.** Every scenario keeps the strongest obligation it has had
+  in this session. Re-saving the plan with a must-test scenario dropped or downgraded does
+  not release it — `plan save` warns, and the floor still enforces it. To retire one
+  legitimately, record a decision and an `exec not-run` NOT_APPLICABLE citing it.
+- **`blocked` is a commitment too.** A scenario planned as `blocked` must name its
+  `blocked_by` uncertainty and still needs an `exec not-run` linked to it, so it appears in
+  the report instead of vanishing.
+- **`should-test` needs a disposition.** Run it, or record an `exec not-run` (SKIPPED is
+  fine) with the reason. An exclusion the reader cannot see is not allowed.
+- **A plan with no `must-test` scenario commits to nothing** and fails `--final`.
+- **No plan at all**, once real work has run, fails `--final`.
+- **The plan must name everything the floors will demand.** One committed scenario per floor
+  category (applicable P0/P1, plus the mandatory baselines); one per `high` inventory item and
+  **two** per `critical` one (happy path and an edge case), tagged with `"feature": "FEAT-…"`.
+  A thin plan fails `--final` as `plan-misses-floor-category` / `plan-misses-feature` — plan it
+  up front so `todo` is the complete list from the start.
+- **Applicable P2/P3 categories need a disposition.** They need not run, but each needs a run
+  or a recorded skip (`exec not-run` with `SKIPPED` and the reason) so the exclusion is in the
+  report.
+
+Then work the queue, not the document:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" todo            # what is still owed, with next commands
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" plan progress   # per-scenario view, every attempt and whether it counted
+```
+
 ## 7. Partition around blockers
 
 ```bash
@@ -140,7 +199,7 @@ At minimum: scope, depth, browser method, and anything you chose not to test tha
 reader might expect. Then:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session phase plan --note "plan PLAN-00001 written"
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" session phase plan --note "plan PLAN-00001 saved"
 ```
 
 ## 8b. Consider parallel execution
@@ -185,6 +244,38 @@ Subagents must:
 
 If subagents are available but the matrix has <3 partitions, serial execution is correct —
 record why you did not fan out.
+
+## 8c. Exploratory charters: a bug bash that ends in proof
+
+When `exploratory` is applicable (a UI nobody has mapped, or "find bugs in X"), plan the
+exploration as charters, not as one open-ended wander:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" plan charters --areas "checkout,signup,account" --postures first-time-user,edge-input,error-paths
+```
+
+It prints one `must-test` scenario per area × posture (category `exploratory`, with the
+persona and mission filled in). The five postures are `first-time-user`, `numbers-and-copy`,
+`edge-input`, `state-after-reload` and `error-paths`; pick the ones that fit, or omit
+`--postures` for all five. Add the scenarios to the plan and `plan save` — the scenario floor
+then enforces that every charter was actually explored.
+
+Then:
+
+1. **Fan out.** One `browser-explorer` subagent per charter, up to four at once. Give each
+   its scenario ID; it records its run with `plan_scenario_id` and files candidates with
+   `finding add`. They share the session safely.
+2. **Merge.** Duplicate candidates collapse on their fingerprint automatically.
+3. **Triage before writing any test.** Reject explorer artifacts, environment issues,
+   intended design and fixture gaps with `finding reject … --class … --reason … --cite …`.
+   Read the source before calling anything intended.
+4. **Prove what survives.** For each remaining candidate, write a repro check and run it
+   with `"reproduces": "FIND-…"` (`defect-reporting` skill). A failure on the assertion
+   confirms it; a locator miss or a timeout means the repro is wrong; a pass refutes it.
+5. **Report** confirmed defects first, then unverified risks, then rejections with reasons —
+   the rendered report does this ordering for you.
+
+`validate --final` holds you to step 4 for every `major`+ defect claim.
 
 ## 9. Golden-path journey (mandatory for multi-role systems)
 

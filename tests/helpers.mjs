@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { setStateRoot } from '../engine/core/paths.mjs';
+import * as execution from '../engine/execution-engine/index.mjs';
+import * as evidence from '../engine/evidence-engine/index.mjs';
 
 /** Point the state engine at a throwaway directory for the duration of a test file. */
 export function useTempState(label) {
@@ -34,4 +36,16 @@ export function sampleProfile() {
     gaps: ['No coverage report was produced; coverage figures are file counts only.'],
     provenance: { skill_version: '0.5.0', created_at: new Date().toISOString(), created_by: 'agent' },
   };
+}
+
+/**
+ * Confirm a finding the way an agent must: a repro run linked with `reproduces`, failing on
+ * a product-defect assertion, with a captured non-zero exit. Without this, defect claims stay
+ * unverified and may not be filed externally.
+ */
+export function confirmWithRepro(findingId, command = 'npx playwright test tests/repro.spec.ts') {
+  const e = execution.start({ goal: `repro for ${findingId}`, method: 'playwright-script', reproduces: findingId, command, testFiles: ['tests/repro.spec.ts'], git: null });
+  const ev = evidence.captureOutput({ argv: command, cwd: '/repo', exitCode: 1, durationMs: 5, stdout: '1 failed: expected order row, found none', summary: `repro for ${findingId}`, executionId: e.execution_id, git: null });
+  execution.finish(e.execution_id, { status: 'FAILED', statusReason: 'repro assertion fails as the finding describes', evidence: [ev.evidence_id], signals: ['assertion-mismatch'] });
+  return e.execution_id;
 }

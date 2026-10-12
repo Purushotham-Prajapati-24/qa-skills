@@ -38,6 +38,7 @@ A discrepancy is an uncertainty, not a failure:
   "question": "URL guard-tq11.onrender.com appears to serve a visitor portal, not a guard interface as described",
   "status": "user-input-required",
   "impact": "test plan for guard role built against wrong target",
+  "affectedScope": ["guard role"],
   "nextAction": "confirm correct URL for each role before planning"
 }
 ```

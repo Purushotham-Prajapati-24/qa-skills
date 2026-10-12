@@ -115,10 +115,10 @@ export const DEFINITIONS = {
 };
 
 export function compute({ declaredRequirements = [], highRiskBehaviours = [], automationCandidates = [] } = {}) {
-  const executions = state.list('executions');
-  const decisions = state.list('decisions');
-  const findings = state.list('findings');
-  const evidenceItems = state.list('evidence');
+  const executions = state.listForSession('executions');
+  const decisions = state.listForSession('decisions');
+  const findings = state.listForSession('findings');
+  const evidenceItems = state.listForSession('evidence');
   const session = state.loadSession();
   const writes = state.list('ledger').flatMap((db) => Object.values(db.entries ?? {}));
 

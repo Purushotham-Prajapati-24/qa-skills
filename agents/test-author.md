@@ -30,8 +30,22 @@ Rules, in priority order:
 A test that exercises code without meaningful assertions is not coverage. It is a coverage
 number, which is worse than nothing because it creates false confidence.
 
-Run what you wrote before reporting. A test you did not execute is a draft.
+**Run what you wrote before reporting — through the testing CLI, so the run is on record.**
+A test you did not execute is a draft, and `validate --final` fails on any test file written
+this session that no recorded execution ran. For each file (or batch):
 
-Return: the files you created or changed, what each test asserts and **why that assertion
-matters**, anything you chose not to test and why, and any failure you hit — including the
-ones that look like real defects.
+1. `exec start` with `"test_files": ["<path>"]` (one file per execution), `"plan_scenario_id"`
+   if the caller gave you one, and the category. Several files in one run count only when the
+   command names each one or the runner's per-test results (`junit`) list them; a bare batch
+   declaration is not proof that every file ran.
+2. `evidence capture --exec <id> -- <runner> <path>` — the runner's real output, hashed.
+3. `exec finish` with the status the output supports.
+
+If the test cannot run as written (missing credential, unavailable service), run what it can
+against a stub or local stand-in, and report the remainder as blocked with the reason —
+never return an unrun test as finished work. A test that fails because it is wrong gets
+fixed and re-run; one that fails because the product is wrong is the deliverable.
+
+Return: the files you created or changed, the execution IDs that ran them and their
+outcomes, what each test asserts and **why that assertion matters**, anything you chose not
+to test and why, and any failure you hit — including the ones that look like real defects.

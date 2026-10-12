@@ -84,6 +84,10 @@
           "id": { "type": "string" },
           "title": { "type": "string" },
           "category": { "$ref": "common.schema.json#/definitions/testCategory" },
+          "area": { "type": "string", "description": "Exploratory charter: the page, flow or surface explored." },
+          "posture": { "type": "string", "enum": ["first-time-user", "numbers-and-copy", "edge-input", "state-after-reload", "error-paths"], "description": "Exploratory charter: the stance the explorer takes. One area x posture pair per charter." },
+          "persona": { "type": "string", "description": "Exploratory charter: who the explorer pretends to be." },
+          "feature": { "type": "string", "description": "functionality_inventory id this scenario exercises. Every high/critical inventory item needs a committed scenario naming it; a critical one needs two (happy path and an edge case)." },
           "obligation": {
             "type": "string",
             "enum": ["must-test", "should-test", "nice-to-test", "not-applicable", "blocked", "deferred"]

@@ -1,7 +1,7 @@
 {
   "execution_id": "EXEC-2026-00003",
   "session_id": "SESSION-0001",
-  "started_at": "2026-10-05T09:07:29.486Z",
+  "started_at": "2026-10-12T11:19:59.025Z",
   "goal": "User A cannot select user B's saved card",
   "method": "api-client",
   "status": "FAILED",
@@ -15,19 +15,20 @@
   "uncertainties": [],
   "retries": 0,
   "provenance": {
-    "skill_version": "0.12.0",
+    "skill_version": "0.13.0",
     "skill_name": "testing-orchestrator",
-    "engine_version": "0.12.0",
-    "created_at": "2026-10-05T09:07:29.486Z",
+    "engine_version": "0.13.0",
+    "created_at": "2026-10-12T11:19:59.025Z",
     "created_by": "agent",
     "session_id": "SESSION-0001"
   },
   "test_category": "authn-authz",
   "decision_id": "DEC-00001",
+  "plan_scenario_id": "S-02",
   "command": "npm run test:api -- saved-cards",
   "environment": "local-docker",
   "runtime": {
-    "os": "win32 10.0.26200",
+    "os": "win32 10.0.26300",
     "arch": "x64",
     "node": "v22.17.1"
   },
@@ -38,9 +39,9 @@
     "pull_request": "412",
     "dirty": false
   },
-  "finished_at": "2026-10-05T09:07:29.497Z",
-  "wall_clock_ms": 11,
-  "duration_ms": 11,
+  "finished_at": "2026-10-12T11:19:59.037Z",
+  "wall_clock_ms": 12,
+  "duration_ms": 12,
   "command_duration_ms": 3120,
   "test_results": [
     {
@@ -60,11 +61,10 @@
     "errored": 0
   },
   "failure_classification": {
-    "class": "authentication-failure",
-    "confidence": 0.5,
+    "class": "product-defect",
+    "confidence": 0.59,
     "signals": [
-      "http-403",
-      "caveat: Ambiguous between a product authorisation defect and missing test credentials."
+      "assertion-mismatch"
     ],
     "evidence_refs": [
       "EV-2026-00002"

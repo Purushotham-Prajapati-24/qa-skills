@@ -20,7 +20,7 @@ import { summarise } from '../execution-engine/index.mjs';
 import { listWrites } from '../authorization/index.mjs';
 import { compute } from '../evaluation-engine/metrics.mjs';
 import { open as openUncertainties, BLOCKING_STATUSES } from '../uncertainty-register/index.mjs';
-import { check as checkProcessCompleteness } from '../evaluation-engine/process-completeness.mjs';
+import { check as checkProcessCompleteness, planProgress, authoredTests, findingVerifier, DEFECT_KINDS } from '../evaluation-engine/process-completeness.mjs';
 import { flakyTests, testName } from '../flakiness/index.mjs';
 
 const STATUS_ORDER = ['FAILED', 'BLOCKED', 'NEEDS_USER_INPUT', 'INCONCLUSIVE', 'INTERRUPTED', 'PARTIAL', 'DEFERRED', 'SKIPPED', 'NOT_APPLICABLE', 'PASSED', 'COMPLETED'];
@@ -38,12 +38,13 @@ function digestOf(reportLike) {
 
 export function generate({ plan = null, riskAssessment = null, applicability = [], recommendations = [], now = new Date() } = {}) {
   const session = state.requireSession();
-  const executions = state.list('executions');
-  const findings = state.list('findings');
-  const evidence = state.list('evidence');
-  const decisions = state.list('decisions');
+  const executions = state.listForSession('executions');
+  const findings = state.listForSession('findings');
+  const evidence = state.listForSession('evidence');
+  const decisions = state.listForSession('decisions');
   const writes = listWrites();
-  const uncertainties = state.list('uncertainties');
+  const uncertainties = state.listForSession('uncertainties');
+  const verifyFinding = findingVerifier();
 
   const claims = executions
     .filter((e) => e.method !== 'not-executed')
@@ -169,6 +170,7 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
       kind: f.kind,
       severity: f.severity,
       confidence: f.confidence,
+      verification: DEFECT_KINDS.has(f.kind) || ['not-a-defect', 'wont-report'].includes(f.triage?.state) ? verifyFinding(f) : undefined,
       component: f.component || undefined,
       summary: f.summary || undefined,
       expected: f.reproduction?.expected || undefined,
@@ -208,6 +210,9 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
       resolved: u.status === 'resolved',
       blocking: BLOCKING_STATUSES.has(u.status),
       raised_by_execution: u.raised_by_execution ?? null,
+      // A hold attributed to the user shows the words relied on and where they were verified:
+      // the request, a hook-recorded prompt, or the agent's own transcription.
+      ...(u.user_quote ? { user_quote: u.user_quote, user_quote_source: state.verifyUserQuote(u.user_quote) ?? 'not found' } : {}),
     })),
     coverage_gaps: (plan?.change_summary?.coverage_gaps ?? []).concat(
       applicability.filter((a) => a.applicable && a.existing_coverage === 'none').map((a) => `${a.category}: no existing coverage`),
@@ -260,6 +265,36 @@ export function generate({ plan = null, riskAssessment = null, applicability = [
   if (session.goals?.length) report.goals = session.goals;
   const quarantinedTests = flakyTests().map((f) => testName(f.test));
   if (quarantinedTests.length) report.quarantined_tests = quarantinedTests;
+  // The plan was a commitment; the reader gets it side by side with what ran, judged by the
+  // same rule `validate --final` uses, so "planned" can never be read as "done".
+  const progress = planProgress();
+  if (progress.plans_in_session.length) {
+    const HOLD = ['BLOCKED', 'NEEDS_USER_INPUT', 'DEFERRED', 'NOT_APPLICABLE'];
+    const committedRows = progress.scenarios.filter((s) => ['must-test', 'blocked'].includes(s.obligation));
+    report.plan_progress = {
+      plan_id: progress.plan_id,
+      committed: progress.must_test,
+      covered: progress.must_test_executed,
+      ran: committedRows.filter((s) => s.executed && !HOLD.includes(s.execution.status)).length,
+      held: committedRows.filter((s) => s.executed && HOLD.includes(s.execution.status)).length,
+      remaining: progress.must_test_remaining,
+      scenarios: progress.scenarios.map((s) => {
+        const last = s.attempts.at(-1);
+        return {
+          id: s.id,
+          title: s.title,
+          obligation: s.obligation,
+          category: s.category ?? null,
+          covered: s.executed,
+          held: Boolean(s.executed && HOLD.includes(s.execution.status)),
+          outcome: s.execution?.status ?? (last ? `${last.status} (does not count)` : 'NOT RUN'),
+          execution_id: s.execution?.execution_id ?? last?.execution_id ?? null,
+        };
+      }),
+    };
+  }
+  const authored = authoredTests();
+  if (authored.length) report.authored_tests = authored;
 
   // The digest is computed over everything above -- including every field just
   // conditionally added -- and must be the LAST thing set before this record is stored or
@@ -290,7 +325,7 @@ const SEVERITY_LABEL = {
 
 function headline({ overall, executions, findings, notTested }) {
   const real = executions.filter((e) => e.method !== 'not-executed').length;
-  const actionable = findings.filter((f) => !f.duplicate_of && f.kind !== 'observation');
+  const actionable = findings.filter((f) => !f.duplicate_of && f.kind !== 'observation' && !['not-a-defect', 'wont-report'].includes(f.triage?.state));
   const worst = actionable
     .map((f) => SEVERITY_ORDER.indexOf(f.severity))
     .filter((i) => i >= 0)
@@ -370,6 +405,13 @@ function renderFinding(f) {
 
   const lines = [`#### ${f.finding_id} — ${f.title}`, '', meta, ''];
 
+  const v = f.verification;
+  if (v?.status === 'confirmed') {
+    lines.push(`**Confirmed** — repro check \`${v.repro}\` fails on it (${v.execution_id}); it should pass once fixed.`, '');
+  } else if (v && v.status !== 'duplicate') {
+    lines.push(`> **${v.status[0].toUpperCase()}${v.status.slice(1)} — not a proven defect.** ${v.reason}`, '');
+  }
+
   if (f.confidence < 0.6) {
     lines.push(`> **Low confidence (${f.confidence}).** This may not be a defect. Confirm before acting.`, '');
   }
@@ -396,7 +438,8 @@ export function render(r) {
   const add = (s) => { if (s && s.trim()) out.push(s.trim()); };
 
   const details = r.finding_details ?? [];
-  const actionable = details.filter((f) => !f.duplicate_of && f.kind !== 'observation');
+  const rejected = details.filter((f) => f.verification?.status === 'rejected');
+  const actionable = details.filter((f) => !f.duplicate_of && f.kind !== 'observation' && f.verification?.status !== 'rejected');
   const observations = details.filter((f) => f.kind === 'observation' && !f.duplicate_of);
   const duplicates = details.filter((f) => f.duplicate_of);
 
@@ -439,6 +482,16 @@ export function render(r) {
       ]),
     ];
     add(section('Needs attention', body));
+  }
+
+  if (rejected.length) {
+    add(section('Rejected candidates', [
+      '_Reported as possible problems during testing, then triaged out. Each states why, and where to check._',
+      table(
+        rejected.map((f) => [f.finding_id, f.title, f.verification.reason]),
+        ['Finding', 'Candidate', 'Why rejected (class: reason, citation)'],
+      ),
+    ]));
   }
 
   /* -------------------------------------------------------- 2b. unblock these */
@@ -508,6 +561,31 @@ export function render(r) {
       ),
       remote.length < rows.length ? traceability : '',
       deployedNote,
+    ]));
+  }
+
+  /* ------------------------------------------------------ 3b. plan vs executed */
+
+  if (r.plan_progress?.scenarios?.length) {
+    const pp = r.plan_progress;
+    add(section('Plan vs executed', [
+      `**${pp.ran} of ${pp.committed} committed scenario(s) ran.** ${pp.held} held`
+        + `${pp.held ? ' (on a blocker outside the agent\'s control, or the user\'s own instruction — not tested)' : ''}`
+        + `${pp.remaining ? `; **${pp.remaining} neither ran nor were legitimately held**` : ''}.`,
+      table(
+        pp.scenarios.map((s) => [s.id, s.title, s.obligation, s.category ?? '—', s.covered && !s.held ? s.outcome : `**${s.outcome}**${s.held ? ' — not tested' : ''}`, s.execution_id ?? '—']),
+        ['Scenario', 'What', 'Obligation', 'Category', 'Outcome', 'Execution'],
+      ),
+    ]));
+  }
+
+  if (r.authored_tests?.length) {
+    add(section('Tests written this session', [
+      '_Every test file new or changed during the session, and the execution that ran it. A test that never ran is a draft._',
+      table(
+        r.authored_tests.map((t) => [t.file, t.ran ? 'ran' : t.held ? 'held (blocker)' : '**never run**', t.execution_id ?? '—', t.status ?? '—']),
+        ['File', 'Ran?', 'Execution', 'Status'],
+      ),
     ]));
   }
 

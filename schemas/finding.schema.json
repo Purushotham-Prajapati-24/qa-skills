@@ -70,6 +70,8 @@
       "properties": {
         "state": { "type": "string", "enum": ["new", "confirmed", "needs-more-evidence", "not-a-defect", "wont-report", "reported", "resolved"] },
         "note": { "type": "string" },
+        "reason_class": { "type": "string", "enum": ["explorer-artifact", "environment", "intended-design", "fixture-gap", "not-reproduced", "out-of-scope"], "description": "Why a candidate finding was rejected. Set by `finding reject`, which requires a cited reason." },
+        "citation": { "type": "string", "description": "Where the rejection reason can be checked: file:line, an evidence id, a doc URL." },
         "decided_by": { "type": "string", "enum": ["agent", "human"] },
         "decision_id": { "$ref": "common.schema.json#/definitions/decisionId" }
       },

@@ -6,12 +6,12 @@ completeness.
 
 **Current phase:** core complete and exercised end to end; integrations specified, bound where
 a provider exists.
-**Version:** 0.12.0 · **Last validated:** 2026-10-05
+**Version:** 0.13.0 · **Last validated:** 2026-10-12
 
 ## Validation status
 
 ```
-node --test "tests/*.test.mjs"     361 passed, 0 failed
+node --test "tests/*.test.mjs"     452 passed, 0 failed
 node bin/ast.mjs eval run          51/51 checks across 22 cases (16 benchmark + 6 regression)
 node scripts/validate-repo.mjs     0 problems
 node scripts/demo-session.mjs      full pipeline exercised end to end
@@ -44,13 +44,16 @@ Working, tested, exercised by the demo session.
 | Secret redaction | Token shapes and sensitive keys, with a `SAFE_KEYS` allowlist |
 | 21 skills | Frontmatter and links validated; all under the 500-line guidance |
 | 4 subagents | `agents/*.md` |
-| 2 Claude Code hooks | Both tested by hand; `SessionStart` and `PreToolUse` |
+| 4 Claude Code hooks | `SessionStart`, `PreToolUse`, `UserPromptSubmit` (records user statements), `Stop` (refuses to stop while `ast todo` is non-empty; releases after 3 refusals without progress). Stop and UserPromptSubmit driven as subprocesses in `tests/hooks.test.mjs` |
 | Plugin + marketplace manifests | Match the verified plugin layout |
 | **npx installer** | `bin/install.mjs`; 7 tests install into a throwaway repo and assert the CLI runs, every link resolves and no skill still points at the source layout |
 | Repository self-check | Catches broken links, hard-coded MCP names, dangling references |
 | **Regression suite from real sessions** | `evaluation/regression-suite/`: 6 cases (5 from 3 field trials, 1 from the 2026-10-05 bare-URL feedback), loaded by `ast eval run`; each seen failing on the engine version that produced it |
 | **Jira adapter (executable)** | `engine/adapters/jira.mjs`: REST v3 reads with ADF-to-text and acceptance-criteria extraction, gated writes, delegated writes confirmed by REST read-back; transitions stay prohibited |
 | **Coverage floors** | `validate --final` fails when an applicable P0/P1 category has no execution, a high/critical `functionality_inventory` item has no tagged execution, or a profile with a UI/API has no inventory at all |
+| **Plan-to-execution enforcement** | Persisted plans with ratcheting commitments; scenario, disposition and authored-test floors; one coverage judge (anchored non-trivial evidence, verified user holds, category-matched links); `ast todo` work queue; Plan vs executed and Tests written report sections. `tests/plan-execution-gap.test.mjs`: 33 adversarial tests; each rule was seen failing either against the pre-fix engine or under a targeted mutation |
+| **Session continuity** | Project-scoped state for shared runtimes (user scope, plugin); queue, gate and validate share one integrity check; capture kills process trees, streams big output, and redaction is linear; judgements scoped to the active session; resume finalises only idle runs and reports what is owed; results are final; restart over unfinished work refused; SessionStart hook fires on compaction. `tests/continuity.test.mjs` (11), `tests/queue-driven-agent.test.mjs` (a memoryless agent finishes a session across a compaction using only the queue), `tests/docs-workflows.test.mjs` (every documented command and payload runs) |
+| **Confirmed defects and charters** | A defect is confirmed only by a linked repro run failing on a product-defect assertion with real evidence; `validate --final` refuses unproven `major`+ claims; unconfirmed defects cannot be filed externally; `finding reject` needs class, reason and citation; `plan charters` builds area x posture exploratory scenarios that the scenario floor enforces (closes P4, multi-agent fan-out). `tests/defect-confirmation.test.mjs`: 14 tests, 6/6 targeted mutations caught |
 | **GitHub adapter (executable)** | `engine/adapters/github.mjs`; 29 tests assert each gate refuses **before** the provider is called |
 | **Enforced write protocol** | `performWrite` is the only path to a ledger entry, and it runs capability -> authorisation -> ledger -> render -> perform -> parse -> record in order |
 | **Delegated-write tickets** | An MCP-resolved write cannot be recorded without a single-use, hour-limited ticket proving the gates ran |
@@ -97,6 +100,9 @@ Nothing.
 | Decision accuracy is self-assessed | Treat the agent's own verdicts as weak evidence. `decision_assessment_rate` exposes a small sample, and `validate` now warns when no decision was assessed at all. |
 | Redaction cannot recognise a secret shaped like ordinary text | Defence in depth, not a guarantee |
 | The hook guard is pattern-based | A creative command can evade it. It is a backstop, not the authorisation system. |
+| Coverage proves a relevant run happened, not that it tested the right thing | A same-category run with real evidence discharges a scenario even if its assertions are weak. The evidence-auditor subagent is the semantic check. |
+| User-attributed holds without the hook rest on agent transcription | With the UserPromptSubmit hook, quotes are checked against prompts Claude Code actually received. Without it, `session said` is the agent's own record (labelled `source: agent`). |
+| The trivial-command check is a heuristic | It catches `echo PASSED` and `node -e 0`; a deliberately disguised no-op still passes. |
 | `traceability` only sees declared requirements | Stated in the query's own output. Undeclared expectations remain the largest untested surface. |
 
 ## Next recommended stage

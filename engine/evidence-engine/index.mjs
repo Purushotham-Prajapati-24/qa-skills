@@ -220,6 +220,19 @@ export function verifyClaim({ status, evidenceIds = [], statement = '', executio
   const claimsSuccess = ['PASSED', 'COMPLETED'].includes(status);
 
   if (claimsSuccess) {
+    // A command that never finished -- killed by its timeout, not found, out of buffer -- has no
+    // exit code. "It did not fail" is not "it passed": the run was cut off before it could do
+    // either. Only captured-command evidence carries `command`; artifacts registered with
+    // `evidence add` are unaffected.
+    const execItems = items.filter((i) => EXECUTION_EVIDENCE.has(i.rec.kind));
+    const unfinished = execItems.filter((i) => i.rec.command && !Number.isInteger(i.rec.command.exit_code));
+    if (unfinished.length && unfinished.length === execItems.length) {
+      return {
+        permitted: false,
+        downgrade_to: 'INCONCLUSIVE',
+        reasons: [`Evidence ${unfinished.map((i) => i.id).join(', ')} is from a command that did not complete (no exit code: timed out, killed or not found). A run that was cut off cannot support a "${status}" claim. Re-run it to completion.`],
+      };
+    }
     const failedCommand = items.find((i) => Number.isInteger(i.rec.command?.exit_code) && i.rec.command.exit_code !== 0);
     if (failedCommand) {
       return {

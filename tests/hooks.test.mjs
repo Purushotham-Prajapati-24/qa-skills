@@ -143,3 +143,119 @@ test('obfuscated destructive commands are a documented blind spot, not a silent 
     runGuard(command);
   }
 });
+
+/* ------------------------------------------------------------ Stop gate hook */
+
+import fs from 'node:fs';
+import os from 'node:os';
+
+const STOP = path.join(ROOT, 'scripts', 'hooks', 'stop-gate.mjs');
+const PROMPT = path.join(ROOT, 'scripts', 'hooks', 'record-user-prompt.mjs');
+const CLI = path.join(ROOT, 'bin', 'ast.mjs');
+
+function hook(script, stateDir, input = {}, env = {}) {
+  const out = execFileSync(process.execPath, [script], {
+    input: JSON.stringify(input), encoding: 'utf8', timeout: 30_000,
+    env: { ...process.env, AST_STATE_DIR: stateDir, AST_STOP_GATE: '', ...env },
+  });
+  return out.trim() ? JSON.parse(out.trim()) : null;
+}
+
+function cli(stateDir, args, body) {
+  const extra = [];
+  if (body) {
+    const f = path.join(stateDir, `in-${Math.random().toString(36).slice(2)}.json`);
+    fs.writeFileSync(f, JSON.stringify(body));
+    extra.push('--input', f);
+  }
+  return JSON.parse(execFileSync(process.execPath, [CLI, '--state', stateDir, ...args, ...extra], { encoding: 'utf8' }));
+}
+
+function sessionWithPlan(label) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `ast-hook-${label}-`));
+  cli(dir, ['session', 'start', '--request', 'test everything; you have 30 minutes']);
+  const m = cli(dir, ['applicability', 'eval'], { signals: [] });
+  for (const r of (m.matrix ?? []).filter((x) => x.applicable)) {
+    cli(dir, ['exec', 'not-run'], { goal: `${r.category} testing`, status: 'SKIPPED', reason: `${r.priority}, out of scope for this probe`, testCategory: r.category });
+  }
+  cli(dir, ['decide'], { question: 'How deep should testing go?', options: ['standard', 'deep'], selected: 'standard', reason: 'fixture', confidence: 0.8, reversible: true });
+  cli(dir, ['plan', 'save'], {
+    plan_id: 'PLAN-00001', created_at: new Date().toISOString(), objective: 'Stop gate probe',
+    scope: { in_scope: ['x'], out_of_scope: [] },
+    applicability: [{ category: 'e2e', applicable: true, reason: 'multi-step user paths present' }],
+    scenarios: [
+      { id: 'S-01', title: 'first', category: 'e2e', method: 'api-client', obligation: 'must-test' },
+      { id: 'S-02', title: 'second', category: 'e2e', method: 'api-client', obligation: 'must-test' },
+    ],
+    exit_criteria: ['both run'],
+    provenance: { skill_version: '0.12.0', created_at: new Date().toISOString(), created_by: 'agent' },
+  });
+  return dir;
+}
+
+function runScenario(dir, id) {
+  const ex = cli(dir, ['exec', 'start'], { goal: `run ${id}`, method: 'api-client', plan_scenario_id: id, git: null });
+  const ev = cli(dir, ['evidence', 'capture', '--exec', ex.execution_id, '--summary', id, '--', process.execPath, '-e', "require('node:assert').ok(1 + 1 === 2)"]);
+  cli(dir, ['exec', 'finish', ex.execution_id], { status: 'PASSED', statusReason: `${id} assertion held`, evidence: [ev.evidence_id] });
+}
+
+test('stop gate: no testing session on disk -> silent, stopping allowed', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ast-hook-empty-'));
+  assert.equal(hook(STOP, dir), null);
+});
+
+test('stop gate: owed work blocks the stop and hands back the queue', () => {
+  const dir = sessionWithPlan('block');
+  const out = hook(STOP, dir, { stop_hook_active: false });
+  assert.equal(out.decision, 'block');
+  assert.match(out.reason, /S-01/);
+  assert.match(out.reason, /S-02/);
+  assert.match(out.reason, /Keep going/);
+});
+
+test('stop gate: progress resets the count; no progress releases after the maximum', () => {
+  const dir = sessionWithPlan('release');
+  assert.equal(hook(STOP, dir).decision, 'block');           // strike 1
+  runScenario(dir, 'S-01');
+  assert.equal(hook(STOP, dir).decision, 'block');           // S-01 discharged: progress, back to strike 1
+  assert.equal(hook(STOP, dir).decision, 'block');           // strike 2
+  assert.equal(hook(STOP, dir).decision, 'block');           // strike 3
+  const released = hook(STOP, dir);                          // strike 4 > max 3
+  assert.equal(released.decision, undefined, 'it must never trap the session');
+  assert.match(released.systemMessage, /released/);
+});
+
+test('stop gate: an empty queue lets the session stop', () => {
+  const dir = sessionWithPlan('done');
+  runScenario(dir, 'S-01');
+  runScenario(dir, 'S-02');
+  const todo = cli(dir, ['todo']);
+  assert.equal(todo.done, true, JSON.stringify(todo.items));
+  assert.equal(hook(STOP, dir), null);
+});
+
+test('stop gate: AST_STOP_GATE=off disables it', () => {
+  const dir = sessionWithPlan('off');
+  assert.equal(hook(STOP, dir, {}, { AST_STOP_GATE: 'off' }), null);
+});
+
+test('prompt hook: records the user\'s words, which then verify a user-attributed hold', async () => {
+  const dir = sessionWithPlan('prompt');
+  assert.equal(hook(PROMPT, dir, { prompt: 'Skip the load tests, the staging box cannot take it.' }), null);
+  const s = cli(dir, ['session', 'show']);
+  assert.equal(s.user_statements.at(-1).source, 'hook');
+  assert.match(s.user_statements.at(-1).quote, /Skip the load tests/);
+  const { setStateRoot } = await import('../engine/core/paths.mjs');
+  setStateRoot(dir);
+  const state = await import('../engine/state-engine/index.mjs');
+  assert.equal(state.verifyUserQuote('skip the load tests'), 'hook');
+  assert.equal(state.verifyUserQuote('you have 30 minutes'), 'request');
+  assert.equal(state.verifyUserQuote('skip security too'), null);
+  setStateRoot(null);
+});
+
+test('CLI: `session said` records an agent-transcribed statement, labelled as such', () => {
+  const dir = sessionWithPlan('said');
+  const out = cli(dir, ['session', 'said', '--quote', 'Do not touch the payments sandbox today']);
+  assert.equal(out.recorded.source, 'agent');
+});

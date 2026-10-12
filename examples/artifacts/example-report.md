@@ -8,30 +8,33 @@ hand-written approximation of it.
 -->
 # Testing Report · REPORT-2026-00001
 
-**FAILED** — 8 executions run · 2 findings, worst critical · 10 planned items not run.
+**FAILED** — 8 executions run · 2 findings, worst critical · 25 planned items not run.
 
 | Session | Repository | Commit | PR | Generated | Skill |
 | --- | --- | --- | --- | --- | --- |
-| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-10-05 09:07:29Z | v0.12.0 |
+| SESSION-0001 | acme/shop (feat/SHOP-412-saved-card) | abc1234 | 412 | 2026-10-12 11:19:59Z | v0.13.0 |
 
 ## Verdict
 
 - 2 execution(s) failed — each carries a failure classification below.
-- 2 execution(s) blocked; their scope was NOT covered by anything else.
+- 3 execution(s) blocked; their scope was NOT covered by anything else.
 - 1 finding(s) at critical severity or above.
+- 1 finding(s) carry low confidence and need human confirmation before action.
 
 ## Needs attention
 
 | Severity | Count | Findings |
 | --- | --- | --- |
 | Critical | 1 | FIND-00001 |
-| Minor | 1 | FIND-00003 |
+| Minor | 1 | FIND-00004 |
 
 ### Critical
 
 #### FIND-00001 — Saved card belonging to another user is selectable and chargeable
 
 `server/payments` · reproduced 3/3 (always) · confidence 0.86 · security-issue
+
+**Confirmed** — repro check `npm run test:api -- saved-cards` fails on it (EXEC-2026-00003); it should pass once fixed.
 
 The payment-method lookup does not compare the record owner to the session user, so any authenticated user can select and charge a card saved by someone else.
 
@@ -47,7 +50,7 @@ _Evidence: EV-2026-00002_
 
 ### Minor
 
-#### FIND-00003 — Flaky test quarantined: saved card survives a reload
+#### FIND-00004 — Flaky test quarantined: saved card survives a reload
 
 `saved card survives a reload` · reproduced 3/3 (intermittent) · confidence 0.7 · test-quality-issue
 
@@ -63,6 +66,14 @@ Mixed outcomes (2 passed / 1 failed) at a single commit (abc1234): the code did 
 
 _Evidence: EV-2026-00004, EV-2026-00005, EV-2026-00006_
 
+## Rejected candidates
+
+_Reported as possible problems during testing, then triaged out. Each states why, and where to check._
+
+| Finding | Candidate | Why rejected (class: reason, citation) |
+| --- | --- | --- |
+| FIND-00003 | Terms link on checkout opens nothing when clicked | explorer-artifact: The link opens the terms in a new tab (target=_blank), which the explorer does not follow; it works for a user. (src/checkout/Footer.tsx:22) |
+
 ## Unblock these
 
 _Every item below is waiting on you, not on more agent work. Say so and it runs._
@@ -75,11 +86,29 @@ _Every item below is waiting on you, not on more agent work. Say so and it runs.
 | --- | --- | --- | --- | --- |
 | EXEC-2026-00002 | Baseline: full unit suite at head | regression | existing-suite | EV-2026-00001 |
 | EXEC-2026-00007 | Accessibility scan of the checkout pages (restarted after interruption) | accessibility | static-analysis | EV-2026-00003 |
-| EXEC-2026-00009 | Checkout UI regression suite, run 1 of 3 _(includes quarantined saved card survives a reload; that pass is not counted)_ | regression | playwright-script | EV-2026-00004 |
-| EXEC-2026-00011 | Checkout UI regression suite, run 3 of 3 _(includes quarantined saved card survives a reload; that pass is not counted)_ | regression | playwright-script | EV-2026-00006 |
-| EXEC-2026-00010 | checkout renders saved cards _(passed; run FAILED overall: 1/2)_ | regression | playwright-script | EV-2026-00005 |
+| EXEC-2026-00010 | Checkout UI regression suite, run 1 of 3 _(includes quarantined saved card survives a reload; that pass is not counted)_ | regression | playwright-script | EV-2026-00004 |
+| EXEC-2026-00012 | Checkout UI regression suite, run 3 of 3 _(includes quarantined saved card survives a reload; that pass is not counted)_ | regression | playwright-script | EV-2026-00006 |
+| EXEC-2026-00011 | checkout renders saved cards _(passed; run FAILED overall: 1/2)_ | regression | playwright-script | EV-2026-00005 |
 
 _Every row above executed against the commit named at the top and is backed by the evidence cited. Nothing else in this report is a claim that something works._
+
+## Plan vs executed
+
+**3 of 10 committed scenario(s) ran.** 7 held (on a blocker outside the agent's control, or the user's own instruction — not tested).
+
+| Scenario | What | Obligation | Category | Outcome | Execution |
+| --- | --- | --- | --- | --- | --- |
+| S-01 | Baseline unit suite at head | must-test | regression | PASSED | EXEC-2026-00002 |
+| S-02 | Cross-user card isolation (IDOR) | must-test | authn-authz | FAILED | EXEC-2026-00003 |
+| S-03 | Accessibility scan of checkout | must-test | accessibility | PASSED | EXEC-2026-00007 |
+| S-04 | Payment E2E with real provider | should-test | e2e | **NEEDS_USER_INPUT** — not tested | EXEC-2026-00008 |
+| S-10 | security baseline for the payment path | must-test | security | **DEFERRED** — not tested | EXEC-2026-00013 |
+| S-11 | input-validation baseline for the payment path | must-test | input-validation | **DEFERRED** — not tested | EXEC-2026-00014 |
+| S-12 | session-management baseline for the payment path | must-test | session-management | **DEFERRED** — not tested | EXEC-2026-00015 |
+| S-13 | database baseline for the payment path | must-test | database | **DEFERRED** — not tested | EXEC-2026-00016 |
+| S-14 | migration baseline for the payment path | must-test | migration | **DEFERRED** — not tested | EXEC-2026-00017 |
+| S-15 | data-integrity baseline for the payment path | must-test | data-integrity | **DEFERRED** — not tested | EXEC-2026-00018 |
+| S-16 | perf-baseline baseline for the payment path | must-test | perf-baseline | **DEFERRED** — not tested | EXEC-2026-00019 |
 
 ## What was not tested
 
@@ -89,14 +118,29 @@ _Read this before drawing any conclusion from the results above._
 
 - Payment E2E against the real provider — BLOCKED: STRIPE_SECRET_KEY is unset; refusing to transact against a live key.
 - Localisation testing — NOT_APPLICABLE: No i18n resources exist in the repository; nothing is translated.
+- Payment E2E with the real provider (should-test S-04) — NEEDS_USER_INPUT: The mocked-provider run covered the journey; only the real provider hop needs a sandbox key.
 - Saved-card E2E with real provider credentials — NEEDS_USER_INPUT: Which sandbox account may be charged is the user's call, not the agent's.
-- security testing — DEFERRED: The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.
-- input-validation testing — DEFERRED: The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.
-- session-management testing — DEFERRED: The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.
-- database testing — DEFERRED: The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.
-- migration testing — DEFERRED: The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.
-- data-integrity testing — DEFERRED: The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.
-- perf-baseline testing — DEFERRED: The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.
+- security baseline for the payment path — DEFERRED: The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.
+- input-validation baseline for the payment path — DEFERRED: The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.
+- session-management baseline for the payment path — DEFERRED: The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.
+- database baseline for the payment path — DEFERRED: The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.
+- migration baseline for the payment path — DEFERRED: The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.
+- data-integrity baseline for the payment path — DEFERRED: The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.
+- perf-baseline baseline for the payment path — DEFERRED: The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.
+- acceptance testing — SKIPPED: P2: below the coverage floor and outside the user's 150-minute budget.
+- dependency-scan testing — SKIPPED: P2: below the coverage floor and outside the user's 150-minute budget.
+- sanity testing — SKIPPED: P2: below the coverage floor and outside the user's 150-minute budget.
+- component testing — SKIPPED: P2: below the coverage floor and outside the user's 150-minute budget.
+- exploratory testing — SKIPPED: P2: below the coverage floor and outside the user's 150-minute budget.
+- functional testing — SKIPPED: P3: below the coverage floor and outside the user's 150-minute budget.
+- ui testing — SKIPPED: P3: below the coverage floor and outside the user's 150-minute budget.
+- integration testing — SKIPPED: P3: below the coverage floor and outside the user's 150-minute budget.
+- browser-automation testing — SKIPPED: P3: below the coverage floor and outside the user's 150-minute budget.
+- api testing — SKIPPED: P3: below the coverage floor and outside the user's 150-minute budget.
+- unit testing — SKIPPED: P3: below the coverage floor and outside the user's 150-minute budget.
+- resilience testing — SKIPPED: P3: below the coverage floor and outside the user's 150-minute budget.
+- ci-cd testing — SKIPPED: P3: below the coverage floor and outside the user's 150-minute budget.
+- visual testing — SKIPPED: P3: below the coverage floor and outside the user's 150-minute budget.
 
 **Not applicable to this repository.**
 
@@ -112,7 +156,7 @@ _Read this before drawing any conclusion from the results above._
 | ID | Status | Question | What would resolve it | Owner |
 | --- | --- | --- | --- | --- |
 | U-00001 | user-input-required | Should payment E2E use a real provider sandbox key, or a mock at the HTTP boundary? | ask the user which environment and credentials to use | user |
-| U-00002 | deferred | Categories the coverage floor enforces, not reached in this time-boxed session: security, input-validation, session-management, database, migration, data-integrity, perf-baseline | schedule a follow-up session for the security sweep and input edge cases on staging, plus a disposable database for data and migration tests | user |
+| U-00002 | deferred | Committed scenarios not reached inside the user's 150-minute budget: S-10, S-11, S-12, S-13, S-14, S-15, S-16 | schedule a follow-up session for the security sweep and input edge cases on staging, plus a disposable database for data and migration tests | user |
 
 _Questions owned by you are the only ones the agent cannot progress on its own._
 
@@ -137,24 +181,39 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 
 | ID | Status | Goal | Method | Failure class | Wall clock | Command time |
 | --- | --- | --- | --- | --- | --- | --- |
-| EXEC-2026-00003 | FAILED | User A cannot select user B's saved card | api-client | authentication-failure (0.5) | 11 ms | 3120 ms |
-| EXEC-2026-00010 | FAILED | Checkout UI regression suite, run 2 of 3 | playwright-script | product-defect (0.59) | 11 ms | 3700 ms |
+| EXEC-2026-00003 | FAILED | User A cannot select user B's saved card | api-client | product-defect (0.59) | 12 ms | 3120 ms |
+| EXEC-2026-00011 | FAILED | Checkout UI regression suite, run 2 of 3 | playwright-script | product-defect (0.59) | 10 ms | 3700 ms |
 | EXEC-2026-00004 | BLOCKED | Payment E2E against the real provider | not-executed | — | 0 ms | — |
-| EXEC-2026-00008 | NEEDS_USER_INPUT | Saved-card E2E with real provider credentials | not-executed | — | 0 ms | — |
-| EXEC-2026-00001 | INCONCLUSIVE | Quick smoke of the checkout page | existing-suite | — | 9 ms | — |
+| EXEC-2026-00008 | NEEDS_USER_INPUT | Payment E2E with the real provider (should-test S-04) | not-executed | — | 0 ms | — |
+| EXEC-2026-00009 | NEEDS_USER_INPUT | Saved-card E2E with real provider credentials | not-executed | — | 0 ms | — |
+| EXEC-2026-00001 | INCONCLUSIVE | Quick smoke of the checkout page | existing-suite | — | 7 ms | — |
 | EXEC-2026-00006 | INTERRUPTED | Accessibility scan of the checkout pages | static-analysis | — | — | — |
-| EXEC-2026-00012 | DEFERRED | security testing | not-executed | — | 0 ms | — |
-| EXEC-2026-00013 | DEFERRED | input-validation testing | not-executed | — | 0 ms | — |
-| EXEC-2026-00014 | DEFERRED | session-management testing | not-executed | — | 0 ms | — |
-| EXEC-2026-00015 | DEFERRED | database testing | not-executed | — | 0 ms | — |
-| EXEC-2026-00016 | DEFERRED | migration testing | not-executed | — | 0 ms | — |
-| EXEC-2026-00017 | DEFERRED | data-integrity testing | not-executed | — | 0 ms | — |
-| EXEC-2026-00018 | DEFERRED | perf-baseline testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00013 | DEFERRED | security baseline for the payment path | not-executed | — | 0 ms | — |
+| EXEC-2026-00014 | DEFERRED | input-validation baseline for the payment path | not-executed | — | 0 ms | — |
+| EXEC-2026-00015 | DEFERRED | session-management baseline for the payment path | not-executed | — | 0 ms | — |
+| EXEC-2026-00016 | DEFERRED | database baseline for the payment path | not-executed | — | 0 ms | — |
+| EXEC-2026-00017 | DEFERRED | migration baseline for the payment path | not-executed | — | 0 ms | — |
+| EXEC-2026-00018 | DEFERRED | data-integrity baseline for the payment path | not-executed | — | 0 ms | — |
+| EXEC-2026-00019 | DEFERRED | perf-baseline baseline for the payment path | not-executed | — | 0 ms | — |
+| EXEC-2026-00020 | SKIPPED | acceptance testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00021 | SKIPPED | dependency-scan testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00022 | SKIPPED | sanity testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00023 | SKIPPED | component testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00024 | SKIPPED | exploratory testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00025 | SKIPPED | functional testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00026 | SKIPPED | ui testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00027 | SKIPPED | integration testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00028 | SKIPPED | browser-automation testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00029 | SKIPPED | api testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00030 | SKIPPED | unit testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00031 | SKIPPED | resilience testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00032 | SKIPPED | ci-cd testing | not-executed | — | 0 ms | — |
+| EXEC-2026-00033 | SKIPPED | visual testing | not-executed | — | 0 ms | — |
 | EXEC-2026-00005 | NOT_APPLICABLE | Localisation testing | not-executed | — | 0 ms | — |
-| EXEC-2026-00002 | PASSED | Baseline: full unit suite at head | existing-suite | — | 14 ms | 12480 ms |
+| EXEC-2026-00002 | PASSED | Baseline: full unit suite at head | existing-suite | — | 13 ms | 12480 ms |
 | EXEC-2026-00007 | PASSED | Accessibility scan of the checkout pages (restarted after interruption) | static-analysis | — | 11 ms | 4100 ms |
-| EXEC-2026-00009 | PASSED | Checkout UI regression suite, run 1 of 3 | playwright-script | — | 11 ms | 1700 ms |
-| EXEC-2026-00011 | PASSED | Checkout UI regression suite, run 3 of 3 | playwright-script | — | 11 ms | 1700 ms |
+| EXEC-2026-00010 | PASSED | Checkout UI regression suite, run 1 of 3 | playwright-script | — | 11 ms | 1700 ms |
+| EXEC-2026-00012 | PASSED | Checkout UI regression suite, run 3 of 3 | playwright-script | — | 10 ms | 1700 ms |
 
 | Status | Count |
 | --- | --- |
@@ -164,19 +223,20 @@ _Questions owned by you are the only ones the agent cannot progress on its own._
 | BLOCKED | 1 |
 | NOT_APPLICABLE | 1 |
 | INTERRUPTED | 1 |
-| NEEDS_USER_INPUT | 1 |
+| NEEDS_USER_INPUT | 2 |
 | DEFERRED | 7 |
+| SKIPPED | 14 |
 
 ### Evidence
 
 | ID | Kind | Summary | Anchored? | Artifact |
 | --- | --- | --- | --- | --- |
-| EV-2026-00001 | command-output | vitest: 211/211 passed | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-wEFh3G\evidence\blobs\output-2026-10-05T09-07-29-471Z-45768.txt |
-| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-wEFh3G\evidence\blobs\output-2026-10-05T09-07-29-492Z-45768.txt |
-| EV-2026-00003 | command-output | axe: 0 violations on /checkout | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-wEFh3G\evidence\blobs\output-2026-10-05T09-07-29-568Z-45768.txt |
-| EV-2026-00004 | command-output | playwright checkout suite, run 1 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-wEFh3G\evidence\blobs\output-2026-10-05T09-07-29-596Z-45768.txt |
-| EV-2026-00005 | command-output | playwright checkout suite, run 2 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-wEFh3G\evidence\blobs\output-2026-10-05T09-07-29-615Z-45768.txt |
-| EV-2026-00006 | command-output | playwright checkout suite, run 3 | yes | C:\Users\purus\AppData\Local\Temp\ast-demo-wEFh3G\evidence\blobs\output-2026-10-05T09-07-29-633Z-45768.txt |
+| EV-2026-00001 | command-output | vitest: 211/211 passed | yes | .testing-state\evidence\blobs\output-2026-10-12T11-19-59-010Z-66656.txt |
+| EV-2026-00002 | command-output | api: 11/12 passed, 1 failed | yes | .testing-state\evidence\blobs\output-2026-10-12T11-19-59-032Z-66656.txt |
+| EV-2026-00003 | command-output | axe: 0 violations on /checkout | yes | .testing-state\evidence\blobs\output-2026-10-12T11-19-59-121Z-66656.txt |
+| EV-2026-00004 | command-output | playwright checkout suite, run 1 | yes | .testing-state\evidence\blobs\output-2026-10-12T11-19-59-164Z-66656.txt |
+| EV-2026-00005 | command-output | playwright checkout suite, run 2 | yes | .testing-state\evidence\blobs\output-2026-10-12T11-19-59-183Z-66656.txt |
+| EV-2026-00006 | command-output | playwright checkout suite, run 3 | yes | .testing-state\evidence\blobs\output-2026-10-12T11-19-59-201Z-66656.txt |
 
 ### External writes
 
@@ -290,7 +350,7 @@ _Excluded for lack of evidence — not scored, not guessed: user_impact, depende
 | requirement_coverage | 0.6667 | 3 | ⚠️ below noise floor (5) | higher-is-better |
 | high_risk_coverage | 0 | 6 |  | higher-is-better |
 | decision_assessment_rate | 0 | 1 | ⚠️ below noise floor (5) | higher-is-better |
-| actionable_finding_rate | 1 | 2 | ⚠️ below noise floor (5) | higher-is-better |
+| actionable_finding_rate | 0.6667 | 3 | ⚠️ below noise floor (5) | higher-is-better |
 | evidence_completeness | 1 | 6 |  | higher-is-better |
 | evidence_anchored_rate | 1 | 6 |  | higher-is-better |
 | audit_coverage | 0 | 6 |  | higher-is-better |
@@ -325,6 +385,6 @@ _Not measured this session (zero denominator, honestly excluded rather than show
 
 ---
 
-Produced by the Autonomous Software Testing skill system v0.12.0. Every status above is traceable to a record under `state/`.
+Produced by the Autonomous Software Testing skill system v0.13.0. Every status above is traceable to a record under `state/`.
 
-_Rendered from REPORT-2026-00001 · digest `sha256:a263de0246f485ea41b1b0db96b372690aa62b94c09e761f07af5d4561f8c7cf` · verify with `ast report verify`. A report with no digest line was not produced by this system._
+_Rendered from REPORT-2026-00001 · digest `sha256:265bf871f4ca8ed0d0bd889ffc00466157542ffb9e9f65ccf1cf876e1d4ea69e` · verify with `ast report verify`. A report with no digest line was not produced by this system._

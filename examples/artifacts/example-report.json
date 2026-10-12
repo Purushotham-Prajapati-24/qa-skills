@@ -1,28 +1,44 @@
 {
   "report_id": "REPORT-2026-00001",
   "report_version": "1.2.0",
-  "generated_at": "2026-10-05T09:07:29.748Z",
+  "generated_at": "2026-10-12T11:19:59.673Z",
   "session_id": "SESSION-0001",
   "executive_summary": {
-    "headline": "**FAILED** — 8 executions run · 2 findings, worst critical · 10 planned items not run.",
+    "headline": "**FAILED** — 8 executions run · 2 findings, worst critical · 25 planned items not run.",
     "overall_status": "FAILED",
     "confidence": 1,
     "key_points": [
       "2 execution(s) failed — each carries a failure classification below.",
-      "2 execution(s) blocked; their scope was NOT covered by anything else.",
-      "1 finding(s) at critical severity or above."
+      "3 execution(s) blocked; their scope was NOT covered by anything else.",
+      "1 finding(s) at critical severity or above.",
+      "1 finding(s) carry low confidence and need human confirmation before action."
     ],
     "what_was_not_tested": [
       "Payment E2E against the real provider — BLOCKED: STRIPE_SECRET_KEY is unset; refusing to transact against a live key.",
       "Localisation testing — NOT_APPLICABLE: No i18n resources exist in the repository; nothing is translated.",
+      "Payment E2E with the real provider (should-test S-04) — NEEDS_USER_INPUT: The mocked-provider run covered the journey; only the real provider hop needs a sandbox key.",
       "Saved-card E2E with real provider credentials — NEEDS_USER_INPUT: Which sandbox account may be charged is the user's call, not the agent's.",
-      "security testing — DEFERRED: The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.",
-      "input-validation testing — DEFERRED: The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.",
-      "session-management testing — DEFERRED: The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.",
-      "database testing — DEFERRED: The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.",
-      "migration testing — DEFERRED: The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.",
-      "data-integrity testing — DEFERRED: The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.",
-      "perf-baseline testing — DEFERRED: The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report."
+      "security baseline for the payment path — DEFERRED: The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.",
+      "input-validation baseline for the payment path — DEFERRED: The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.",
+      "session-management baseline for the payment path — DEFERRED: The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.",
+      "database baseline for the payment path — DEFERRED: The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.",
+      "migration baseline for the payment path — DEFERRED: The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.",
+      "data-integrity baseline for the payment path — DEFERRED: The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.",
+      "perf-baseline baseline for the payment path — DEFERRED: The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.",
+      "acceptance testing — SKIPPED: P2: below the coverage floor and outside the user's 150-minute budget.",
+      "dependency-scan testing — SKIPPED: P2: below the coverage floor and outside the user's 150-minute budget.",
+      "sanity testing — SKIPPED: P2: below the coverage floor and outside the user's 150-minute budget.",
+      "component testing — SKIPPED: P2: below the coverage floor and outside the user's 150-minute budget.",
+      "exploratory testing — SKIPPED: P2: below the coverage floor and outside the user's 150-minute budget.",
+      "functional testing — SKIPPED: P3: below the coverage floor and outside the user's 150-minute budget.",
+      "ui testing — SKIPPED: P3: below the coverage floor and outside the user's 150-minute budget.",
+      "integration testing — SKIPPED: P3: below the coverage floor and outside the user's 150-minute budget.",
+      "browser-automation testing — SKIPPED: P3: below the coverage floor and outside the user's 150-minute budget.",
+      "api testing — SKIPPED: P3: below the coverage floor and outside the user's 150-minute budget.",
+      "unit testing — SKIPPED: P3: below the coverage floor and outside the user's 150-minute budget.",
+      "resilience testing — SKIPPED: P3: below the coverage floor and outside the user's 150-minute budget.",
+      "ci-cd testing — SKIPPED: P3: below the coverage floor and outside the user's 150-minute budget.",
+      "visual testing — SKIPPED: P3: below the coverage floor and outside the user's 150-minute budget."
     ],
     "not_applicable_summary": {
       "total": 22,
@@ -59,7 +75,7 @@
     }
   },
   "execution_summary": {
-    "executions": 18,
+    "executions": 33,
     "by_status": {
       "INCONCLUSIVE": 1,
       "PASSED": 4,
@@ -67,10 +83,11 @@
       "BLOCKED": 1,
       "NOT_APPLICABLE": 1,
       "INTERRUPTED": 1,
-      "NEEDS_USER_INPUT": 1,
-      "DEFERRED": 7
+      "NEEDS_USER_INPUT": 2,
+      "DEFERRED": 7,
+      "SKIPPED": 14
     },
-    "total_duration_ms": 78,
+    "total_duration_ms": 74,
     "test_cases": 9
   },
   "detailed_results": [
@@ -81,8 +98,8 @@
       "method": "api-client",
       "status": "FAILED",
       "status_reason": "GET /api/payment-methods/:id returned another user's card with HTTP 200.",
-      "duration_ms": 11,
-      "wall_clock_ms": 11,
+      "duration_ms": 12,
+      "wall_clock_ms": 12,
       "command_duration_ms": 3120,
       "evidence": [
         "EV-2026-00002"
@@ -91,11 +108,10 @@
         "FIND-00001"
       ],
       "failure_classification": {
-        "class": "authentication-failure",
-        "confidence": 0.5,
+        "class": "product-defect",
+        "confidence": 0.59,
         "signals": [
-          "http-403",
-          "caveat: Ambiguous between a product authorisation defect and missing test credentials."
+          "assertion-mismatch"
         ],
         "evidence_refs": [
           "EV-2026-00002"
@@ -112,14 +128,14 @@
       "passed_tests": []
     },
     {
-      "execution_id": "EXEC-2026-00010",
+      "execution_id": "EXEC-2026-00011",
       "goal": "Checkout UI regression suite, run 2 of 3",
       "category": "regression",
       "method": "playwright-script",
       "status": "FAILED",
       "status_reason": "\"saved card survives a reload\" failed: expected 1 saved card, found 0.",
-      "duration_ms": 11,
-      "wall_clock_ms": 11,
+      "duration_ms": 10,
+      "wall_clock_ms": 10,
       "command_duration_ms": 3700,
       "evidence": [
         "EV-2026-00005"
@@ -164,6 +180,21 @@
     },
     {
       "execution_id": "EXEC-2026-00008",
+      "goal": "Payment E2E with the real provider (should-test S-04)",
+      "category": "e2e",
+      "method": "not-executed",
+      "status": "NEEDS_USER_INPUT",
+      "status_reason": "The mocked-provider run covered the journey; only the real provider hop needs a sandbox key.",
+      "duration_ms": 0,
+      "wall_clock_ms": 0,
+      "command_duration_ms": null,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00009",
       "goal": "Saved-card E2E with real provider credentials",
       "category": "e2e",
       "method": "not-executed",
@@ -184,8 +215,8 @@
       "method": "existing-suite",
       "status": "INCONCLUSIVE",
       "status_reason": "Checkout works. [DOWNGRADED from PASSED: \"PASSED\" claims something was executed, but no evidence is attached. Absence of failure is not proof of correctness.]",
-      "duration_ms": 9,
-      "wall_clock_ms": 9,
+      "duration_ms": 7,
+      "wall_clock_ms": 7,
       "command_duration_ms": null,
       "evidence": [],
       "findings": [],
@@ -213,27 +244,12 @@
       "decision_id": null
     },
     {
-      "execution_id": "EXEC-2026-00012",
-      "goal": "security testing",
+      "execution_id": "EXEC-2026-00013",
+      "goal": "security baseline for the payment path",
       "category": "security",
       "method": "not-executed",
       "status": "DEFERRED",
-      "status_reason": "The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.",
-      "duration_ms": 0,
-      "wall_clock_ms": 0,
-      "command_duration_ms": null,
-      "evidence": [],
-      "findings": [],
-      "failure_classification": null,
-      "decision_id": null
-    },
-    {
-      "execution_id": "EXEC-2026-00013",
-      "goal": "input-validation testing",
-      "category": "input-validation",
-      "method": "not-executed",
-      "status": "DEFERRED",
-      "status_reason": "The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.",
+      "status_reason": "The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.",
       "duration_ms": 0,
       "wall_clock_ms": 0,
       "command_duration_ms": null,
@@ -244,11 +260,11 @@
     },
     {
       "execution_id": "EXEC-2026-00014",
-      "goal": "session-management testing",
-      "category": "session-management",
+      "goal": "input-validation baseline for the payment path",
+      "category": "input-validation",
       "method": "not-executed",
       "status": "DEFERRED",
-      "status_reason": "The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.",
+      "status_reason": "The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.",
       "duration_ms": 0,
       "wall_clock_ms": 0,
       "command_duration_ms": null,
@@ -259,11 +275,11 @@
     },
     {
       "execution_id": "EXEC-2026-00015",
-      "goal": "database testing",
-      "category": "database",
+      "goal": "session-management baseline for the payment path",
+      "category": "session-management",
       "method": "not-executed",
       "status": "DEFERRED",
-      "status_reason": "The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.",
+      "status_reason": "The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.",
       "duration_ms": 0,
       "wall_clock_ms": 0,
       "command_duration_ms": null,
@@ -274,11 +290,11 @@
     },
     {
       "execution_id": "EXEC-2026-00016",
-      "goal": "migration testing",
-      "category": "migration",
+      "goal": "database baseline for the payment path",
+      "category": "database",
       "method": "not-executed",
       "status": "DEFERRED",
-      "status_reason": "The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.",
+      "status_reason": "The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.",
       "duration_ms": 0,
       "wall_clock_ms": 0,
       "command_duration_ms": null,
@@ -289,11 +305,11 @@
     },
     {
       "execution_id": "EXEC-2026-00017",
-      "goal": "data-integrity testing",
-      "category": "data-integrity",
+      "goal": "migration baseline for the payment path",
+      "category": "migration",
       "method": "not-executed",
       "status": "DEFERRED",
-      "status_reason": "The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.",
+      "status_reason": "The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.",
       "duration_ms": 0,
       "wall_clock_ms": 0,
       "command_duration_ms": null,
@@ -304,11 +320,236 @@
     },
     {
       "execution_id": "EXEC-2026-00018",
-      "goal": "perf-baseline testing",
+      "goal": "data-integrity baseline for the payment path",
+      "category": "data-integrity",
+      "method": "not-executed",
+      "status": "DEFERRED",
+      "status_reason": "The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.",
+      "duration_ms": 0,
+      "wall_clock_ms": 0,
+      "command_duration_ms": null,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00019",
+      "goal": "perf-baseline baseline for the payment path",
       "category": "perf-baseline",
       "method": "not-executed",
       "status": "DEFERRED",
-      "status_reason": "The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report.",
+      "status_reason": "The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report.",
+      "duration_ms": 0,
+      "wall_clock_ms": 0,
+      "command_duration_ms": null,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00020",
+      "goal": "acceptance testing",
+      "category": "acceptance",
+      "method": "not-executed",
+      "status": "SKIPPED",
+      "status_reason": "P2: below the coverage floor and outside the user's 150-minute budget.",
+      "duration_ms": 0,
+      "wall_clock_ms": 0,
+      "command_duration_ms": null,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00021",
+      "goal": "dependency-scan testing",
+      "category": "dependency-scan",
+      "method": "not-executed",
+      "status": "SKIPPED",
+      "status_reason": "P2: below the coverage floor and outside the user's 150-minute budget.",
+      "duration_ms": 0,
+      "wall_clock_ms": 0,
+      "command_duration_ms": null,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00022",
+      "goal": "sanity testing",
+      "category": "sanity",
+      "method": "not-executed",
+      "status": "SKIPPED",
+      "status_reason": "P2: below the coverage floor and outside the user's 150-minute budget.",
+      "duration_ms": 0,
+      "wall_clock_ms": 0,
+      "command_duration_ms": null,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00023",
+      "goal": "component testing",
+      "category": "component",
+      "method": "not-executed",
+      "status": "SKIPPED",
+      "status_reason": "P2: below the coverage floor and outside the user's 150-minute budget.",
+      "duration_ms": 0,
+      "wall_clock_ms": 0,
+      "command_duration_ms": null,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00024",
+      "goal": "exploratory testing",
+      "category": "exploratory",
+      "method": "not-executed",
+      "status": "SKIPPED",
+      "status_reason": "P2: below the coverage floor and outside the user's 150-minute budget.",
+      "duration_ms": 0,
+      "wall_clock_ms": 0,
+      "command_duration_ms": null,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00025",
+      "goal": "functional testing",
+      "category": "functional",
+      "method": "not-executed",
+      "status": "SKIPPED",
+      "status_reason": "P3: below the coverage floor and outside the user's 150-minute budget.",
+      "duration_ms": 0,
+      "wall_clock_ms": 0,
+      "command_duration_ms": null,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00026",
+      "goal": "ui testing",
+      "category": "ui",
+      "method": "not-executed",
+      "status": "SKIPPED",
+      "status_reason": "P3: below the coverage floor and outside the user's 150-minute budget.",
+      "duration_ms": 0,
+      "wall_clock_ms": 0,
+      "command_duration_ms": null,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00027",
+      "goal": "integration testing",
+      "category": "integration",
+      "method": "not-executed",
+      "status": "SKIPPED",
+      "status_reason": "P3: below the coverage floor and outside the user's 150-minute budget.",
+      "duration_ms": 0,
+      "wall_clock_ms": 0,
+      "command_duration_ms": null,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00028",
+      "goal": "browser-automation testing",
+      "category": "browser-automation",
+      "method": "not-executed",
+      "status": "SKIPPED",
+      "status_reason": "P3: below the coverage floor and outside the user's 150-minute budget.",
+      "duration_ms": 0,
+      "wall_clock_ms": 0,
+      "command_duration_ms": null,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00029",
+      "goal": "api testing",
+      "category": "api",
+      "method": "not-executed",
+      "status": "SKIPPED",
+      "status_reason": "P3: below the coverage floor and outside the user's 150-minute budget.",
+      "duration_ms": 0,
+      "wall_clock_ms": 0,
+      "command_duration_ms": null,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00030",
+      "goal": "unit testing",
+      "category": "unit",
+      "method": "not-executed",
+      "status": "SKIPPED",
+      "status_reason": "P3: below the coverage floor and outside the user's 150-minute budget.",
+      "duration_ms": 0,
+      "wall_clock_ms": 0,
+      "command_duration_ms": null,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00031",
+      "goal": "resilience testing",
+      "category": "resilience",
+      "method": "not-executed",
+      "status": "SKIPPED",
+      "status_reason": "P3: below the coverage floor and outside the user's 150-minute budget.",
+      "duration_ms": 0,
+      "wall_clock_ms": 0,
+      "command_duration_ms": null,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00032",
+      "goal": "ci-cd testing",
+      "category": "ci-cd",
+      "method": "not-executed",
+      "status": "SKIPPED",
+      "status_reason": "P3: below the coverage floor and outside the user's 150-minute budget.",
+      "duration_ms": 0,
+      "wall_clock_ms": 0,
+      "command_duration_ms": null,
+      "evidence": [],
+      "findings": [],
+      "failure_classification": null,
+      "decision_id": null
+    },
+    {
+      "execution_id": "EXEC-2026-00033",
+      "goal": "visual testing",
+      "category": "visual",
+      "method": "not-executed",
+      "status": "SKIPPED",
+      "status_reason": "P3: below the coverage floor and outside the user's 150-minute budget.",
       "duration_ms": 0,
       "wall_clock_ms": 0,
       "command_duration_ms": null,
@@ -339,8 +580,8 @@
       "method": "existing-suite",
       "status": "PASSED",
       "status_reason": "vitest suite executed against abc1234; 211 tests passed, 0 failed.",
-      "duration_ms": 14,
-      "wall_clock_ms": 14,
+      "duration_ms": 13,
+      "wall_clock_ms": 13,
       "command_duration_ms": 12480,
       "evidence": [
         "EV-2026-00001"
@@ -378,7 +619,7 @@
       "decision_id": null
     },
     {
-      "execution_id": "EXEC-2026-00009",
+      "execution_id": "EXEC-2026-00010",
       "goal": "Checkout UI regression suite, run 1 of 3",
       "category": "regression",
       "method": "playwright-script",
@@ -406,14 +647,14 @@
       ]
     },
     {
-      "execution_id": "EXEC-2026-00011",
+      "execution_id": "EXEC-2026-00012",
       "goal": "Checkout UI regression suite, run 3 of 3",
       "category": "regression",
       "method": "playwright-script",
       "status": "PASSED",
       "status_reason": "Both checkout UI tests passed at abc1234.",
-      "duration_ms": 11,
-      "wall_clock_ms": 11,
+      "duration_ms": 10,
+      "wall_clock_ms": 10,
       "command_duration_ms": 1700,
       "evidence": [
         "EV-2026-00006"
@@ -440,7 +681,7 @@
       "kind": "command-output",
       "summary": "vitest: 211/211 passed",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-wEFh3G\\evidence\\blobs\\output-2026-10-05T09-07-29-471Z-45768.txt",
+      "path": ".testing-state\\evidence\\blobs\\output-2026-10-12T11-19-59-010Z-66656.txt",
       "sha256": "sha256:08847719b18700defc4e5811a3e0be639fa4d8c92fcbdefd7cff7a429ac59e38"
     },
     {
@@ -448,7 +689,7 @@
       "kind": "command-output",
       "summary": "api: 11/12 passed, 1 failed",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-wEFh3G\\evidence\\blobs\\output-2026-10-05T09-07-29-492Z-45768.txt",
+      "path": ".testing-state\\evidence\\blobs\\output-2026-10-12T11-19-59-032Z-66656.txt",
       "sha256": "sha256:6860525264278abb9c4fb263992a6bcbbfd9d5d8d074c9c5f1779db558c4b2b8"
     },
     {
@@ -456,7 +697,7 @@
       "kind": "command-output",
       "summary": "axe: 0 violations on /checkout",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-wEFh3G\\evidence\\blobs\\output-2026-10-05T09-07-29-568Z-45768.txt",
+      "path": ".testing-state\\evidence\\blobs\\output-2026-10-12T11-19-59-121Z-66656.txt",
       "sha256": "sha256:bbacb4745aabb84bc3a3a939b8e07b53f73b807ba3f95e3389fb70e6445bcbaf"
     },
     {
@@ -464,7 +705,7 @@
       "kind": "command-output",
       "summary": "playwright checkout suite, run 1",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-wEFh3G\\evidence\\blobs\\output-2026-10-05T09-07-29-596Z-45768.txt",
+      "path": ".testing-state\\evidence\\blobs\\output-2026-10-12T11-19-59-164Z-66656.txt",
       "sha256": "sha256:fcf6eedae0c5ae91968ac5863ca304acb9622c37abbe13ee82f26097765faef3"
     },
     {
@@ -472,7 +713,7 @@
       "kind": "command-output",
       "summary": "playwright checkout suite, run 2",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-wEFh3G\\evidence\\blobs\\output-2026-10-05T09-07-29-615Z-45768.txt",
+      "path": ".testing-state\\evidence\\blobs\\output-2026-10-12T11-19-59-183Z-66656.txt",
       "sha256": "sha256:6ab2b01371879032854e860ae6e74ff4097a33e82e7fe0cddd4b44e165d74960"
     },
     {
@@ -480,14 +721,15 @@
       "kind": "command-output",
       "summary": "playwright checkout suite, run 3",
       "grade": "anchored",
-      "path": "C:\\Users\\purus\\AppData\\Local\\Temp\\ast-demo-wEFh3G\\evidence\\blobs\\output-2026-10-05T09-07-29-633Z-45768.txt",
+      "path": ".testing-state\\evidence\\blobs\\output-2026-10-12T11-19-59-201Z-66656.txt",
       "sha256": "sha256:fcf6eedae0c5ae91968ac5863ca304acb9622c37abbe13ee82f26097765faef3"
     }
   ],
   "findings": [
     "FIND-00001",
     "FIND-00002",
-    "FIND-00003"
+    "FIND-00003",
+    "FIND-00004"
   ],
   "finding_details": [
     {
@@ -496,6 +738,12 @@
       "kind": "security-issue",
       "severity": "critical",
       "confidence": 0.86,
+      "verification": {
+        "status": "confirmed",
+        "execution_id": "EXEC-2026-00003",
+        "repro": "npm run test:api -- saved-cards",
+        "reason": "EXEC-2026-00003 fails on a product-defect assertion."
+      },
       "component": "server/payments",
       "summary": "The payment-method lookup does not compare the record owner to the session user, so any authenticated user can select and charge a card saved by someone else.",
       "expected": "403 Forbidden, or 404 if the design hides existence",
@@ -515,6 +763,12 @@
       "kind": "security-issue",
       "severity": "critical",
       "confidence": 0.86,
+      "verification": {
+        "status": "duplicate",
+        "execution_id": null,
+        "repro": null,
+        "reason": "Duplicate of FIND-00001."
+      },
       "component": "server/payments",
       "expected": "403 Forbidden, or 404 if the design hides existence",
       "actual": "200 OK with user B's card brand, last4 and billing postcode",
@@ -524,6 +778,26 @@
     },
     {
       "finding_id": "FIND-00003",
+      "title": "Terms link on checkout opens nothing when clicked",
+      "kind": "defect",
+      "severity": "minor",
+      "confidence": 0.5,
+      "verification": {
+        "status": "rejected",
+        "execution_id": null,
+        "repro": null,
+        "reason": "explorer-artifact: The link opens the terms in a new tab (target=_blank), which the explorer does not follow; it works for a user. (src/checkout/Footer.tsx:22)"
+      },
+      "component": "checkout/footer",
+      "expected": "terms page opens",
+      "actual": "explorer saw no navigation",
+      "reproducible": "once",
+      "attempts": 1,
+      "evidence": [],
+      "external_refs": []
+    },
+    {
+      "finding_id": "FIND-00004",
       "title": "Flaky test quarantined: saved card survives a reload",
       "kind": "test-quality-issue",
       "severity": "minor",
@@ -571,45 +845,50 @@
     },
     {
       "execution_id": "EXEC-2026-00008",
+      "goal": "Payment E2E with the real provider (should-test S-04)",
+      "reason": "The mocked-provider run covered the journey; only the real provider hop needs a sandbox key."
+    },
+    {
+      "execution_id": "EXEC-2026-00009",
       "goal": "Saved-card E2E with real provider credentials",
       "reason": "Which sandbox account may be charged is the user's call, not the agent's."
     }
   ],
   "deferred_work": [
     {
-      "execution_id": "EXEC-2026-00012",
-      "goal": "security testing",
-      "reason": "The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report."
-    },
-    {
       "execution_id": "EXEC-2026-00013",
-      "goal": "input-validation testing",
-      "reason": "The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report."
+      "goal": "security baseline for the payment path",
+      "reason": "The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report."
     },
     {
       "execution_id": "EXEC-2026-00014",
-      "goal": "session-management testing",
-      "reason": "The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report."
+      "goal": "input-validation baseline for the payment path",
+      "reason": "The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report."
     },
     {
       "execution_id": "EXEC-2026-00015",
-      "goal": "database testing",
-      "reason": "The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report."
+      "goal": "session-management baseline for the payment path",
+      "reason": "The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report."
     },
     {
       "execution_id": "EXEC-2026-00016",
-      "goal": "migration testing",
-      "reason": "The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report."
+      "goal": "database baseline for the payment path",
+      "reason": "The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report."
     },
     {
       "execution_id": "EXEC-2026-00017",
-      "goal": "data-integrity testing",
-      "reason": "The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report."
+      "goal": "migration baseline for the payment path",
+      "reason": "The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report."
     },
     {
       "execution_id": "EXEC-2026-00018",
-      "goal": "perf-baseline testing",
-      "reason": "The 150-minute budget ran out before this category was reached. Recorded so it cannot vanish from the report."
+      "goal": "data-integrity baseline for the payment path",
+      "reason": "The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report."
+    },
+    {
+      "execution_id": "EXEC-2026-00019",
+      "goal": "perf-baseline baseline for the payment path",
+      "reason": "The user-set 150-minute budget ran out before this scenario was reached. Recorded so it cannot vanish from the report."
     }
   ],
   "interrupted_work": [
@@ -641,22 +920,24 @@
     {
       "id": "U-00002",
       "status": "deferred",
-      "question": "Categories the coverage floor enforces, not reached in this time-boxed session: security, input-validation, session-management, database, migration, data-integrity, perf-baseline",
+      "question": "Committed scenarios not reached inside the user's 150-minute budget: S-10, S-11, S-12, S-13, S-14, S-15, S-16",
       "impact": "security, input and data behaviour of the payment path is untested until a follow-up pass runs",
       "next_action": "schedule a follow-up session for the security sweep and input edge cases on staging, plus a disposable database for data and migration tests",
       "owner": "user",
       "affected_scope": [
-        "security",
-        "input-validation",
-        "session-management",
-        "database",
-        "migration",
-        "data-integrity",
-        "perf-baseline"
+        "S-10",
+        "S-11",
+        "S-12",
+        "S-13",
+        "S-14",
+        "S-15",
+        "S-16"
       ],
       "resolved": false,
       "blocking": false,
-      "raised_by_execution": null
+      "raised_by_execution": null,
+      "user_quote": "You have 150 minutes",
+      "user_quote_source": "request"
     }
   ],
   "coverage_gaps": [
@@ -695,11 +976,11 @@
     }
   ],
   "metrics": {
-    "computed_at": "2026-10-05T09:07:29.774Z",
+    "computed_at": "2026-10-12T11:19:59.723Z",
     "sample_sizes": {
-      "executions": 18,
+      "executions": 33,
       "decisions": 1,
-      "findings": 3,
+      "findings": 4,
       "external_writes": 1,
       "declared_requirements": 3
     },
@@ -709,7 +990,7 @@
       "high_risk_coverage": 0,
       "decision_accuracy": null,
       "decision_assessment_rate": 0,
-      "actionable_finding_rate": 1,
+      "actionable_finding_rate": 0.6667,
       "evidence_completeness": 1,
       "evidence_anchored_rate": 1,
       "audit_coverage": 0,
@@ -727,7 +1008,7 @@
       "high_risk_coverage": 6,
       "decision_accuracy": 0,
       "decision_assessment_rate": 1,
-      "actionable_finding_rate": 2,
+      "actionable_finding_rate": 3,
       "evidence_completeness": 6,
       "evidence_anchored_rate": 6,
       "audit_coverage": 6,
@@ -752,7 +1033,7 @@
     "violations": [],
     "notes": [
       "A null metric means the denominator was zero. Nulls are honest; do not substitute 0 or 1.",
-      "Metrics with a denominator under 5 are noise, not signal -- read them qualitatively: false_confidence_rate (n=4), requirement_coverage (n=3), decision_assessment_rate (n=1), actionable_finding_rate (n=2), flaky_identification_quality (n=1), interruption_recovery_rate (n=2), authorization_compliance (n=1).",
+      "Metrics with a denominator under 5 are noise, not signal -- read them qualitatively: false_confidence_rate (n=4), requirement_coverage (n=3), decision_assessment_rate (n=1), actionable_finding_rate (n=3), flaky_identification_quality (n=1), interruption_recovery_rate (n=2), authorization_compliance (n=1).",
       "Categories executed: smoke, regression, authn-authz, accessibility."
     ],
     "definitions": {
@@ -860,10 +1141,10 @@
     "evidence_auditor_run": false
   },
   "provenance": {
-    "skill_version": "0.12.0",
+    "skill_version": "0.13.0",
     "skill_name": "test-reporting",
-    "engine_version": "0.12.0",
-    "created_at": "2026-10-05T09:07:29.748Z",
+    "engine_version": "0.13.0",
+    "created_at": "2026-10-12T11:19:59.673Z",
     "created_by": "agent",
     "session_id": "SESSION-0001"
   },
@@ -1982,7 +2263,7 @@
         {
           "criterion": "A user cannot select another user's saved card",
           "status": "FAILED",
-          "assessed_at": "2026-10-05T09:07:29.742Z",
+          "assessed_at": "2026-10-12T11:19:59.667Z",
           "evidence": [
             "EV-2026-00002"
           ],
@@ -1995,5 +2276,125 @@
   "quarantined_tests": [
     "saved card survives a reload"
   ],
-  "digest": "sha256:a263de0246f485ea41b1b0db96b372690aa62b94c09e761f07af5d4561f8c7cf"
+  "plan_progress": {
+    "plan_id": "PLAN-00001",
+    "committed": 10,
+    "covered": 10,
+    "ran": 3,
+    "held": 7,
+    "remaining": 0,
+    "scenarios": [
+      {
+        "id": "S-01",
+        "title": "Baseline unit suite at head",
+        "obligation": "must-test",
+        "category": "regression",
+        "covered": true,
+        "held": false,
+        "outcome": "PASSED",
+        "execution_id": "EXEC-2026-00002"
+      },
+      {
+        "id": "S-02",
+        "title": "Cross-user card isolation (IDOR)",
+        "obligation": "must-test",
+        "category": "authn-authz",
+        "covered": true,
+        "held": false,
+        "outcome": "FAILED",
+        "execution_id": "EXEC-2026-00003"
+      },
+      {
+        "id": "S-03",
+        "title": "Accessibility scan of checkout",
+        "obligation": "must-test",
+        "category": "accessibility",
+        "covered": true,
+        "held": false,
+        "outcome": "PASSED",
+        "execution_id": "EXEC-2026-00007"
+      },
+      {
+        "id": "S-04",
+        "title": "Payment E2E with real provider",
+        "obligation": "should-test",
+        "category": "e2e",
+        "covered": true,
+        "held": true,
+        "outcome": "NEEDS_USER_INPUT",
+        "execution_id": "EXEC-2026-00008"
+      },
+      {
+        "id": "S-10",
+        "title": "security baseline for the payment path",
+        "obligation": "must-test",
+        "category": "security",
+        "covered": true,
+        "held": true,
+        "outcome": "DEFERRED",
+        "execution_id": "EXEC-2026-00013"
+      },
+      {
+        "id": "S-11",
+        "title": "input-validation baseline for the payment path",
+        "obligation": "must-test",
+        "category": "input-validation",
+        "covered": true,
+        "held": true,
+        "outcome": "DEFERRED",
+        "execution_id": "EXEC-2026-00014"
+      },
+      {
+        "id": "S-12",
+        "title": "session-management baseline for the payment path",
+        "obligation": "must-test",
+        "category": "session-management",
+        "covered": true,
+        "held": true,
+        "outcome": "DEFERRED",
+        "execution_id": "EXEC-2026-00015"
+      },
+      {
+        "id": "S-13",
+        "title": "database baseline for the payment path",
+        "obligation": "must-test",
+        "category": "database",
+        "covered": true,
+        "held": true,
+        "outcome": "DEFERRED",
+        "execution_id": "EXEC-2026-00016"
+      },
+      {
+        "id": "S-14",
+        "title": "migration baseline for the payment path",
+        "obligation": "must-test",
+        "category": "migration",
+        "covered": true,
+        "held": true,
+        "outcome": "DEFERRED",
+        "execution_id": "EXEC-2026-00017"
+      },
+      {
+        "id": "S-15",
+        "title": "data-integrity baseline for the payment path",
+        "obligation": "must-test",
+        "category": "data-integrity",
+        "covered": true,
+        "held": true,
+        "outcome": "DEFERRED",
+        "execution_id": "EXEC-2026-00018"
+      },
+      {
+        "id": "S-16",
+        "title": "perf-baseline baseline for the payment path",
+        "obligation": "must-test",
+        "category": "perf-baseline",
+        "covered": true,
+        "held": true,
+        "outcome": "DEFERRED",
+        "execution_id": "EXEC-2026-00019"
+      }
+    ]
+  },
+  "digest": "sha256:265bf871f4ca8ed0d0bd889ffc00466157542ffb9e9f65ccf1cf876e1d4ea69e"
 }

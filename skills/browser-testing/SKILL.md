@@ -4,7 +4,7 @@ description: Choose and run the right browser testing method — agent-driven ex
 when_to_use: "explore the app for UI bugs", "test this page", "should I use Playwright MCP or a script", "create regression tests for this flow", "capture a trace", "the UI is broken"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.12.0
+  system_version: 0.13.0
   role: specialist
 ---
 
@@ -153,7 +153,9 @@ In short:
 3. Explore with the MCP: navigate, snapshot, click through, read console and network.
 4. Find a stable, valuable path. `should-automate` → yes.
 5. Write a spec matching the repository's existing conventions and fixtures.
-6. Run it. Capture trace + JSON report as evidence.
+6. Run it immediately — `exec start` with `"test_files": ["<spec path>"]`, then `evidence
+   capture -- npx playwright test <spec path>`. Capture trace + JSON report as evidence. An
+   unrun spec fails `validate --final`.
 7. Update coverage; file an issue **only if** a real defect was found and authorised.
 8. Record why MCP was used first and why a script was written afterwards.
 

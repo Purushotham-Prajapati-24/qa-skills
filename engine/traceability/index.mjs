@@ -17,10 +17,10 @@ import * as state from '../state-engine/index.mjs';
 import { listWrites } from '../authorization/index.mjs';
 
 export function build() {
-  const executions = state.list('executions');
-  const findings = state.list('findings');
-  const evidence = state.list('evidence');
-  const decisions = state.list('decisions');
+  const executions = state.listForSession('executions');
+  const findings = state.listForSession('findings');
+  const evidence = state.listForSession('evidence');
+  const decisions = state.listForSession('decisions');
   const writes = listWrites();
 
   const nodes = new Map();

@@ -162,6 +162,7 @@ export function createGitHubAdapter({ exec = shellExec } = {}) {
         system: SYSTEM,
         userAuthorised: Boolean(authorisation.userAuthorised),
         authorisationQuote: authorisation.authorisationQuote ?? '',
+        allowUnverified: Boolean(authorisation.allowUnverified),
       });
       if (!promo.may_file) {
         return {

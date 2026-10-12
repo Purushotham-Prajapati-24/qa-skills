@@ -23,6 +23,7 @@ what makes an interrupted session recoverable.
   "goal": "Guest checkout with a test card creates an order",
   "method": "playwright-script",
   "testCategory": "e2e",
+  "planScenarioId": "S-01",
   "decisionId": "DEC-00007",
   "command": "npx playwright test checkout --reporter=json",
   "environment": "local-docker",
@@ -56,6 +57,14 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec finish EXEC-2026-00003 --input res
 `exec start --example` and `exec finish --example` print valid payloads. Four fields matter
 more than they look:
 
+- **`planScenarioId`** on `exec start` — the id of the scenario in the persisted plan that
+  this execution fulfils (`"planScenarioId": "S-01"`). This is how the scenario coverage
+  floor confirms every `must-test` scenario was addressed; an execution with no
+  `planScenarioId` does not count toward any plan scenario, and one naming an id no plan
+  defines is itself a `--final` failure. **Pass it on every execution that corresponds to a
+  plan scenario.** A real hold (`exec not-run`) also accepts it.
+- **`test_files`** on `exec start` — the test files this run executes, when you wrote them
+  this session and the command line does not name them (a whole-suite `npm test`).
 - **`feature`** on `exec start` — the id of the `functionality_inventory` item this execution
   exercises (`"feature": "FEAT-login"`). This is how the per-feature coverage floor confirms
   every critical feature was addressed; an execution with no `feature` tag does not count
@@ -208,28 +217,62 @@ Parallelise reads freely (repository analysis, ticket retrieval, coverage inspec
 Never parallelise anything that shares mutable state: a database under test, an external
 write, a report version bump.
 
-### The non-functional checkpoint
+### Non-functional testing: run it, ask only for what is not yet authorised
 
-When all functional testing has a terminal status, **explicitly ask the user** before
-proceeding to non-functional testing:
+Non-functional work is not a phase that waits for permission. Split it by what it needs:
 
-> Functional testing is complete. The following non-functional categories are applicable
-> and have not run:
-> - `security-testing` (mandatory baseline + deep scan) — needs non-production confirmation
-> - `performance-testing` (load/stress) — needs explicit authorisation
-> - `accessibility-testing` — ready to run
->
-> **Which should I proceed with?**
-> (a) All applicable non-functional testing
-> (b) Security and accessibility only (skip load)
-> (c) Skip all non-functional — record as DEFERRED
-> (d) [specific selection]
+| Category | Needs | Do |
+| --- | --- | --- |
+| `accessibility` scan | a reachable UI | Run it. Never ask. |
+| `perf-baseline` (a handful of timed requests) | a non-production target | Run it. Never ask. |
+| Security baseline sweep (benign probes) | a non-production target | Run it. Never ask. |
+| `load` / `stress` / `spike` / `endurance` | explicit authorisation + non-production | Run it if "test everything" or an explicit authorisation is on record; otherwise ask **once**, batched with any other question, and keep working while you wait. |
+| Anything touching production | explicit authorisation | Ask. |
 
-Do not silently defer non-functional testing to never. The checkpoint ensures it either
-runs or is explicitly deferred by the user — never quietly dropped.
+If the user's request already authorised it ("test everything", "full QA", a named
+staging target), there is nothing to ask. Never stop the session at a checkpoint whose
+answer is already known.
 
-The mandatory security baseline (see orchestrator's "Mandatory testing baselines") runs
-regardless of this checkpoint when its trigger conditions are met.
+## The work queue: loop on `ast todo` until it is empty
+
+The plan is a commitment, not a document. After saving it, and after every result:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" todo
+```
+
+It lists everything still owed before `validate --final` can pass: committed scenarios with
+no qualifying run, should-test scenarios with no recorded disposition, test files written
+this session that never ran, holds whose blocker has since been resolved, and floor
+categories and critical features not yet covered — each with the next command. Take the next
+item, run it, ask again. **Do not stop to ask the user between items.** You are finished when
+`todo` returns `"done": true`, not when you feel finished.
+
+What discharges an item:
+
+- **A finished run with real evidence**, linked with `plan_scenario_id` (category and
+  feature are inherited from the scenario; add `test_files` as it applies). Any outcome
+  counts — FAILED is testing. What does *not* count: INTERRUPTED; a status with no evidence;
+  evidence that is only your own sentence (`evidence add` with no artifact grades
+  `asserted`); evidence from a command that runs nothing (`echo PASSED`, `node -e 0`); and a
+  run of a different category than the scenario's. Use `evidence capture` and it is right by
+  construction.
+- **A real hold**: `exec not-run` BLOCKED/NEEDS_USER_INPUT/DEFERRED linking an *open*
+  uncertainty you cannot clear yourself — a blocking status, or a user-owned hold carrying
+  the user's own words in `user_quote` (see the hold ladder in
+  [../policies/escalation-policy.md](../policies/escalation-policy.md)).
+- **NOT_APPLICABLE backed by a decision**: when you discover a planned scenario cannot apply
+  (feature flagged off, endpoint removed), record the decision, then
+  `exec not-run {"status":"NOT_APPLICABLE","decisionId":"DEC-…","plan_scenario_id":"S-…"}`.
+
+`plan progress` shows the same judgement per scenario, including every attempt and whether
+it counted. The rendered report carries it as **Plan vs executed** (ran / held / not covered,
+side by side) and **Tests written this session**, so the reader sees the commitment beside
+the outcome.
+
+If the Stop hook is installed, ending your turn while `todo` is non-empty is refused and
+the queue is handed back to you. It releases after three refusals without progress — at
+that point you need a human, so ask.
 
 ## When something fails
 
@@ -271,7 +314,7 @@ Then act on the classification:
 
 | Class | Do |
 | --- | --- |
-| product-defect | Raise a finding. **Never** change product code to make the test pass. |
+| product-defect | Raise a finding linked to this run (`executionId`) — if the run is a check that failed on the assertion, that alone confirms it. Otherwise write a repro (`"reproduces"`). **Never** change product code to make the test pass. |
 | test-defect | Fix the test, re-run, record both runs. Not a product signal. |
 | environment-defect / infrastructure | `BLOCKED`, not `FAILED`. Continue elsewhere. |
 | flaky-test | Re-run ≥3 times at the same commit before using the word. |
@@ -319,7 +362,8 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" exec not-run --input not-run.json
 ```
 
 Then **keep going**. Run the unit suite, mock the provider at the API boundary, inspect
-the implementation, prepare the deterministic test for later. Record what you did anyway:
+the implementation, write the deterministic test **and run it** against the mock. Record
+what you did anyway:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" uncertainty partition --input scenarios.json
@@ -337,6 +381,11 @@ and match them. Specifics in the relevant specialist skill; the universal rules:
 - One reason to fail per test, and a failure message that says what went wrong.
 - **Never weaken product behaviour, configuration or an assertion to get green.** A
   failing test that reflects a real defect is the deliverable.
+- **Run every test you write, in the same turn you write it**, through the CLI: `exec start`
+  with `"test_files": ["<path>"]`, then `evidence capture -- <runner> <path>`, then
+  `exec finish`. `validate --final` detects test files written or changed this session (from
+  git) and fails on any that no execution ran. A test that fails because the product is wrong
+  is a finding; a test that fails because the test is wrong is fixed and re-run.
 
 ## Interruptions
 

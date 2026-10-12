@@ -4,7 +4,7 @@ description: Test HTTP, GraphQL and gRPC APIs — status codes, response shapes,
 when_to_use: "test the API", "test these endpoints", "did the schema change break anything", "test the GraphQL API", "validate the OpenAPI contract"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.12.0
+  system_version: 0.13.0
   role: specialist
 ---
 
@@ -85,7 +85,7 @@ that the checks were ad hoc rather than committed.
 `exec.json`:
 
 ```json
-{"goal":"Checkout API contract and authz","method":"api-client","testCategory":"api","command":"npm run test:api","environment":"local-docker"}
+{"goal":"Checkout API contract and authz","method":"api-client","plan_scenario_id":"S-01","testCategory":"api","command":"npm run test:api","environment":"local-docker"}
 ```
 
 ```bash

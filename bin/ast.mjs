@@ -16,7 +16,84 @@
 import process from 'node:process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, spawn } from 'node:child_process';
+
+// Measured in characters (JavaScript string length), not bytes: output is decoded as UTF-8 first.
+const CAPTURE_HALF = 4 * 1024 * 1024;
+
+/** Keep the first and last CAPTURE_HALF characters of a decoded stream; drop and count the middle. */
+function cappedSink() {
+  let head = '';
+  let tail = '';
+  let dropped = 0;
+  return {
+    push(s) {
+      if (head.length < CAPTURE_HALF) {
+        const take = Math.min(s.length, CAPTURE_HALF - head.length);
+        head += s.slice(0, take);
+        if (take === s.length) return;
+        tail += s.slice(take);
+      } else {
+        tail += s;
+      }
+      if (tail.length > CAPTURE_HALF) {
+        dropped += tail.length - CAPTURE_HALF;
+        tail = tail.slice(tail.length - CAPTURE_HALF);
+      }
+    },
+    text() {
+      return dropped ? `${head}\n[... ${dropped} characters of output truncated by ast evidence capture ...]\n${tail}` : head + tail;
+    },
+  };
+}
+
+/**
+ * Run a command for `evidence capture`. Streams output (no buffer ceiling to overflow) and, on
+ * timeout, kills the whole process tree: with a shell on Windows, killing only the shell left
+ * the real process (a dev server started by mistake, a hung test) running, orphaned.
+ */
+function runCaptured(command, args, { cwd, timeout, shell }) {
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn(command, args, { cwd, shell, windowsHide: true, detached: process.platform !== 'win32' });
+    } catch (error) {
+      resolve({ status: null, signal: null, error, stdout: '', stderr: '' });
+      return;
+    }
+    const out = cappedSink();
+    const err = cappedSink();
+    let timedOut = false;
+    let settled = false;
+    // The stream decoder carries an incomplete multibyte sequence over to the next chunk;
+    // decoding each chunk on its own turned split characters into U+FFFD in the evidence.
+    child.stdout?.setEncoding('utf8');
+    child.stderr?.setEncoding('utf8');
+    child.stdout?.on('data', (c) => out.push(c));
+    child.stderr?.on('data', (c) => err.push(c));
+    const killTree = () => {
+      try {
+        if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+        else process.kill(-child.pid, 'SIGKILL');
+      } catch { try { child.kill('SIGKILL'); } catch { /* already gone */ } }
+    };
+    const timer = setTimeout(() => { timedOut = true; killTree(); }, timeout);
+    const finish = (status, signal, error = null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({
+        status: timedOut ? null : status,
+        signal: timedOut ? 'SIGKILL' : signal,
+        error: error ?? (timedOut ? new Error(`timed out after ${timeout}ms; process tree killed`) : null),
+        stdout: out.text(),
+        stderr: err.text(),
+      });
+    };
+    child.on('error', (e) => finish(null, null, e));
+    child.on('close', (code, signal) => finish(code, signal));
+  });
+}
 import { setStateRoot, stateRoot, dir } from '../engine/core/paths.mjs';
 import { readJson } from '../engine/core/fsjson.mjs';
 import { SYSTEM_VERSION } from '../engine/core/version.mjs';
@@ -38,7 +115,8 @@ import * as evaluation from '../engine/evaluation-engine/index.mjs';
 import * as processCompleteness from '../engine/evaluation-engine/process-completeness.mjs';
 import * as adapters from '../engine/adapters/index.mjs';
 import { compute as computeMetrics } from '../engine/evaluation-engine/metrics.mjs';
-import { validate as validateSchema } from '../engine/schema/validate.mjs';
+import { nextId } from '../engine/core/ids.mjs';
+import * as integrity from '../engine/evaluation-engine/integrity.mjs';
 import { classify, unknownSignals, signalsByClass as failureSignalsByClass } from '../engine/failure-classifier/index.mjs';
 
 /* ---------------------------------------------------------------- arg parse */
@@ -185,6 +263,21 @@ const COMMANDS = {
     },
     run: ({ flags }) => {
       const body = payload(flags);
+      // Starting over an unfinished session is the costliest continuity mistake: after a
+      // compaction an agent "starts testing" again, and every commitment, open run and owed
+      // item of the real session drops out of view. Refuse it for a recent session with work
+      // in progress; --new is the explicit, deliberate way to abandon it.
+      const current = state.loadSession();
+      if (current && !flags.new && Date.now() - new Date(current.updated_at).getTime() < 12 * 60 * 60 * 1000) {
+        const open = (current.open_executions ?? []).length;
+        const plan = state.loadPlan() ? processCompleteness.planProgress() : null;
+        const owed = plan?.must_test_remaining ?? 0;
+        if (open || owed) {
+          throw new Error(`Session ${current.session_id} is unfinished (${open} open run(s), ${owed} committed scenario(s) not covered), `
+            + `last updated ${current.updated_at}. To continue it: "session resume". To abandon it deliberately and start fresh: `
+            + 'add --new (its open runs are finalised as INTERRUPTED and it is archived).');
+        }
+      }
       return state.startSession({
         request: flags.request ?? body.request,
         trigger: flags.trigger ?? body.trigger ?? 'user-request',
@@ -217,8 +310,33 @@ const COMMANDS = {
     run: ({ flags }) => state.recordInterruption({ kind: flags.kind ?? 'user', note: flags.note }),
   },
   'session resume': {
-    help: 'Run the recovery protocol and print what to do next.',
-    run: () => state.recover(),
+    help: 'Run the recovery protocol and print what is owed and what to do next. Open runs idle for 10+ minutes are '
+      + 'finalised as INTERRUPTED; recent ones are left for a parallel explorer that may still own them. '
+      + 'Add --interrupt-all when you know nothing else is running.',
+    run: ({ flags }) => {
+      const r = state.recover({ interruptAll: Boolean(flags['interrupt-all']) });
+      if (!r.recoverable) return r;
+      const queue = processCompleteness.outstanding();
+      const plan = state.loadPlan() ? processCompleteness.planProgress() : null;
+      return {
+        ...r,
+        recorded_next_action: r.next_action,
+        next_action: queue.done
+          ? (plan ? 'Nothing is owed. Run `validate --final`, then generate and verify the report.' : r.next_action)
+          : `Continue the work queue (${queue.count} item(s) owed). Next: ${queue.items[0].what}${queue.items[0].next ? ` -> ${queue.items[0].next}` : ''}`,
+        plan_progress: plan ? { plan_id: plan.plan_id, committed: plan.must_test, covered: plan.must_test_executed, remaining: plan.must_test_remaining } : null,
+        owed: { count: queue.count, items: queue.items.slice(0, 10), more: Math.max(0, queue.count - 10) },
+      };
+    },
+  },
+  'session said': {
+    help: 'Record the user\'s own words mid-session: session said --quote "you have 30 minutes". Needed only when the '
+      + 'UserPromptSubmit hook is not installed (it records prompts itself). Stored as source "agent" and labelled so in the report. '
+      + 'A user-owned hold counts only when its user_quote is found in the request or a recorded statement.',
+    run: ({ flags }) => {
+      const s = state.recordUserStatement(flags.quote, { source: 'agent' });
+      return { recorded: s.user_statements.at(-1) };
+    },
   },
   'session goal': {
     help: 'Record a goal outcome: session goal G-01 [--criterion 2] --status PASSED --evidence EV-2026-00004[,EV-...] [--exec EXEC-...] [--note "..."]. '
@@ -265,7 +383,7 @@ const COMMANDS = {
       ],
       declared_signals: [{ signal: 'responsive', evidence: ['src/app/page.tsx uses md:/lg: breakpoint classes'] }],
       gaps: ['No coverage report; coverage is unmeasured'],
-      provenance: { skill_version: '0.12.0', created_at: '2026-10-05T10:00:00.000Z', created_by: 'agent' },
+      provenance: { skill_version: '0.13.0', created_at: '2026-10-12T10:00:00.000Z', created_by: 'agent' },
     },
     run: ({ flags }) => {
       const profile = payload(flags, false);
@@ -369,7 +487,8 @@ const COMMANDS = {
     },
   },
   'browser should-automate': {
-    help: 'Decide whether an explored scenario should become a committed test.',
+    help: 'Decide whether an explored scenario should become a committed test: browser should-automate --input factors.json. See "browser should-automate --example".',
+    example: { factors: { repeatability: 0.9, business_criticality: 0.8, environment_stability: 0.8, expected_runtime_minutes: 2 } },
     run: ({ flags }) => browser.shouldAutomate(payload(flags)),
   },
   'browser matrix': { help: 'Print the browser decision matrix.', run: () => browser.matrix() },
@@ -396,20 +515,131 @@ const COMMANDS = {
     run: ({ positional, flags }) => decisions.assess(positional[2], { verdict: flags.verdict, note: flags.note ?? '' }),
   },
   'decision next': {
-    help: 'Ask what to do after a result: decision next --input next.json, where next.json is {"status":"FAILED","failureClass":"...","remainingWork":["..."]}',
+    help: 'Ask what to do after a result: decision next --input next.json. failureClass is the "class" that `failure classify` returned. See "decision next --example".',
+    example: { status: 'FAILED', failureClass: 'data-failure', remainingWork: ['accessibility scan of /checkout', 'perf baseline of /api/orders'] },
     run: ({ flags }) => decisions.nextAction(payload(flags)),
   },
   'decision list': { help: 'List decision records.', run: () => state.list('decisions') },
 
+  /* ---- plan ---- */
+  'plan save': {
+    help: 'Persist a plan: plan save --input plan.json. See "plan save --example". The plan is linked to the active session '
+      + 'and its must-test scenarios become obligations that `validate --final` enforces.',
+    example: {
+      plan_id: 'PLAN-00001',
+      created_at: '2026-10-08T10:00:00.000Z',
+      objective: 'Comprehensive testing of the visitor management system',
+      scope: { in_scope: ['visitor CRUD', 'guard approval flow', 'admin dashboard'], out_of_scope: ['billing integration'] },
+      applicability: [
+        { category: 'e2e', applicable: true, reason: 'multi-role system with handoff points', priority: 'P0' },
+        { category: 'security', applicable: true, reason: 'auth + user-input signals present', priority: 'P1' },
+      ],
+      scenarios: [
+        { id: 'S-01', title: 'Host creates a visit invite', category: 'e2e', obligation: 'must-test', method: 'api-client' },
+        { id: 'S-02', title: 'Guard approves arriving visitor', category: 'e2e', obligation: 'must-test', method: 'playwright-script' },
+        { id: 'S-03', title: 'XSS probe on visitor name field', category: 'security', obligation: 'must-test', method: 'api-client' },
+        { id: 'S-04', title: 'Load test on check-in endpoint', category: 'load', obligation: 'should-test', method: 'load-tool' },
+      ],
+      exit_criteria: ['All must-test scenarios executed or blocked with reason', 'Coverage floors satisfied'],
+      provenance: { skill_version: '0.13.0', created_at: '2026-10-08T10:00:00.000Z', created_by: 'agent' },
+    },
+    run: ({ flags }) => {
+      const plan = payload(flags, false);
+      if (!plan.plan_id) plan.plan_id = nextId('plan');
+      const before = state.planCommitments();
+      const saved = state.savePlan(plan);
+      const warnings = [];
+      for (const c of Object.values(before)) {
+        const now = saved.scenarios.find((s) => s.id === c.id);
+        if ((c.obligation === 'must-test' || c.obligation === 'blocked') && (!now || now.obligation !== c.obligation)) {
+          warnings.push(`${c.id} was ${c.obligation} in ${c.plan_id} and is ${now ? now.obligation : 'missing'} here. Commitments do not shrink: it is still enforced. Discharge it with a run, a blocked not-run, or a NOT_APPLICABLE not-run backed by a decision.`);
+        }
+      }
+      for (const s of saved.scenarios) {
+        if (s.obligation === 'blocked' && !s.blocked_by) warnings.push(`${s.id} is planned as blocked but names no blocked_by uncertainty.`);
+      }
+      if (!saved.scenarios.some((s) => s.obligation === 'must-test')) warnings.push('No must-test scenario: this plan commits to nothing and validate --final will fail.');
+      return warnings.length ? { ...saved, plan_warnings: warnings } : saved;
+    },
+  },
+  'plan charters': {
+    help: 'Generate exploratory charters (area x posture) as plan scenarios to paste into plan.json: '
+      + 'plan charters --areas "checkout,signup" [--postures first-time-user,edge-input] [--start 20] [--obligation must-test]. '
+      + 'Postures: first-time-user, numbers-and-copy, edge-input, state-after-reload, error-paths (default: all five). '
+      + 'Each charter is one browser-explorer run, linked with plan_scenario_id, so the scenario floor enforces every one.',
+    run: ({ flags }) => {
+      const POSTURES = {
+        'first-time-user': { persona: 'a first-time user with no context', mission: 'complete the main task the way a newcomer would; note anything confusing, misleading or broken' },
+        'numbers-and-copy': { persona: 'a careful reader who checks every number and word', mission: 'verify totals, counts, dates, currency, pluralisation and copy against each other and against the inputs' },
+        'edge-input': { persona: 'a fuzzer', mission: 'feed empty, boundary, oversized, unicode and malformed values into every input and watch for crashes and silent acceptance' },
+        'state-after-reload': { persona: 'a user who reloads, goes back and opens a second tab', mission: 'change state, then reload, navigate back/forward and duplicate the tab; check nothing is lost, duplicated or stale' },
+        'error-paths': { persona: 'a skeptic', mission: 'force failures: wrong credentials, expired session, offline, double submit, server errors; check every error is handled and explained' },
+      };
+      const areas = String(flags.areas ?? '').split(',').map((a) => a.trim()).filter(Boolean);
+      if (!areas.length) throw new Error('--areas is required: the pages or flows to explore, comma-separated (e.g. "checkout,signup").');
+      const postures = flags.postures ? String(flags.postures).split(',').map((p) => p.trim()) : Object.keys(POSTURES);
+      const unknown = postures.filter((p) => !POSTURES[p]);
+      if (unknown.length) throw new Error(`Unknown posture(s): ${unknown.join(', ')}. Known: ${Object.keys(POSTURES).join(', ')}.`);
+      const obligation = flags.obligation ?? 'must-test';
+      let n = Number(flags.start ?? 20);
+      if (!Number.isInteger(n) || n < 1) throw new Error('--start must be a positive integer.');
+      const scenarios = [];
+      for (const area of areas) {
+        for (const posture of postures) {
+          scenarios.push({
+            id: `S-${String(n).padStart(2, '0')}`,
+            title: `Explore ${area} as ${POSTURES[posture].persona}`,
+            category: 'exploratory',
+            method: 'browser-explorer',
+            obligation,
+            area,
+            posture,
+            persona: POSTURES[posture].persona,
+            steps: [POSTURES[posture].mission],
+          });
+          n += 1;
+        }
+      }
+      return { scenarios, next: 'Add these to plan.json "scenarios" and run plan save. Dispatch one browser-explorer per charter (up to 4 in parallel); each records its run with plan_scenario_id and files candidate findings, which stay unverified until a repro check confirms them.' };
+    },
+  },
+  'plan show': {
+    help: 'Print the active plan, or a specific one: plan show [PLAN-00001]',
+    run: ({ positional }) => {
+      const plan = state.loadPlan(positional[2] ?? null);
+      if (!plan) return { error: 'No plan stored. Write one during the planning phase and persist it with `plan save`.' };
+      return plan;
+    },
+  },
+  'plan progress': {
+    help: 'Show must-test scenarios vs executions: which are done, which are not.',
+    run: () => {
+      if (!state.loadPlan()) return { error: 'No plan stored.' };
+      return processCompleteness.planProgress();
+    },
+  },
+  'todo': {
+    help: 'The work queue: every item still owed before `validate --final` can pass (unrun committed scenarios, '
+      + 'authored tests never executed, holds whose blocker was resolved, floor categories and features). '
+      + 'Loop on it: run the next item, then ask again, until "done": true.',
+    run: () => processCompleteness.outstanding(),
+  },
+
   /* ---- evidence ---- */
-  'evidence add': { help: 'Register evidence: evidence add --input evidence.json', run: ({ flags }) => evidence.add(payload(flags)) },
+  'evidence add': {
+    help: 'Register a file another process already produced (a CI artifact, a runner\'s report): evidence add --input evidence.json. '
+      + 'If you are about to run the command yourself, use `evidence capture` instead. See "evidence add --example".',
+    example: { kind: 'test-report', summary: 'playwright: 11 passed, 1 failed', epistemicClass: 'observed', executionId: 'EXEC-2026-00003', artifactPath: 'test-results/results.json', mediaType: 'application/json' },
+    run: ({ flags }) => evidence.add(payload(flags)),
+  },
   'evidence capture': {
     help: 'Run a command and register its real output as evidence.\n'
       + '  evidence capture --exec EXEC-2026-00001 [--summary "..."] [--cwd dir] [--timeout ms] -- <command> [args...]\n'
       + '  evidence capture --exec EXEC-2026-00001 --script <file> [--summary "..."] [--cwd dir] [--timeout ms]\n'
       + 'The --script form runs the file directly (shell:false) — no quote mangling, safe on Windows/PowerShell.\n'
-      + 'Supported: .js/.mjs (via node), .ps1 (via powershell), .sh (via bash), .py (via python).',
-    run: ({ flags, rest }) => {
+      + 'Supported: .js/.mjs (via node), .ps1 (via powershell), .sh (via bash), .py (via python).\n'
+      + 'On timeout the whole process tree is killed. Output beyond 8M characters per stream keeps its first and last 4M.',
+    run: async ({ flags, rest }) => {
       const hasScript = Boolean(flags.script);
       if (!hasScript && !rest.length) {
         throw new Error(
@@ -422,8 +652,13 @@ const COMMANDS = {
       if (!flags.exec) {
         throw new Error('evidence capture requires --exec <EXECUTION_ID> naming the execution this evidence supports.');
       }
-      if (!state.get('executions', flags.exec)) {
+      const target = state.get('executions', flags.exec);
+      if (!target) {
         throw new Error(`No such execution: ${flags.exec}. Open one first with "exec start" -- never capture evidence for an execution that does not exist.`);
+      }
+      if (target.finished_at) {
+        throw new Error(`${flags.exec} already finished as ${target.status}; evidence captured now would attach to nothing. `
+          + 'Start a new execution for this run, capture into it, then finish it.');
       }
 
       const cwd = flags.cwd ?? process.cwd();
@@ -459,7 +694,7 @@ const COMMANDS = {
         useShell = false;
       } else {
         // -- <command> [args...] mode: original behaviour.
-        argvString = rest.join(' ');
+        argvString = rest.map((a) => (/\s/.test(a) && !/^".*"$/.test(a) ? `"${a}"` : a)).join(' ');
         // shell: true on Windows matches the existing precedent in capability-registry/
         // index.mjs -- it is what lets "npm" resolve to "npm.cmd". But per Node's own
         // documentation, shell:true on Windows makes QUOTING the caller's job: cmd.exe
@@ -477,13 +712,7 @@ const COMMANDS = {
       }
 
       const started = Date.now();
-      const r = spawnSync(spawnCommand, spawnArgs, {
-        encoding: 'utf8',
-        cwd,
-        timeout,
-        maxBuffer: 32 * 1024 * 1024,
-        shell: useShell,
-      });
+      const r = await runCaptured(spawnCommand, spawnArgs, { cwd, timeout, shell: useShell });
       const durationMs = Date.now() - started;
 
       // The capture MECHANISM failing (command not found, timed out, killed by signal
@@ -523,7 +752,8 @@ const COMMANDS = {
     },
   },
   'evidence verify': {
-    help: 'Check whether a status claim is supported: evidence verify --input claim.json, where claim.json is {"status":"PASSED","evidenceIds":["EV-..."]}',
+    help: 'Check whether a status claim is supported: evidence verify --input claim.json. See "evidence verify --example".',
+    example: { status: 'PASSED', evidenceIds: ['EV-2026-00004'], executionId: 'EXEC-2026-00003', statement: 'vitest: 211/211 passed at abc1234' },
     run: ({ flags }) => evidence.verifyClaim(payload(flags)),
   },
   'evidence amend': {
@@ -538,16 +768,29 @@ const COMMANDS = {
 
   /* ---- execution ---- */
   'exec start': {
-    help: 'Open an execution record: exec start --input exec.json. See "exec start --example". Add "target": {"url": "...", "deployed_commit": "..."} when testing a deployed system.',
+    help: 'Open an execution record: exec start --input exec.json. See "exec start --example". Add "target": {"url": "...", "deployed_commit": "..."} when testing a deployed system. '
+      + 'Add "plan_scenario_id": "S-01" to link this execution to a plan scenario so the scenario coverage floor can verify it. '
+      + 'Add "test_files": ["tests/x.spec.ts"] when it runs test files you wrote this session.',
     example: {
       goal: 'Read-only smoke of the staging deployment',
       method: 'playwright-script',
       testCategory: 'smoke',
+      plan_scenario_id: 'S-01',
+      test_files: ['e2e/smoke.spec.ts'],
       command: 'npx playwright test smoke --reporter=junit',
       environment: 'staging',
       target: { url: 'https://staging.example.com' },
     },
-    run: ({ flags }) => execution.start(payload(flags)),
+    run: ({ flags }) => {
+      const body = payload(flags);
+      const rec = execution.start(body);
+      const sid = rec.plan_scenario_id;
+      const known = state.planCommitments();
+      if (sid && Object.keys(known).length && !known[sid]) {
+        return { ...rec, warning: `plan_scenario_id "${sid}" is not a scenario in this session's plan (known: ${Object.keys(known).join(', ')}). This run will count toward no scenario. If that was a typo, finish this run and start a new one with the right id.` };
+      }
+      return rec;
+    },
   },
   'exec finish': {
     help: 'Finalise an execution: exec finish EXEC-2026-00001 --input result.json. See "exec finish --example". '
@@ -562,9 +805,19 @@ const COMMANDS = {
     run: ({ positional, flags }) => execution.finish(positional[2], payload(flags)),
   },
   'exec not-run': {
-    help: 'Document work that was NOT executed: exec not-run --input not-run.json, where not-run.json is '
-      + '{"goal":"...","status":"BLOCKED","reason":"...","testCategory":"...","feature":"FEAT-...","uncertainties":["U-..."]}. '
-      + 'It counts toward the coverage floors only when status is BLOCKED/NEEDS_USER_INPUT/DEFERRED and an uncertainty is linked.',
+    help: 'Document work that was NOT executed: exec not-run --input not-run.json. See "exec not-run --example". '
+      + 'A hold counts toward the floors only while it links an OPEN uncertainty the agent cannot clear itself: status blocked, '
+      + 'user-input-required, environment-unavailable or external-dependency, or a user-owned hold whose user_quote matches '
+      + 'what the user said. NOT_APPLICABLE counts only with "decisionId" naming a recorded decision. SKIPPED records a visible '
+      + 'disposition (enough for should-test scenarios and P2/P3 categories) but never covers a floor. Add "reproduces" to hold a defect repro.',
+    example: {
+      goal: 'Payment E2E against the real provider sandbox',
+      status: 'BLOCKED',
+      reason: 'STRIPE_SECRET_KEY is unset; the journey ran with the provider mocked, only the real-provider hop is untested.',
+      testCategory: 'e2e',
+      plan_scenario_id: 'S-04',
+      uncertainties: ['U-00001'],
+    },
     run: ({ flags }) => execution.recordNonExecution(payload(flags)),
   },
   'exec list': { help: 'List executions.', run: () => state.list('executions') },
@@ -572,7 +825,8 @@ const COMMANDS = {
 
   /* ---- failure ---- */
   'failure classify': {
-    help: 'Classify a failure: failure classify --input signals.json, where signals.json is {"signals":["http-500"],"evidenceIds":["EV-..."]}. Known signal tokens: `failure signals`.',
+    help: 'Classify a failure: failure classify --input signals.json. Signals are real tokens from the output; `failure signals` lists them. See "failure classify --example".',
+    example: { signals: ['assertion-mismatch', 'wrong-value-rendered'], evidenceIds: ['EV-2026-00007'] },
     run: ({ flags }) => {
       const body = payload(flags);
       const result = classify(body);
@@ -616,7 +870,23 @@ const COMMANDS = {
       userAuthorised: Boolean(flags.authorised),
       authorisationQuote: flags.quote ?? '',
       assignee: flags.assignee ?? null,
+      allowUnverified: Boolean(flags['allow-unverified']),
     }),
+  },
+  'finding verify': {
+    help: 'Show each finding\'s verification as validate --final judges it: confirmed (a linked repro run failed on a '
+      + 'product-defect assertion with real evidence), held, refuted, rejected, unverified or duplicate -- with the reason. '
+      + 'Optional: finding verify FIND-00001.',
+    run: ({ positional }) => {
+      const all = defects.verifyAll();
+      return positional[2] ? all.find((v) => v.finding_id === positional[2]) ?? { error: `No such finding: ${positional[2]}` } : all;
+    },
+  },
+  'finding reject': {
+    help: 'Triage a candidate out: finding reject FIND-00001 --class <explorer-artifact|environment|intended-design|fixture-gap|'
+      + 'not-reproduced|out-of-scope> --reason "why it is not a defect" --cite "src/x.ts:42 | EXEC-... | URL". '
+      + 'All three are required; the rejection is listed in the report with its citation.',
+    run: ({ positional, flags }) => defects.reject(positional[2], { reasonClass: flags.class, reason: flags.reason, citation: flags.cite }),
   },
   'finding render': { help: 'Render the issue title/body/labels for a finding.', run: ({ positional }) => defects.renderIssue(positional[2]) },
   'finding list': { help: 'List findings, most severe first.', run: () => defects.bySeverity() },
@@ -640,14 +910,24 @@ const COMMANDS = {
     run: ({ positional, flags }) => uncertainty.resolve(positional[2], { answer: flags.answer, resolvedBy: flags.by ?? 'user' }),
   },
   'uncertainty partition': {
-    help: 'Split planned scenarios into runnable vs blocked: uncertainty partition --input scenarios.json',
+    help: 'Split planned scenarios into runnable vs blocked: uncertainty partition --input scenarios.json. See "uncertainty partition --example".',
+    example: { scenarios: [{ id: 'S-01', category: 'unit' }, { id: 'S-02', category: 'e2e' }, { id: 'S-03', category: 'authn-authz' }] },
     run: ({ flags }) => uncertainty.partitionWork(payload(flags).scenarios ?? payload(flags)),
   },
   'uncertainty list': { help: 'List open uncertainties.', run: () => uncertainty.open() },
+  'uncertainty note': {
+    help: 'Record work done despite a blocker: uncertainty note U-00001 --work "Ran the API suite against a mocked provider (12/12)". '
+      + 'This is the evidence that the blocker stopped one branch, not the session.',
+    run: ({ positional, flags }) => {
+      if (!flags.work || !String(flags.work).trim()) throw new Error('--work is required: what you did anyway, with its result.');
+      return uncertainty.noteIndependentWork(positional[2], String(flags.work).trim());
+    },
+  },
 
   /* ---- authorization + external writes ---- */
   'auth check': {
-    help: 'Authorization gate: auth check --input auth.json, where auth.json is {"action":"github.create_issue","target":"owner/repo","userAuthorised":true,"authorisationQuote":"..."}',
+    help: 'Authorization gate: auth check --input auth.json. See "auth check --example".',
+    example: { action: 'github.create_issue', target: 'acme/shop', userAuthorised: true, authorisationQuote: 'yes, open a GitHub issue for that' },
     run: ({ flags }) => {
       const body = payload(flags);
       if (!body.environmentClass && body.target) {
@@ -665,7 +945,8 @@ const COMMANDS = {
       : auth.resolveEnvironment(positional[2] ?? '', state.loadProfile())),
   },
   'write check': {
-    help: 'Duplicate-suppression check before an external write.',
+    help: 'Duplicate-suppression check before an external write: write check --input write.json. See "write check --example".',
+    example: { system: 'github', action: 'github.create_issue', idempotencyKey: 'sha256:<finding fingerprint>' },
     run: ({ flags }) => auth.alreadyWritten(payload(flags)),
   },
   'write record': {
@@ -779,7 +1060,7 @@ const COMMANDS = {
       repo: flags.repo,
       decisionId: flags.decision ?? null,
       dryRun: Boolean(flags['dry-run']),
-      authorisation: { userAuthorised: Boolean(flags.authorised), authorisationQuote: flags.quote ?? '' },
+      authorisation: { userAuthorised: Boolean(flags.authorised), authorisationQuote: flags.quote ?? '', allowUnverified: Boolean(flags['allow-unverified']) },
     }),
   },
   'github comment': {
@@ -788,7 +1069,7 @@ const COMMANDS = {
       repo: flags.repo, number: flags.number, body: payload(flags).body,
       idempotencyKey: flags.key, decisionId: flags.decision ?? null,
       dryRun: Boolean(flags['dry-run']),
-      authorisation: { userAuthorised: Boolean(flags.authorised), authorisationQuote: flags.quote ?? '' },
+      authorisation: { userAuthorised: Boolean(flags.authorised), authorisationQuote: flags.quote ?? '', allowUnverified: Boolean(flags['allow-unverified']) },
     }),
   },
   'github assign': {
@@ -796,7 +1077,7 @@ const COMMANDS = {
     run: ({ flags }) => adapters.getAdapter('github').assign({
       repo: flags.repo, number: flags.number, assignee: flags.assignee ?? null,
       decisionId: flags.decision ?? null, dryRun: Boolean(flags['dry-run']),
-      authorisation: { userAuthorised: Boolean(flags.authorised), authorisationQuote: flags.quote ?? '' },
+      authorisation: { userAuthorised: Boolean(flags.authorised), authorisationQuote: flags.quote ?? '', allowUnverified: Boolean(flags['allow-unverified']) },
     }),
   },
   'jira preflight': {
@@ -820,20 +1101,22 @@ const COMMANDS = {
       issueType: flags.type ?? 'Bug',
       decisionId: flags.decision ?? null,
       dryRun: Boolean(flags['dry-run']),
-      authorisation: { userAuthorised: Boolean(flags.authorised), authorisationQuote: flags.quote ?? '' },
+      authorisation: { userAuthorised: Boolean(flags.authorised), authorisationQuote: flags.quote ?? '', allowUnverified: Boolean(flags['allow-unverified']) },
     }),
   },
   'jira comment': {
-    help: 'Comment on a Jira issue: jira comment --key SHOP-412 --input body.json [--authorised --quote "..."] [--dry-run]. body.json is {"body":"plain text"}; it is converted to ADF.',
+    help: 'Comment on a Jira issue: jira comment --key SHOP-412 --input body.json [--authorised --quote "..."] [--dry-run]. The body is plain text; it is converted to ADF. See "jira comment --example".',
+    example: { body: 'Test plan for SHOP-412: 12 scenarios, 9 ran, 1 confirmed defect (FIND-00001), 2 blocked on sandbox credentials.' },
     run: ({ flags }) => adapters.getAdapter('jira').comment({
       key: flags.key, body: payload(flags).body,
       idempotencyKey: flags.idempotency, decisionId: flags.decision ?? null,
       dryRun: Boolean(flags['dry-run']),
-      authorisation: { userAuthorised: Boolean(flags.authorised), authorisationQuote: flags.quote ?? '' },
+      authorisation: { userAuthorised: Boolean(flags.authorised), authorisationQuote: flags.quote ?? '', allowUnverified: Boolean(flags['allow-unverified']) },
     }),
   },
   'adapter complete': {
-    help: 'Finish a delegated (MCP) write: adapter complete --ticket WT-... --input response.json',
+    help: 'Finish a delegated (MCP) write: adapter complete --ticket WT-... --input response.json, where response.json is the raw provider response, unedited. See "adapter complete --example" (a GitHub create-issue response).',
+    example: { number: 418, html_url: 'https://github.com/acme/shop/issues/418', title: 'Saved card belonging to another user is selectable', state: 'open' },
     run: ({ flags }) => {
       const ticket = adapters.readTicket(flags.ticket);
       if (!ticket) throw new Error(`No such ticket: ${flags.ticket}. Run \`ast adapter pending\` to list open ones.`);
@@ -864,85 +1147,12 @@ const COMMANDS = {
 
 /* ------------------------------------------------------------ ast validate */
 
-/**
- * Collection -> { schema, the field holding THAT record's own ID }.
- *
- * The ID field must be pinned per collection. A fallback chain like
- * `item.decision_id ?? item.execution_id ?? ...` looks harmless and is not: an execution
- * carries a `decision_id`, and evidence and findings carry an `execution_id`, so the chain
- * keys every record by a foreign ID and then reports every real reference as dangling.
- */
-const COLLECTION_SCHEMAS = {
-  decisions: { schema: 'decision', idField: 'decision_id' },
-  executions: { schema: 'execution', idField: 'execution_id' },
-  evidence: { schema: 'evidence', idField: 'evidence_id' },
-  findings: { schema: 'finding', idField: 'finding_id' },
-  uncertainties: { schema: 'uncertainty', idField: 'id' },
-  reports: { schema: 'report', idField: 'report_id' },
-};
-
 function validateAll({ final = false } = {}) {
-  const problems = [];
+  // Structural problems (schema, dangling references, open runs) come from the same engine
+  // module the work queue and the Stop gate use, so the three can never disagree.
+  const { counts, problems: structural } = integrity.structuralCheck();
+  const problems = structural.map((p) => p.message);
   const warnings = [];
-  const counts = {};
-
-  const session = state.loadSession();
-  if (session) {
-    const r = validateSchema(session, 'session-state');
-    counts.session = 1;
-    if (!r.valid) problems.push(...r.errors.map((e) => `session-state ${e.path}: ${e.message}`));
-  }
-
-  const profile = state.loadProfile();
-  if (profile) {
-    const r = validateSchema(profile, 'repository-profile');
-    counts.profile = 1;
-    if (!r.valid) problems.push(...r.errors.map((e) => `repository-profile ${e.path}: ${e.message}`));
-  }
-
-  const known = { evidence: new Set(), decisions: new Set(), findings: new Set(), uncertainties: new Set(), executions: new Set() };
-
-  for (const [collection, { schema: schemaName, idField }] of Object.entries(COLLECTION_SCHEMAS)) {
-    const items = state.list(collection);
-    counts[collection] = items.length;
-    for (const item of items) {
-      const id = item[idField];
-      if (!id) {
-        problems.push(`${collection}: a record is missing its "${idField}"`);
-        continue;
-      }
-      if (known[collection]) known[collection].add(id);
-      const r = validateSchema(item, schemaName);
-      if (!r.valid) problems.push(...r.errors.map((e) => `${collection}/${id} ${e.path}: ${e.message}`));
-    }
-  }
-
-  /* referential integrity */
-  const dangling = (ids, pool, where) =>
-    (ids ?? []).filter((i) => !pool.has(i)).forEach((i) => problems.push(`${where} references missing ${i}`));
-
-  for (const e of state.list('executions')) {
-    dangling(e.evidence, known.evidence, `executions/${e.execution_id}.evidence`);
-    dangling(e.findings, known.findings, `executions/${e.execution_id}.findings`);
-    dangling(e.uncertainties, known.uncertainties, `executions/${e.execution_id}.uncertainties`);
-    if (e.decision_id && !known.decisions.has(e.decision_id)) problems.push(`executions/${e.execution_id}.decision_id references missing ${e.decision_id}`);
-    if (!e.finished_at && e.status !== 'PARTIAL') problems.push(`executions/${e.execution_id} has no finished_at but status ${e.status}`);
-  }
-  for (const f of state.list('findings')) {
-    dangling(f.evidence, known.evidence, `findings/${f.finding_id}.evidence`);
-    if (f.duplicate_of && !known.findings.has(f.duplicate_of)) problems.push(`findings/${f.finding_id}.duplicate_of references missing ${f.duplicate_of}`);
-  }
-  for (const d of state.list('decisions')) {
-    dangling(d.evidence_refs, known.evidence, `decisions/${d.decision_id}.evidence_refs`);
-  }
-  if (session) {
-    dangling(session.decisions, known.decisions, 'session.decisions');
-    dangling(session.findings, known.findings, 'session.findings');
-    dangling(session.uncertainties, known.uncertainties, 'session.uncertainties');
-    if (session.open_executions?.length) {
-      problems.push(`session has ${session.open_executions.length} open execution(s): ${session.open_executions.join(', ')}. Run "ast session resume" to finalise them as INTERRUPTED.`);
-    }
-  }
 
   // Schema and referential-integrity problems above are always fatal. Process-completeness
   // findings are advisory by default -- correct at any point mid-session -- and a

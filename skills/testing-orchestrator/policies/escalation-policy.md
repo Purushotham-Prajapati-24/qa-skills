@@ -14,11 +14,44 @@ was still available.
 - run API tests against a mocked provider
 - read the checkout implementation and map the code paths
 - run the existing regression suite
-- write the deterministic E2E spec so it is ready the moment credentials arrive
-- record `U-00019` (`user-input-required`) and mark payment E2E `BLOCKED`
+- write the E2E spec **and run it now** with the provider mocked at the HTTP boundary — the
+  whole journey except the one hop that needs the key
+- record `U-00019` (`user-input-required`) and mark only the real-provider run `BLOCKED`,
+  with `test_files` naming the spec so the hold is traceable
 - note the independent work against the uncertainty so the record shows you did not stall
 
 Then ask — once, at the end, with the context of everything you already did.
+
+A test written and not run is a draft, not an asset. `validate --final` fails on any test
+file written this session that no execution ran.
+
+## Hold only when no option is left
+
+Before recording anything `BLOCKED`, walk this ladder. Each rung is a way to run the work
+anyway; stop at the first that applies and run it.
+
+1. **Start it locally.** A repository can be run. "No running instance" is a reason only
+   after you tried to start it and captured why it failed.
+2. **Stand in for the missing piece.** Mock or stub the unavailable dependency at its
+   boundary; seed your own test data; create your own test account on a non-production
+   target.
+3. **Take another route.** Admin override, direct API call instead of the UI, a different
+   role, a fixture instead of a live upstream.
+4. **Shrink it.** Run the read-only half, the single-record version, the happy path without
+   the side effect.
+5. **Only then hold it** — as `exec not-run` with `BLOCKED`/`NEEDS_USER_INPUT`, linking an
+   uncertainty whose status says what is outside your control (`environment-unavailable`,
+   `user-input-required`, `external-dependency`, `blocked`), and record which rungs you
+   tried in its `independentWork`.
+
+The engine enforces the shape of this. A hold counts toward the coverage floors only while
+it links an **open** uncertainty you cannot clear yourself. Your own `deferred` uncertainty
+("ran out of time", "later") does not count; neither does a skip with no blocker. A hold you
+attribute to the user (`owner: "user"` with a non-blocking status) counts only with
+`"user_quote"`: the user's words, found in the session request or a recorded statement.
+Labelling your own choice as the user's does not make it theirs. When a
+blocker is resolved, every item it held becomes owed again and appears in `ast todo` as
+`unblocked-not-rerun` — run it in the same session.
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/bin/ast.mjs" uncertainty partition --input scenarios.json
@@ -46,6 +79,11 @@ If `runnable` is non-empty, you are not blocked. You have one blocked branch.
 - Permission to *read* anything.
 - Reassurance. If the evidence supports the claim, make the claim.
 - Each item in a batch. Ask once, for the batch.
+- **Moving from one planned must-test scenario to the next.** The plan was agreed up front;
+  execute them in order. Stop only for a genuine blocker (missing credentials, unreachable
+  environment) — record it BLOCKED with a linked uncertainty and its `planScenarioId`, then
+  continue to the next scenario. Stopping to ask "shall I proceed to scenario S-03?" after
+  completing S-02 is the single largest cause of sessions that plan 15 scenarios and run 2.
 - An in-bounds security technique on an authorised non-production target. Sending
   XSS/SQLi-shaped strings, IDOR probes, malformed tokens, mass-assignment payloads and
   the rest of the in-bounds list (`security-testing/SKILL.md` §8) is standard QA — proceed
@@ -65,8 +103,9 @@ Good:
 > (c) Skip it — I record it as a coverage gap.
 >
 > Meanwhile I have run the unit suite (87/87 at `abc1234`), the API contract tests
-> against a mock (12/12), and drafted the E2E spec so it is ready either way. One real
-> defect so far: `FIND-00003`, order not persisted after successful payment.
+> against a mock (12/12), and written and run the E2E spec with the provider mocked (5/5).
+> Only the real-provider hop is untested. One real defect so far: `FIND-00003`, order not
+> persisted after successful payment.
 
 State the blocker, the options with their consequences, and what you did anyway.
 
@@ -91,6 +130,8 @@ no next action is a shrug, not a record.
 
 ## Never
 
+- Leave a test you wrote unexecuted.
+- Hold work on your own say-so. A self-owned deferral is a choice, not a blocker.
 - Silently drop blocked work. It goes in the report with its status.
 - Present a blocker as a completed test.
 - Ask permission for something already authorised in this session.

@@ -4,7 +4,7 @@ description: Test complete user journeys against a running application — criti
 when_to_use: "end to end test", "test the whole checkout journey", "test the signup flow", "critical path testing", "pre-release testing"
 allowed-tools: Read, Glob, Grep, Bash, PowerShell, Write, Edit
 metadata:
-  system_version: 0.12.0
+  system_version: 0.13.0
   role: specialist
 ---
 
@@ -136,7 +136,7 @@ created**. That negative is where payment bugs live.
 `exec.json`:
 
 ```json
-{"goal":"Guest checkout, card payment","method":"playwright-script","testCategory":"e2e","decisionId":"DEC-00007","command":"npx playwright test checkout --trace=on --reporter=json","environment":"local-docker"}
+{"goal":"Guest checkout, card payment","method":"playwright-script","plan_scenario_id":"S-01","testCategory":"e2e","decisionId":"DEC-00007","command":"npx playwright test checkout --trace=on --reporter=json","environment":"local-docker"}
 ```
 
 ```bash
